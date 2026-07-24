@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -55,14 +55,15 @@ export default function App() {
   const [modalRegistro, setModalRegistro] = useState(false);
   const [modalPerfil, setModalPerfil] = useState(false);
   const [modalChat, setModalChat] = useState(false);
+  const [modalInstalar, setModalInstalar] = useState(false);
   const [registroSeleccionado, setRegistroSeleccionado] = useState(null);
 
-  // Vistas del Modal Perfil / Autenticación ('perfil', 'login', 'registro', 'recuperar')
+  // Vistas de Autenticación
   const [vistaPerfil, setVistaPerfil] = useState('perfil');
-  const [metodoRecuperacion, setMetodoRecuperacion] = useState('correo'); // 'correo' o 'sms'
+  const [metodoRecuperacion, setMetodoRecuperacion] = useState('correo');
   const [mensajeAuthOk, setMensajeAuthOk] = useState('');
 
-  // Filtros y Capas
+  // Filtros
   const [mapLayer, setMapLayer] = useState('callejero');
   const [filtroEspecie, setFiltroEspecie] = useState('todas');
   const [busquedaGaleria, setBusquedaGaleria] = useState('');
@@ -70,30 +71,54 @@ export default function App() {
   // Estado de Cobertura
   const [estadoConexion, setEstadoConexion] = useState('online');
 
-  // Usuario Autenticado
+  // Evento PWA para instalación nativa
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
+
+  useEffect(() => {
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    });
+  }, []);
+
+  const ejecutarInstalacionApp = () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      deferredPrompt.userChoice.then(() => setDeferredPrompt(null));
+    } else {
+      setModalInstalar(true);
+    }
+  };
+
+  // USUARIO ACTUAL (Inicialmente configurado como MÁXIMO RANGO)
   const [usuario, setUsuario] = useState({
     isLoggedIn: true,
     nombre: 'Jorge Carvajal',
     email: 'jorge.carvajal@docente.edu',
     telefono: '+506 8888-9999',
     comunidad: 'Tarrazú (San Marcos, San Lorenzo, Carlos)',
-    rol: 'Administrador Experto (Control Total)',
+    rol: 'Administrador Experto (Máximo Rango)',
     pass: '123456'
   });
 
-  // Formulario temporal de Login / Registro
+  // Forms
   const [formLogin, setFormLogin] = useState({ emailOrTel: '', pass: '' });
-  const [formReg, setFormReg] = useState({ nombre: '', email: '', telefono: '', comunidad: 'Tarrazú (San Marcos, San Lorenzo, Carlos)', pass: '', confirmPass: '' });
+  const [formReg, setFormReg] = useState({ nombre: '', email: '', telefono: '', comunidad: 'Tarrazú (San Marcos, San Lorenzo, Carlos)', pass: '', confirmPass: '', solicitaExperto: false });
   const [formRecuperar, setFormRecuperar] = useState({ contacto: '' });
 
-  // Lista de Usuarios
+  // Lista de Usuarios con Jerarquía de 4 Roles
   const [listaUsuarios, setListaUsuarios] = useState([
-    { id: 1, nombre: 'Jorge Carvajal', email: 'jorge.carvajal@docente.edu', tel: '+506 8888-9999', comunidad: 'San Marcos de Tarrazú', rol: 'Admin Experto', estadoConexion: 'online' },
-    { id: 2, nombre: 'Dra. Sofía Herpetóloga', email: 'sofia.herpeto@ucr.ac.cr', tel: '+506 8765-4321', comunidad: 'Santa María de Dota', rol: 'Experto', estadoConexion: 'online' },
-    { id: 3, nombre: 'Carlos Picado', email: 'cpicado@comunidad.cr', tel: '+506 8555-1234', comunidad: 'San Pablo de León Cortés', rol: 'Observador', estadoConexion: 'offline' }
+    { id: 1, nombre: 'Jorge Carvajal', email: 'jorge.carvajal@docente.edu', tel: '+506 8888-9999', comunidad: 'San Marcos de Tarrazú', rol: 'Administrador Experto (Máximo Rango)', estadoConexion: 'online' },
+    { id: 2, nombre: 'Dra. Sofía Herpetóloga', email: 'sofia.herpeto@ucr.ac.cr', tel: '+506 8765-4321', comunidad: 'Santa María de Dota', rol: 'Experto Herpetólogo', estadoConexion: 'online' },
+    { id: 3, nombre: 'Carlos Picado', email: 'cpicado@comunidad.cr', tel: '+506 8555-1234', comunidad: 'San Pablo de León Cortés', rol: 'Usuario Regular', estadoConexion: 'offline' }
   ]);
 
-  // Mensajería Chat
+  // Solicitudes pendientes de validación para ser Experto
+  const [solicitudesExpertos, setSolicitudesExpertos] = useState([
+    { id: 101, nombre: 'MSc. Juan Abarca', email: 'jabarca@herpeto.org', tel: '+506 8333-4444', atencedentes: 'Biólogo especialista en Isthmohyla nacientes.', fecha: '24/07/2026' }
+  ]);
+
+  // Chat Privado
   const [chatMensajes, setChatMensajes] = useState([
     { id: 1, texto: '👋 Has iniciado una consulta privada directa. Escribe tu mensaje abajo.', emisor: 'sistema' }
   ]);
@@ -154,7 +179,7 @@ export default function App() {
         });
       }, 1000);
     } catch (err) {
-      alert('Permiso de micrófono no otorgado o dispositivo incompatible.');
+      alert('Permiso de micrófono no disponible.');
     }
   };
 
@@ -198,7 +223,6 @@ export default function App() {
     return { icon: '🔴', label: 'Fuera de cobertura', color: '#FF5252' };
   };
 
-  // Exportar datos a CSV
   const exportarCSV = () => {
     const headers = "ID,Nombre Comun,Especie,Categoria,Estado,Ubicacion,Reportante,Temperatura,Humedad\n";
     const rows = registros.map(r => `${r.id},"${r.nombreComun}","${r.especie}",${r.categoria},${r.estado},"${r.ubicacion}","${r.reportante}",${r.temp},${r.humedad}`).join("\n");
@@ -292,7 +316,6 @@ export default function App() {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
-          {/* Badge del Estado de Conexión Configurable */}
           <span style={{ backgroundColor: '#0D261C', color: getBadgetConexion(estadoConexion).color, padding: '0.3rem 0.7rem', borderRadius: '20px', fontSize: '0.75rem', border: '1px solid #164D36', fontWeight: 'bold' }}>
             {getBadgetConexion(estadoConexion).icon} {getBadgetConexion(estadoConexion).label}
           </span>
@@ -301,11 +324,14 @@ export default function App() {
             💬 Chat 1 a 1
           </button>
 
+          {/* Dinámico: Muestra "👤 USUARIO" al inicio o el nombre con rango si está autenticado */}
           <button onClick={() => { setVistaPerfil('perfil'); setModalPerfil(true); }} style={{ backgroundColor: '#00C853', color: '#000', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '20px', fontWeight: 'bold', fontSize: '0.75rem', cursor: 'pointer' }}>
-            👤 {usuario.isLoggedIn ? usuario.nombre : 'Ingresar / Registrarse'}
+            {usuario.isLoggedIn ? `🛡️ ${usuario.nombre}` : '👤 USUARIO'}
           </button>
 
-          <button style={{ backgroundColor: '#00E676', color: '#000', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '20px', fontWeight: 'bold', fontSize: '0.75rem', cursor: 'pointer' }}>Instalar App</button>
+          <button onClick={ejecutarInstalacionApp} style={{ backgroundColor: '#00E676', color: '#000', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '20px', fontWeight: 'bold', fontSize: '0.75rem', cursor: 'pointer' }}>
+            📲 Instalar App
+          </button>
         </div>
       </header>
 
@@ -380,7 +406,7 @@ export default function App() {
         </div>
       )}
 
-      {/* 🖼️ GALERÍA CON BUSCADOR */}
+      {/* 🖼️ GALERÍA */}
       {tab === 'galeria' && (
         <div style={{ padding: '1rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.8rem' }}>
@@ -417,7 +443,7 @@ export default function App() {
         </div>
       )}
 
-      {/* 📖 GUÍA DE ESPECIES */}
+      {/* 📖 GUÍA */}
       {tab === 'guia' && (
         <div style={{ padding: '1rem' }}>
           <h2 style={{ margin: 0, fontSize: '1.2rem', color: '#00FF88' }}>📖 Guía de Especies Comunes de Los Santos</h2>
@@ -436,7 +462,7 @@ export default function App() {
         </div>
       )}
 
-      {/* 📊 PANEL ADMIN COMPLETO */}
+      {/* 📊 PANEL ADMIN */}
       {tab === 'admin' && (
         <div style={{ padding: '1.2rem' }}>
           <h2 style={{ fontSize: '1.2rem', color: '#FFF', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -453,7 +479,7 @@ export default function App() {
                 <button onClick={() => setSubTabAdmin('consultas')} style={{ backgroundColor: subTabAdmin === 'consultas' ? '#0F2B20' : 'transparent', color: subTabAdmin === 'consultas' ? '#00FF88' : '#8AA398', border: subTabAdmin === 'consultas' ? '1px solid #00FF88' : 'none', borderRadius: '15px', padding: '0.3rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>💬 Consultas 1 a 1</button>
                 <button onClick={() => setSubTabAdmin('metricas')} style={{ backgroundColor: subTabAdmin === 'metricas' ? '#0F2B20' : 'transparent', color: subTabAdmin === 'metricas' ? '#00FF88' : '#8AA398', border: subTabAdmin === 'metricas' ? '1px solid #00FF88' : 'none', borderRadius: '15px', padding: '0.3rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>📊 Métricas</button>
                 <button onClick={() => setSubTabAdmin('usuarios')} style={{ backgroundColor: subTabAdmin === 'usuarios' ? '#0F2B20' : 'transparent', color: subTabAdmin === 'usuarios' ? '#00FF88' : '#8AA398', border: subTabAdmin === 'usuarios' ? '1px solid #00FF88' : 'none', borderRadius: '15px', padding: '0.3rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>👥 Usuarios</button>
-                <button onClick={() => setSubTabAdmin('solicitudes')} style={{ backgroundColor: subTabAdmin === 'solicitudes' ? '#0F2B20' : 'transparent', color: subTabAdmin === 'solicitudes' ? '#00FF88' : '#8AA398', border: subTabAdmin === 'solicitudes' ? '1px solid #00FF88' : 'none', borderRadius: '15px', padding: '0.3rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>🎓 Solicitudes</button>
+                <button onClick={() => setSubTabAdmin('solicitudes')} style={{ backgroundColor: subTabAdmin === 'solicitudes' ? '#0F2B20' : 'transparent', color: subTabAdmin === 'solicitudes' ? '#00FF88' : '#8AA398', border: subTabAdmin === 'solicitudes' ? '1px solid #00FF88' : 'none', borderRadius: '15px', padding: '0.3rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>🎓 Solicitudes ({solicitudesExpertos.length})</button>
                 <button onClick={() => setSubTabAdmin('moderacion')} style={{ backgroundColor: subTabAdmin === 'moderacion' ? '#0F2B20' : 'transparent', color: subTabAdmin === 'moderacion' ? '#00FF88' : '#8AA398', border: subTabAdmin === 'moderacion' ? '1px solid #00FF88' : 'none', borderRadius: '15px', padding: '0.3rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>📋 Moderación</button>
               </div>
             </div>
@@ -469,7 +495,7 @@ export default function App() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
                   <div style={{ backgroundColor: '#060D0A', border: '1px solid #162B23', borderRadius: '12px', padding: '0.9rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
-                      <strong style={{ color: '#FFF', fontSize: '0.9rem' }}>Jorge Carvajal</strong>
+                      <strong style={{ color: '#FFF', fontSize: '0.9rem' }}>Jorge Carvajal (Admin Experto)</strong>
                       <p style={{ margin: '0.3rem 0', color: '#8AA398', fontSize: '0.8rem' }}>"Consulta directa iniciada."</p>
                     </div>
                     <button onClick={() => setModalChat(true)} style={{ backgroundColor: 'transparent', border: 'none', color: '#00FF88', fontWeight: 'bold', cursor: 'pointer' }}>Abrir →</button>
@@ -478,7 +504,7 @@ export default function App() {
               </div>
             )}
 
-            {/* MÉTRICAS & EXPORTAR */}
+            {/* MÉTRICAS */}
             {subTabAdmin === 'metricas' && (
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
@@ -506,21 +532,13 @@ export default function App() {
                     <div style={{ fontSize: '0.75rem', color: '#8AA398' }}>Cuentas Suspendidas</div>
                   </div>
                 </div>
-
-                <div style={{ backgroundColor: '#060D0A', border: '1px solid #162B23', borderRadius: '12px', padding: '1rem' }}>
-                  <h4 style={{ margin: '0 0 0.8rem 0', color: '#00FF88', fontSize: '0.9rem' }}>🏆 Top Especies Más Avistadas</h4>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.7rem 1rem', backgroundColor: '#0B1A14', borderRadius: '8px', border: '1px solid #122B20' }}>
-                    <span style={{ fontSize: '0.85rem', color: '#FFF' }}><strong>#1</strong> <em>Agalychnis annae</em></span>
-                    <span style={{ backgroundColor: '#0D261C', color: '#00FF88', padding: '0.2rem 0.6rem', borderRadius: '10px', fontSize: '0.75rem', fontWeight: 'bold' }}>1 registros</span>
-                  </div>
-                </div>
               </div>
             )}
 
-            {/* GESTIÓN USUARIOS */}
+            {/* GESTIÓN DE USUARIOS CON RANGOS EXACTOS */}
             {subTabAdmin === 'usuarios' && (
               <div>
-                <h4 style={{ margin: '0 0 1rem 0', color: '#FFF', fontSize: '0.95rem' }}>👥 Gestión de Usuarios, Permisos y Estado de Cobertura</h4>
+                <h4 style={{ margin: '0 0 1rem 0', color: '#FFF', fontSize: '0.95rem' }}>👥 Gestión de Usuarios, Jerarquía de Permisos y Cobertura</h4>
                 <div style={{ overflowX: 'auto' }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', textAlign: 'left' }}>
                     <thead>
@@ -529,7 +547,7 @@ export default function App() {
                         <th style={{ padding: '0.6rem' }}>USUARIO</th>
                         <th style={{ padding: '0.6rem' }}>CONTACTO</th>
                         <th style={{ padding: '0.6rem' }}>COMUNIDAD</th>
-                        <th style={{ padding: '0.6rem' }}>ROL ACTUAL</th>
+                        <th style={{ padding: '0.6rem' }}>ROL ASIGNADO</th>
                         <th style={{ padding: '0.6rem' }}>ACCIÓN</th>
                       </tr>
                     </thead>
@@ -552,9 +570,10 @@ export default function App() {
                                 }} 
                                 style={{ backgroundColor: '#050A08', color: '#00FF88', border: '1px solid #1B3D2F', borderRadius: '12px', padding: '0.3rem 0.5rem', fontSize: '0.75rem' }}
                               >
-                                <option value="Admin Experto">🛡️ Admin Experto</option>
-                                <option value="Experto">🎓 Experto</option>
-                                <option value="Observador">👤 Observador</option>
+                                <option value="Administrador Experto (Máximo Rango)">🛡️ Administrador Experto</option>
+                                <option value="Administrador">⚔️ Administrador</option>
+                                <option value="Experto Herpetólogo">🎓 Experto Herpetólogo</option>
+                                <option value="Usuario Regular">👤 Usuario Regular</option>
                               </select>
                             </td>
                             <td style={{ padding: '0.6rem' }}>
@@ -569,11 +588,40 @@ export default function App() {
               </div>
             )}
 
-            {/* SOLICITUDES */}
+            {/* SOLICITUDES DE ACREDITACIÓN A EXPERTO */}
             {subTabAdmin === 'solicitudes' && (
               <div>
-                <h4 style={{ margin: '0 0 1rem 0', color: '#FFB300', fontSize: '0.95rem' }}>🎓 Solicitudes de Rol Experto</h4>
-                <p style={{ color: '#8AA398', fontSize: '0.85rem' }}>No hay solicitudes de acreditación pendientes en este momento.</p>
+                <h4 style={{ margin: '0 0 1rem 0', color: '#FFB300', fontSize: '0.95rem' }}>🎓 Solicitudes de Acreditación de Rango Experto (Biólogos)</h4>
+                {solicitudesExpertos.length === 0 ? (
+                  <p style={{ color: '#8AA398', fontSize: '0.85rem' }}>No hay solicitudes pendientes.</p>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+                    {solicitudesExpertos.map((s) => (
+                      <div key={s.id} style={{ backgroundColor: '#060D0A', border: '1px solid #162B23', borderRadius: '12px', padding: '0.9rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+                        <div>
+                          <strong style={{ color: '#FFF', fontSize: '0.9rem' }}>{s.nombre}</strong>
+                          <div style={{ fontSize: '0.75rem', color: '#8AA398' }}>📧 {s.email} | 📞 {s.tel}</div>
+                          <div style={{ fontSize: '0.75rem', color: '#00FF88', marginTop: '0.2rem' }}>📜 {s.atencedentes}</div>
+                        </div>
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                          <button 
+                            onClick={() => {
+                              setListaUsuarios([...listaUsuarios, { id: Date.now(), nombre: s.nombre, email: s.email, tel: s.tel, comunidad: 'Zona de los Santos', rol: 'Experto Herpetólogo', estadoConexion: 'online' }]);
+                              setSolicitudesExpertos(solicitudesExpertos.filter(item => item.id !== s.id));
+                              alert(`¡Rango EXPERTO aprobado para ${s.nombre}!`);
+                            }} 
+                            style={{ backgroundColor: '#00E676', color: '#000', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}
+                          >
+                            ✔ Aprobar como EXPERTO
+                          </button>
+                          <button onClick={() => setSolicitudesExpertos(solicitudesExpertos.filter(item => item.id !== s.id))} style={{ backgroundColor: '#D32F2F', color: '#FFF', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}>
+                            ✕ Rechazar
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
@@ -626,12 +674,11 @@ export default function App() {
         </div>
       )}
 
-      {/* 👤 MODAL COMPLETO DE PERFIL, INICIO DE SESIÓN, REGISTRO Y RECUPERACIÓN DE CLAVE */}
+      {/* 👤 MODAL PERFIL CON SELECCIÓN DE JERARQUÍA Y SOLICITUD DE RANGO EXPERTO */}
       {modalPerfil && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999, padding: '1rem' }}>
           <div style={{ backgroundColor: '#09130F', borderRadius: '16px', border: '1px solid #1B3D2F', width: '100%', maxWidth: '520px', padding: '1.2rem', maxHeight: '90vh', overflowY: 'auto' }}>
             
-            {/* Header del Modal */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid #122B20', paddingBottom: '0.5rem' }}>
               <h3 style={{ color: '#FFF', margin: 0, fontSize: '1.1rem' }}>
                 {vistaPerfil === 'perfil' && '👤 Mi Perfil & Disponibilidad'}
@@ -648,7 +695,7 @@ export default function App() {
               </div>
             )}
 
-            {/* VISTA 1: MI PERFIL */}
+            {/* MI PERFIL */}
             {vistaPerfil === 'perfil' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
                 <div style={{ backgroundColor: '#060D0A', border: '1px solid #1B3D2F', borderRadius: '12px', padding: '0.8rem', textAlign: 'center' }}>
@@ -656,16 +703,11 @@ export default function App() {
                   <div style={{ fontSize: '0.7rem', color: '#7A9A8C', marginTop: '0.2rem' }}>Comunidad HerpID Los Santos CR</div>
                 </div>
 
-                {/* Selector de Cobertura */}
                 <div style={{ backgroundColor: '#0A1E16', border: '1px solid #00FF88', padding: '0.8rem', borderRadius: '10px' }}>
                   <label style={{ display: 'block', fontSize: '0.75rem', color: '#00FF88', fontWeight: 'bold', marginBottom: '0.4rem' }}>
                     📡 ESTADO DE COBERTURA Y DISPONIBILIDAD
                   </label>
-                  <select 
-                    value={estadoConexion} 
-                    onChange={(e) => setEstadoConexion(e.target.value)} 
-                    style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }}
-                  >
+                  <select value={estadoConexion} onChange={(e) => setEstadoConexion(e.target.value)} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }}>
                     <option value="online">🟢 En línea (Disponible para consultas)</option>
                     <option value="busy">🟠 Ocupado en campo (Sin respuesta inmediata)</option>
                     <option value="offline">🔴 Fuera de cobertura (Sin señal en montaña)</option>
@@ -687,70 +729,22 @@ export default function App() {
                   <input type="text" value={usuario.telefono} onChange={(e) => setUsuario({ ...usuario, telefono: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }} />
                 </div>
 
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.75rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.3rem' }}>COMUNIDAD EN LOS SANTOS</label>
-                  <select value={usuario.comunidad} onChange={(e) => setUsuario({ ...usuario, comunidad: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }}>
-                    <option value="Tarrazú (San Marcos, San Lorenzo, Carlos)">Tarrazú (San Marcos, San Lorenzo, Carlos)</option>
-                    <option value="Dota (Santa María, Copey, Jardín)">Dota (Santa María, Copey, Jardín)</option>
-                    <option value="León Cortés (San Pablo, San Rafael)">León Cortés (San Pablo, San Rafael)</option>
-                  </select>
-                </div>
-
-                {/* Conmutador de Rol para Pruebas */}
+                {/* Selector de Rango/Rol en Perfil */}
                 <div style={{ backgroundColor: '#1A1807', border: '1px solid #5C4D0A', padding: '0.8rem', borderRadius: '10px' }}>
-                  <label style={{ display: 'block', fontSize: '0.75rem', color: '#FFB300', fontWeight: 'bold', marginBottom: '0.4rem' }}>⚙️ CONMUTAR ROL DE USUARIO (PRUEBAS)</label>
+                  <label style={{ display: 'block', fontSize: '0.75rem', color: '#FFB300', fontWeight: 'bold', marginBottom: '0.4rem' }}>⚙️ CONMUTAR ROL / JERARQUÍA (PARA PRUEBAS)</label>
                   <select value={usuario.rol} onChange={(e) => setUsuario({ ...usuario, rol: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#0A1410', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }}>
-                    <option value="Observador de Campo">👤 Observador de Campo</option>
+                    <option value="Administrador Experto (Máximo Rango)">🛡️ Administrador Experto (Máximo Rango)</option>
+                    <option value="Administrador">⚔️ Administrador</option>
                     <option value="Experto Herpetólogo">🎓 Experto Herpetólogo</option>
-                    <option value="Administrador Experto (Control Total)">🛡️ Administrador Experto (Control Total)</option>
+                    <option value="Usuario Regular">👤 Usuario Regular</option>
                   </select>
                 </div>
 
-                <button onClick={() => setModalPerfil(false)} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#00E676', color: '#000', fontWeight: 'bold', border: 'none', borderRadius: '10px', cursor: 'pointer' }}>Guardar Cambios</button>
-                
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.5rem' }}>
-                  <button onClick={() => setVistaPerfil('login')} style={{ backgroundColor: 'transparent', border: 'none', color: '#8AA398', fontSize: '0.75rem', cursor: 'pointer', textDecoration: 'underline' }}>Cambiar de cuenta</button>
-                  <button onClick={() => setVistaPerfil('registro')} style={{ backgroundColor: 'transparent', border: 'none', color: '#00FF88', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>+ Registrar otra cuenta</button>
-                </div>
+                <button onClick={() => setModalPerfil(false)} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#00E676', color: '#000', fontWeight: 'bold', border: 'none', borderRadius: '10px', cursor: 'pointer' }}>Guardar y Actualizar Perfil</button>
               </div>
             )}
 
-            {/* VISTA 2: INICIAR SESIÓN */}
-            {vistaPerfil === 'login' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.75rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.3rem' }}>CORREO O CELULAR *</label>
-                  <input type="text" placeholder="ej. jorge@docente.edu o +506 8888-9999" value={formLogin.emailOrTel} onChange={(e) => setFormLogin({ ...formLogin, emailOrTel: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }} />
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.75rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.3rem' }}>CONTRASEÑA PERSONAL *</label>
-                  <input type="password" placeholder="••••••••" value={formLogin.pass} onChange={(e) => setFormLogin({ ...formLogin, pass: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }} />
-                </div>
-
-                <div style={{ textAlign: 'right' }}>
-                  <button onClick={() => setVistaPerfil('recuperar')} style={{ backgroundColor: 'transparent', border: 'none', color: '#FFB300', fontSize: '0.75rem', cursor: 'pointer', textDecoration: 'underline' }}>¿Olvidaste tu contraseña?</button>
-                </div>
-
-                <button 
-                  onClick={() => {
-                    setUsuario({ ...usuario, isLoggedIn: true });
-                    setMensajeAuthOk('¡Sesión iniciada con éxito!');
-                    setTimeout(() => { setMensajeAuthOk(''); setVistaPerfil('perfil'); }, 1500);
-                  }} 
-                  style={{ width: '100%', padding: '0.8rem', backgroundColor: '#00E676', color: '#000', fontWeight: 'bold', border: 'none', borderRadius: '10px', cursor: 'pointer' }}
-                >
-                  Ingresar a HerpID
-                </button>
-
-                <div style={{ textAlign: 'center', marginTop: '0.5rem' }}>
-                  <span style={{ fontSize: '0.75rem', color: '#8AA398' }}>¿No tienes cuenta? </span>
-                  <button onClick={() => setVistaPerfil('registro')} style={{ backgroundColor: 'transparent', border: 'none', color: '#00FF88', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}>Regístrate aquí</button>
-                </div>
-              </div>
-            )}
-
-            {/* VISTA 3: CREAR CUENTA NUEVA */}
+            {/* REGISTRO NUEVO DE USUARIOS CON CHECKBOX DE BIÓLOGO/EXPERTO */}
             {vistaPerfil === 'registro' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
                 <div>
@@ -768,13 +762,9 @@ export default function App() {
                   <input type="text" placeholder="+506 8888-0000" value={formReg.telefono} onChange={(e) => setFormReg({ ...formReg, telefono: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }} />
                 </div>
 
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.75rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.3rem' }}>COMUNIDAD EN LOS SANTOS *</label>
-                  <select value={formReg.comunidad} onChange={(e) => setFormReg({ ...formReg, comunidad: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }}>
-                    <option value="Tarrazú (San Marcos, San Lorenzo, Carlos)">Tarrazú (San Marcos, San Lorenzo, Carlos)</option>
-                    <option value="Dota (Santa María, Copey, Jardín)">Dota (Santa María, Copey, Jardín)</option>
-                    <option value="León Cortés (San Pablo, San Rafael)">León Cortés (San Pablo, San Rafael)</option>
-                  </select>
+                <div style={{ backgroundColor: '#0D1E18', border: '1px solid #1B3D2F', padding: '0.7rem', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.6rem' }} onClick={() => setFormReg({ ...formReg, solicitaExperto: !formReg.solicitaExperto })}>
+                  <input type="checkbox" checked={formReg.solicitaExperto} onChange={() => {}} style={{ accentColor: '#00FF88' }} />
+                  <span style={{ color: '#00FF88', fontSize: '0.75rem', fontWeight: 'bold' }}>🎓 Soy Biólogo/Herpetólogo (Solicitar validación de Rango Experto)</span>
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
@@ -791,8 +781,11 @@ export default function App() {
                 <button 
                   onClick={() => {
                     if (!formReg.nombre || !formReg.email || !formReg.pass) {
-                      alert('Por favor completa los campos requeridos.');
+                      alert('Por favor completa todos los campos requeridos.');
                       return;
+                    }
+                    if (formReg.solicitaExperto) {
+                      setSolicitudesExpertos([...solicitudesExpertos, { id: Date.now(), nombre: formReg.nombre, email: formReg.email, tel: formReg.telefono, atencedentes: 'Solicitó rango de Experto al registrarse.', fecha: 'Hoy' }]);
                     }
                     setUsuario({
                       isLoggedIn: true,
@@ -800,76 +793,65 @@ export default function App() {
                       email: formReg.email,
                       telefono: formReg.telefono,
                       comunidad: formReg.comunidad,
-                      rol: 'Observador de Campo',
+                      rol: 'Usuario Regular', // Queda como usuario regular hasta que el admin lo apruebe como experto
                       pass: formReg.pass
                     });
-                    setMensajeAuthOk('¡Cuenta creada exitosamente!');
-                    setTimeout(() => { setMensajeAuthOk(''); setVistaPerfil('perfil'); }, 1500);
-                  }} 
-                  style={{ width: '100%', padding: '0.8rem', backgroundColor: '#00E676', color: '#000', fontWeight: 'bold', border: 'none', borderRadius: '10px', cursor: 'pointer', marginTop: '0.5rem' }}
-                >
-                  Registrarme en HerpID
-                </button>
-
-                <div style={{ textAlign: 'center', marginTop: '0.3rem' }}>
-                  <button onClick={() => setVistaPerfil('login')} style={{ backgroundColor: 'transparent', border: 'none', color: '#8AA398', fontSize: '0.75rem', cursor: 'pointer' }}>¿Ya tienes cuenta? Inicia sesión</button>
-                </div>
-              </div>
-            )}
-
-            {/* VISTA 4: RECUPERAR CONTRASEÑA (VÍA CORREO O SMS) */}
-            {vistaPerfil === 'recuperar' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
-                <p style={{ fontSize: '0.8rem', color: '#8AA398', margin: 0 }}>Selecciona el método de recuperación para recibir las instrucciones y restablecer tu clave:</p>
-                
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-                  <button 
-                    onClick={() => setMetodoRecuperacion('correo')} 
-                    style={{ backgroundColor: metodoRecuperacion === 'correo' ? '#0F2B20' : '#050A08', color: '#FFF', border: metodoRecuperacion === 'correo' ? '2px solid #00FF88' : '1px solid #1B3D2F', padding: '0.6rem', borderRadius: '8px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 'bold' }}
-                  >
-                    ✉️ Por Correo
-                  </button>
-                  <button 
-                    onClick={() => setMetodoRecuperacion('sms')} 
-                    style={{ backgroundColor: metodoRecuperacion === 'sms' ? '#0F2B20' : '#050A08', color: '#FFF', border: metodoRecuperacion === 'sms' ? '2px solid #00FF88' : '1px solid #1B3D2F', padding: '0.6rem', borderRadius: '8px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 'bold' }}
-                  >
-                    💬 Por Mensaje (SMS)
-                  </button>
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.75rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.3rem' }}>
-                    {metodoRecuperacion === 'correo' ? 'INGRESA TU CORREO REGISTRADO *' : 'INGRESA TU CELULAR REGISTRADO *'}
-                  </label>
-                  <input 
-                    type="text" 
-                    placeholder={metodoRecuperacion === 'correo' ? 'ej. usuario@docente.edu' : 'ej. +506 8888-9999'} 
-                    value={formRecuperar.contacto} 
-                    onChange={(e) => setFormRecuperar({ contacto: e.target.value })} 
-                    style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }} 
-                  />
-                </div>
-
-                <button 
-                  onClick={() => {
-                    if (!formRecuperar.contacto) {
-                      alert('Por favor ingresa tu contacto.');
-                      return;
-                    }
-                    setMensajeAuthOk(`¡Enlace/Código de recuperación enviado vía ${metodoRecuperacion === 'correo' ? 'Correo' : 'SMS'}!`);
-                    setTimeout(() => { setMensajeAuthOk(''); setVistaPerfil('login'); }, 2500);
+                    setMensajeAuthOk(formReg.solicitaExperto ? '¡Cuenta registrada! Tu solicitud de Experto quedó en revisión.' : '¡Cuenta registrada exitosamente!');
+                    setTimeout(() => { setMensajeAuthOk(''); setVistaPerfil('perfil'); }, 2000);
                   }} 
                   style={{ width: '100%', padding: '0.8rem', backgroundColor: '#00E676', color: '#000', fontWeight: 'bold', border: 'none', borderRadius: '10px', cursor: 'pointer' }}
                 >
-                  Enviar Instrucciones
+                  Registrarme en HerpID
                 </button>
-
-                <div style={{ textAlign: 'center' }}>
-                  <button onClick={() => setVistaPerfil('login')} style={{ backgroundColor: 'transparent', border: 'none', color: '#8AA398', fontSize: '0.75rem', cursor: 'pointer' }}>Volver al Inicio de Sesión</button>
-                </div>
               </div>
             )}
 
+            {/* RECUPERACIÓN */}
+            {vistaPerfil === 'recuperar' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
+                <p style={{ fontSize: '0.8rem', color: '#8AA398', margin: 0 }}>Selecciona el método de recuperación para recibir las instrucciones:</p>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                  <button onClick={() => setMetodoRecuperacion('correo')} style={{ backgroundColor: metodoRecuperacion === 'correo' ? '#0F2B20' : '#050A08', color: '#FFF', border: metodoRecuperacion === 'correo' ? '2px solid #00FF88' : '1px solid #1B3D2F', padding: '0.6rem', borderRadius: '8px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 'bold' }}>✉️ Por Correo</button>
+                  <button onClick={() => setMetodoRecuperacion('sms')} style={{ backgroundColor: metodoRecuperacion === 'sms' ? '#0F2B20' : '#050A08', color: '#FFF', border: metodoRecuperacion === 'sms' ? '2px solid #00FF88' : '1px solid #1B3D2F', padding: '0.6rem', borderRadius: '8px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 'bold' }}>💬 Por Mensaje (SMS)</button>
+                </div>
+                <input type="text" placeholder={metodoRecuperacion === 'correo' ? 'Correo registrado' : 'Celular registrado'} value={formRecuperar.contacto} onChange={(e) => setFormRecuperar({ contacto: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }} />
+                <button onClick={() => { setMensajeAuthOk(`¡Enviado por ${metodoRecuperacion === 'correo' ? 'Correo' : 'SMS'}!`); setTimeout(() => { setMensajeAuthOk(''); setVistaPerfil('perfil'); }, 2000); }} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#00E676', color: '#000', fontWeight: 'bold', border: 'none', borderRadius: '10px', cursor: 'pointer' }}>Enviar Instrucciones</button>
+              </div>
+            )}
+
+          </div>
+        </div>
+      )}
+
+      {/* 📲 MODAL PWA: INSTALACIÓN REAL EN DISPOSITIVOS */}
+      {modalInstalar && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999, padding: '1rem' }}>
+          <div style={{ backgroundColor: '#09130F', borderRadius: '16px', border: '1px solid #1B3D2F', width: '100%', maxWidth: '520px', padding: '1.2rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid #122B20', paddingBottom: '0.5rem' }}>
+              <h3 style={{ margin: 0, color: '#FFF', fontSize: '1.1rem' }}>📲 Descargar e Instalar HerpID en Celular</h3>
+              <button onClick={() => setModalInstalar(false)} style={{ backgroundColor: 'transparent', border: 'none', color: '#FFF', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
+            </div>
+
+            <div style={{ backgroundColor: '#060D0A', border: '1px solid #1B3D2F', borderRadius: '12px', padding: '0.9rem', marginBottom: '1rem' }}>
+              <h4 style={{ margin: '0 0 0.5rem 0', color: '#00FF88', fontSize: '0.85rem' }}>🍎 Instalación en iPhone / iPad (Safari)</h4>
+              <ol style={{ margin: 0, paddingLeft: '1.2rem', color: '#8AA398', fontSize: '0.75rem', lineHeight: '1.5' }}>
+                <li>Abre este enlace en el navegador <strong>Safari</strong> de tu iPhone.</li>
+                <li>Presiona el botón <strong>Compartir</strong> ⎋ (barra inferior).</li>
+                <li>Desliza hacia abajo y selecciona <strong>"Agregar al inicio" ➕</strong>.</li>
+                <li>¡Listo! El icono de la rana aparecerá en tu pantalla de inicio.</li>
+              </ol>
+            </div>
+
+            <div style={{ backgroundColor: '#060D0A', border: '1px solid #1B3D2F', borderRadius: '12px', padding: '0.9rem' }}>
+              <h4 style={{ margin: '0 0 0.5rem 0', color: '#FFB300', fontSize: '0.85rem' }}>🤖 Instalación en Android (Google Chrome)</h4>
+              <ol style={{ margin: 0, paddingLeft: '1.2rem', color: '#8AA398', fontSize: '0.75rem', lineHeight: '1.5' }}>
+                <li>Toca el menú de los 3 puntos <strong>⋮</strong> arriba a la derecha.</li>
+                <li>Selecciona <strong>"Instalar aplicación"</strong> o <strong>"Agregar a pantalla principal"</strong>.</li>
+                <li>Confirma para utilizarla 100% offline con GPS en el campo.</li>
+              </ol>
+            </div>
+
+            <button onClick={() => setModalInstalar(false)} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#00E676', color: '#000', fontWeight: 'bold', border: 'none', borderRadius: '10px', marginTop: '1.2rem', cursor: 'pointer' }}>Entendido / Cerrar</button>
           </div>
         </div>
       )}
@@ -906,7 +888,7 @@ export default function App() {
         </div>
       )}
 
-      {/* 📌 MODAL COMPLETO: REGISTRAR AVISTAMIENTO EN CAMPO (7 PASOS EXACTOS) */}
+      {/* 📌 MODAL REGISTRAR AVISTAMIENTO (+) */}
       {modalRegistro && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999, padding: '1rem' }}>
           <div style={{ backgroundColor: '#09130F', borderRadius: '16px', border: '1px solid #1B3D2F', width: '100%', maxWidth: '580px', padding: '1.2rem', maxHeight: '92vh', overflowY: 'auto' }}>
@@ -995,7 +977,7 @@ export default function App() {
               )}
             </div>
 
-            {/* PASO 6: GRABACIÓN MEDIARECORDER */}
+            {/* PASO 6 */}
             <div style={{ marginBottom: '1.2rem' }}>
               <label style={{ display: 'block', fontSize: '0.8rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.5rem' }}>6. GRABACIÓN DEL CANTO / VOCALIZACIÓN (OPCIONAL)</label>
               <div style={{ backgroundColor: '#0D1E18', border: '1px border-dashed #1B3D2F', borderRadius: '10px', padding: '0.8rem' }}>
@@ -1088,7 +1070,7 @@ export default function App() {
         </div>
       )}
 
-      {/* 🧭 NAVEGACIÓN INFERIOR */}
+      {/* 🧭 NAVEGACIÓN INFERIOR (TABBAR) */}
       <nav style={{ position: 'fixed', bottom: 0, left: 0, right: 0, backgroundColor: '#0A120E', display: 'flex', borderTop: '1px solid #162B23', height: '65px', alignItems: 'center', zIndex: 1000 }}>
         <button onClick={() => setTab('mapa')} style={{ flex: 1, backgroundColor: 'transparent', border: 'none', color: tab === 'mapa' ? '#00FF88' : '#6A8A7D', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', cursor: 'pointer' }}>
           <span style={{ fontSize: '1.2rem' }}>🗺️</span>
