@@ -114,56 +114,56 @@ export default function App() {
   const [filtroEstadoUsuario, setFiltroEstadoUsuario] = useState('todos');
   const [estadoConexion, setEstadoConexion] = useState('online');
 
-  // === PERSISTENCIA LOCAL (v8) ===
+  // === PERSISTENCIA LOCAL (v9 - SESIÓN CERRADA POR DEFECTO) ===
   const [usuario, setUsuario] = useState(() => {
     try {
-      const sesionGuardada = localStorage.getItem('herpid_usuario_sesion_v8');
+      const sesionGuardada = localStorage.getItem('herpid_usuario_sesion_v9');
       if (sesionGuardada) return JSON.parse(sesionGuardada);
     } catch (e) {}
     // INICIA DESLOGUEADO PARA VER EL BOTÓN DE REGISTRO
     return { isLoggedIn: false, id: null, nombre: '', email: '', codigoPais: '+506', telefono: '', comunidad: '', rol: 'Usuario Regular', mostrarTelefono: false };
   });
 
-  useEffect(() => { localStorage.setItem('herpid_usuario_sesion_v8', JSON.stringify(usuario)); }, [usuario]);
+  useEffect(() => { localStorage.setItem('herpid_usuario_sesion_v9', JSON.stringify(usuario)); }, [usuario]);
 
-  // CUENTAS REGISTRADAS (Tu cuenta admin ya existe)
+  // CUENTAS REGISTRADAS (Tu cuenta admin ya existe en la base de datos para que puedas loguearte)
   const [cuentasRegistradas, setCuentasRegistradas] = useState(() => {
     try {
-      const guardadas = localStorage.getItem('herpid_cuentas_registradas_v8');
+      const guardadas = localStorage.getItem('herpid_cuentas_registradas_v9');
       if (guardadas) return JSON.parse(guardadas);
     } catch (e) {}
     return [
       { id: 1, nombre: 'Jorge Carvajal', email: 'jorge.carvajal@docente.edu', codigoPais: '+506', tel: '88889999', comunidad: 'Tarrazú', rol: 'Administrador Experto (Máximo Rango)', pass: 'admin123', estadoConexion: 'online', fechaIngreso: new Date().toISOString(), mostrarTelefono: false, estatusCuenta: 'activo', cuentaVerificada: true }
     ];
   });
-  useEffect(() => { localStorage.setItem('herpid_cuentas_registradas_v8', JSON.stringify(cuentasRegistradas)); }, [cuentasRegistradas]);
+  useEffect(() => { localStorage.setItem('herpid_cuentas_registradas_v9', JSON.stringify(cuentasRegistradas)); }, [cuentasRegistradas]);
 
   const [registros, setRegistros] = useState(() => {
     try {
-      const guardados = localStorage.getItem('herpid_registros_avistamientos_v8');
+      const guardados = localStorage.getItem('herpid_registros_avistamientos_v9');
       if (guardados) return JSON.parse(guardados);
     } catch (e) {}
     return [];
   });
-  useEffect(() => { localStorage.setItem('herpid_registros_avistamientos_v8', JSON.stringify(registros)); }, [registros]);
+  useEffect(() => { localStorage.setItem('herpid_registros_avistamientos_v9', JSON.stringify(registros)); }, [registros]);
 
   const [solicitudesExpertos, setSolicitudesExpertos] = useState(() => {
     try {
-      const guardadas = localStorage.getItem('herpid_solicitudes_expertos_v8');
+      const guardadas = localStorage.getItem('herpid_solicitudes_expertos_v9');
       if (guardadas) return JSON.parse(guardadas);
     } catch (e) {}
     return [];
   });
-  useEffect(() => { localStorage.setItem('herpid_solicitudes_expertos_v8', JSON.stringify(solicitudesExpertos)); }, [solicitudesExpertos]);
+  useEffect(() => { localStorage.setItem('herpid_solicitudes_expertos_v9', JSON.stringify(solicitudesExpertos)); }, [solicitudesExpertos]);
 
   const [pendientesOffline, setPendientesOffline] = useState(() => {
     try {
-      const guardados = localStorage.getItem('herpid_pendientes_offline_v8');
+      const guardados = localStorage.getItem('herpid_pendientes_offline_v9');
       if (guardados) return JSON.parse(guardados);
     } catch (e) {}
     return [];
   });
-  useEffect(() => { localStorage.setItem('herpid_pendientes_offline_v8', JSON.stringify(pendientesOffline)); }, [pendientesOffline]);
+  useEffect(() => { localStorage.setItem('herpid_pendientes_offline_v9', JSON.stringify(pendientesOffline)); }, [pendientesOffline]);
 
   const esExpertoOAdmin = usuario?.isLoggedIn && usuario?.rol && (usuario.rol.includes('Administrador') || usuario.rol.includes('Experto'));
   const esAdminAbsoluto = usuario?.isLoggedIn && usuario?.rol && usuario.rol.includes('Administrador');
@@ -306,12 +306,33 @@ export default function App() {
     const a = document.createElement('a'); a.href = window.URL.createObjectURL(new Blob([headers + rows], { type: 'text/csv' })); a.download = `HerpID_CostaRica_Avistamientos.csv`; a.click();
   };
 
+  const sincronizarPendientes = () => {
+    if (pendientesOffline.length === 0) return;
+    setRegistros([...pendientesOffline, ...registros]); setPendientesOffline([]); alert('¡Sincronización exitosa!'); setModalSincronizar(false);
+  };
+
+  const generarGuiaDinamica = () => {
+    const validados = registros.filter(r => r.estado === 'VALIDADO');
+    const agrupados = validados.reduce((acc, curr) => {
+      const key = curr.especie;
+      if (!acc[key]) { acc[key] = { ...curr, conteo: 1, lugaresSet: new Set([curr.ubicacion]) }; } 
+      else { acc[key].conteo += 1; acc[key].lugaresSet.add(curr.ubicacion); }
+      return acc;
+    }, {});
+    return Object.values(agrupados).filter(sp => {
+      const matchCat = filtroGuiaCategoria === 'todas' || sp.categoria.toLowerCase() === filtroGuiaCategoria.toLowerCase();
+      const matchLugar = sp.nombreComun.toLowerCase().includes(busquedaGuiaLugar.toLowerCase()) || sp.especie.toLowerCase().includes(busquedaGuiaLugar.toLowerCase()) || Array.from(sp.lugaresSet).some(l => l.toLowerCase().includes(busquedaGuiaLugar.toLowerCase()));
+      return matchCat && matchLugar;
+    });
+  };
+
+  const especiesGuiaDinamica = generarGuiaDinamica();
+
   // LÓGICA DE PRIVACIDAD DEL MAPA
   const registrosProcesadosMapa = registros.map(reg => {
     if (esExpertoOAdmin) {
       return { ...reg, coordsMapa: reg.coords, textoUbicacion: reg.ubicacion, textoHora: `${reg.horaRegistro} (Exacta)` };
     } else {
-      // Offset pseudo-aleatorio basado en el ID para desviar el pin ~3km
       const offsetLat = ((reg.id % 100) - 50) * 0.0006;
       const offsetLng = (((reg.id * 3) % 100) - 50) * 0.0006;
       return { 
@@ -328,38 +349,69 @@ export default function App() {
     return coincideBusqueda;
   });
 
-  const especiesGuiaDinamica = Object.values(registros.filter(r => r.estado === 'VALIDADO').reduce((acc, curr) => {
-    if (!acc[curr.especie]) { acc[curr.especie] = { ...curr, conteo: 1, lugaresSet: new Set([curr.ubicacion.split(',')[0]]) }; } 
-    else { acc[curr.especie].conteo += 1; acc[curr.especie].lugaresSet.add(curr.ubicacion.split(',')[0]); }
-    return acc;
-  }, {})).filter(sp => (filtroGuiaCategoria === 'todas' || sp.categoria.toLowerCase() === filtroGuiaCategoria.toLowerCase()) && (sp.nombreComun.toLowerCase().includes(busquedaGuiaLugar.toLowerCase()) || sp.especie.toLowerCase().includes(busquedaGuiaLugar.toLowerCase()) || Array.from(sp.lugaresSet).some(l => l.toLowerCase().includes(busquedaGuiaLugar.toLowerCase()))));return (
+  const registrosFiltradosGaleria = registros.filter((r) => {
+    const esVisiblePorRol = esExpertoOAdmin || r.estado === 'VALIDADO';
+    const coincideBusqueda = r.nombreComun.toLowerCase().includes(busquedaGaleria.toLowerCase()) || r.especie.toLowerCase().includes(busquedaGaleria.toLowerCase()) || r.ubicacion.toLowerCase().includes(busquedaGaleria.toLowerCase());
+    if (!esVisiblePorRol) return false;
+    if (filtroEspecie === 'anfibios') return r.categoria === 'ANFIBIO' && coincideBusqueda;
+    if (filtroEspecie === 'reptiles') return r.categoria === 'REPTIL' && coincideBusqueda;
+    return coincideBusqueda;
+  });
+
+  const usuariosOrdenadosYFiltrados = cuentasRegistradas
+    .filter(u => filtroEstadoUsuario === 'todos' || u.estadoConexion === filtroEstadoUsuario)
+    .sort((a, b) => new Date(b.fechaIngreso) - new Date(a.fechaIngreso));
+
+  const misReportes = registros.filter(r => r.reportante === usuario.nombre || r.contacto.includes(usuario.email));
+  const conteoModeracion = registros.filter(r => r.estado !== 'VALIDADO').length;
+  return (
     <div style={{ backgroundColor: '#070D0B', color: '#E0E6E3', minHeight: '100vh', fontFamily: 'system-ui, sans-serif', paddingBottom: '90px' }}>
       
-      {alertasFlotantes.map(alerta => (
-        <div key={alerta.id} style={{ position: 'fixed', top: '15px', right: '15px', zIndex: 11000, backgroundColor: alerta.tipo === 'alerta' ? '#FFB300' : '#00E676', color: '#000', padding: '12px 18px', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.5)', fontWeight: 'bold', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <span style={{ fontSize: '1.2rem' }}>{alerta.tipo === 'alerta' ? '🔔' : '✅'}</span>{alerta.mensaje}
-        </div>
-      ))}
+      {/* ALERTAS GLOBALES TOASTS */}
+      <div style={{ position: 'fixed', top: '15px', right: '15px', zIndex: 11000, display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        {alertasFlotantes.map(alerta => (
+          <div key={alerta.id} style={{ backgroundColor: alerta.tipo === 'alerta' ? '#FFB300' : '#00E676', color: '#000', padding: '12px 18px', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.5)', fontWeight: 'bold', fontSize: '0.85rem', animation: 'fadeIn 0.3s ease-in-out', border: `2px solid ${alerta.tipo === 'alerta' ? '#E65100' : '#00C853'}`, display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ fontSize: '1.2rem' }}>{alerta.tipo === 'alerta' ? '🔔' : '✅'}</span>
+            {alerta.mensaje}
+          </div>
+        ))}
+      </div>
+      <style>{`@keyframes fadeIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }`}</style>
 
+      {/* BARRA SUPERIOR HEADER */}
       <header style={{ backgroundColor: '#0B1512', padding: '0.9rem 1.4rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1.5px solid #162B23', flexWrap: 'wrap', gap: '0.8rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <div style={{ background: 'linear-gradient(135deg, #0D2E21 0%, #030A07 100%)', border: '2px solid #00FF88', borderRadius: '20px', width: '56px', height: '56px', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
-            <span style={{ fontSize: '1.9rem', zIndex: 2 }}>🐸</span>
-            <div style={{ position: 'absolute', bottom: '5px', right: '5px', backgroundColor: '#00FF88', width: '12px', height: '12px', borderRadius: '50%' }}></div>
+          <div style={{ background: 'linear-gradient(135deg, #0D2E21 0%, #030A07 100%)', border: '2px solid #00FF88', borderRadius: '20px', width: '56px', height: '56px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 20px rgba(0,230,118,0.4), inset 0 0 10px rgba(0,255,136,0.2)', position: 'relative', overflow: 'hidden' }}>
+            <div style={{ position: 'absolute', width: '42px', height: '42px', border: '1px solid rgba(0,255,136,0.3)', borderRadius: '50%' }}></div>
+            <div style={{ position: 'absolute', width: '28px', height: '28px', border: '1px dashed rgba(0,255,136,0.5)', borderRadius: '50%' }}></div>
+            <span style={{ fontSize: '1.9rem', filter: 'drop-shadow(0 3px 6px rgba(0,255,136,0.7))', zIndex: 2 }}>🐸</span>
+            <div style={{ position: 'absolute', bottom: '5px', right: '5px', backgroundColor: '#00FF88', width: '12px', height: '12px', borderRadius: '50%', border: '2px solid #070D0B', boxShadow: '0 0 8px #00FF88' }}></div>
           </div>
           <div>
-            <h1 style={{ margin: 0, fontSize: '1.3rem', color: '#00FF88', fontWeight: '900' }}>HerpID Costa Rica</h1>
-            <p style={{ margin: 0, fontSize: '0.75rem', color: '#7AA394', fontWeight: 'bold' }}>PLATAFORMA CIENTÍFICA</p>
+            <h1 style={{ margin: 0, fontSize: '1.3rem', color: '#00FF88', fontWeight: '900', letterSpacing: '0.5px' }}>HerpID Costa Rica</h1>
+            <p style={{ margin: 0, fontSize: '0.75rem', color: '#7AA394', letterSpacing: '1px', fontWeight: 'bold' }}>PLATAFORMA CIENTÍFICA DE HERPETOFAUNA</p>
           </div>
         </div>
+
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
-          <span style={{ backgroundColor: '#0D261C', color: getBadgetConexion(estadoConexion).color, padding: '0.3rem 0.7rem', borderRadius: '20px', fontSize: '0.75rem', border: '1px solid #164D36', fontWeight: 'bold' }}>{getBadgetConexion(estadoConexion).icon} {getBadgetConexion(estadoConexion).label}</span>
+          {pendientesOffline.length > 0 && (
+            <button onClick={() => setModalSincronizar(true)} style={{ backgroundColor: '#FFB300', color: '#000', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '20px', fontWeight: 'bold', fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              ⏳ {pendientesOffline.length} Offline
+            </button>
+          )}
+          <span style={{ backgroundColor: '#0D261C', color: getBadgetConexion(estadoConexion).color, padding: '0.3rem 0.7rem', borderRadius: '20px', fontSize: '0.75rem', border: '1px solid #164D36', fontWeight: 'bold' }}>
+            {getBadgetConexion(estadoConexion).icon} {getBadgetConexion(estadoConexion).label}
+          </span>
+          <button onClick={() => setModalChat(true)} style={{ backgroundColor: '#0A2E23', color: '#00FF88', border: '1px solid #16523B', padding: '0.4rem 0.8rem', borderRadius: '20px', fontWeight: 'bold', fontSize: '0.75rem', cursor: 'pointer' }}>
+            💬 Chat 1 a 1
+          </button>
           <button onClick={() => { setVistaPerfil(usuario?.isLoggedIn ? 'perfil' : 'login'); setModalPerfil(true); }} style={{ backgroundColor: usuario?.isLoggedIn ? '#00C853' : '#102E23', color: usuario?.isLoggedIn ? '#000' : '#00FF88', border: usuario?.isLoggedIn ? 'none' : '1px solid #00FF88', padding: '0.4rem 0.8rem', borderRadius: '20px', fontWeight: 'bold', fontSize: '0.75rem', cursor: 'pointer' }}>
-            {usuario?.isLoggedIn ? `${usuario.rol.includes('Admin') ? '🛡️' : '👤'} ${usuario.nombre}` : '🔑 INICIAR SESIÓN / REGISTRARSE'}
+            {usuario?.isLoggedIn ? `${usuario.rol.includes('Admin') ? '🛡️' : usuario.rol.includes('Experto') ? '🎓' : '👤'} ${usuario.nombre}` : '🔑 INICIAR SESIÓN / REGISTRARSE'}
           </button>
         </div>
       </header>
 
+      {/* MAPA INTERACTIVO */}
       {tab === 'mapa' && (
         <div style={{ position: 'relative' }}>
           {!esExpertoOAdmin && (
@@ -388,173 +440,55 @@ export default function App() {
         </div>
       )}
 
+      {/* GALERÍA */}
       {tab === 'galeria' && (
         <div style={{ padding: '1rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
             <h2 style={{ margin: '0', color: '#00FF88' }}>🌿 Registros Históricos</h2>
-            <button onClick={() => { if (!usuario?.isLoggedIn) setModalPerfil(true); else abrirModalRegistro(); }} style={{ backgroundColor: '#00C853', color: '#000', border: 'none', padding: '0.5rem 1rem', borderRadius: '20px', fontWeight: 'bold', cursor: 'pointer' }}>+ Registrar</button>
+            <button onClick={() => { if (!usuario?.isLoggedIn) { alert('Inicia sesión'); setVistaPerfil('login'); setModalPerfil(true); } else abrirModalRegistro(); }} style={{ backgroundColor: '#00C853', color: '#000', border: 'none', padding: '0.5rem 1rem', borderRadius: '20px', fontWeight: 'bold', cursor: 'pointer' }}>+ Registrar</button>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
-            {registros.filter(r => esExpertoOAdmin || r.estado === 'VALIDADO').map((reg) => (
-              <div key={reg.id} onClick={() => setRegistroSeleccionado(reg)} style={{ backgroundColor: '#0F1A16', borderRadius: '12px', overflow: 'hidden', border: '1px solid #1B2E27', cursor: 'pointer' }}>
-                <img src={reg.img} alt={reg.especie} style={{ width: '100%', height: '180px', objectFit: 'cover' }} />
-                <div style={{ padding: '0.9rem' }}>
-                  <h3 style={{ margin: '0.3rem 0', color: '#FFF' }}>{reg.nombreComun}</h3>
-                  <p style={{ margin: '0.2rem 0', fontSize: '0.8rem', color: '#8AA398' }}>📍 {esExpertoOAdmin ? reg.ubicacion : reg.ubicacion.split(',')[0]} • 🕒 {reg.horaRegistro.split('(')[0]}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {tab === 'guia' && (
-        <div style={{ padding: '1rem' }}>
-          <h2 style={{ margin: '0 0 1rem 0', color: '#00FF88' }}>📖 Guía Oficial de Especies Validadas</h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
-            {especiesGuiaDinamica.map((sp, idx) => (
-              <div key={idx} onClick={() => setRegistroSeleccionado(registros.find(r => r.id === sp.id))} style={{ backgroundColor: '#0F1A16', borderRadius: '12px', overflow: 'hidden', border: '1px solid #1B2E27', cursor: 'pointer' }}>
-                <img src={sp.img} alt={sp.especie} style={{ width: '100%', height: '180px', objectFit: 'cover' }} />
-                <div style={{ padding: '1rem' }}>
-                  <span style={{ fontSize: '0.75rem', backgroundColor: '#FFB300', color: '#000', fontWeight: 'bold', padding: '0.2rem 0.5rem', borderRadius: '12px' }}>🔥 {sp.conteo} Avistamiento(s)</span>
-                  <h3 style={{ margin: '0.6rem 0 0.2rem 0', fontSize: '1.2rem', color: '#FFF' }}>{sp.especie}</h3>
-                  <h4 style={{ margin: '0 0 0.6rem 0', fontSize: '0.9rem', color: '#00FF88' }}>{sp.nombreComun}</h4>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {tab === 'admin' && (
-        <div style={{ padding: '1.2rem' }}>
-          {!usuario?.isLoggedIn ? (
-            <div style={{ backgroundColor: '#09130F', borderRadius: '16px', border: '1px solid #1B3D2F', padding: '2rem', textAlign: 'center' }}>
-              <h2>🔒 Acceso Restringido</h2>
-              <button onClick={() => { setVistaPerfil('login'); setModalPerfil(true); }} style={{ backgroundColor: '#00E676', color: '#000', border: 'none', padding: '0.8rem 1.5rem', borderRadius: '20px', fontWeight: 'bold', cursor: 'pointer' }}>🔑 Iniciar Sesión Ahora</button>
-            </div>
+          {registrosFiltradosGaleria.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '2rem', color: '#8AA398' }}>La base de datos está limpia. Aún no hay avistamientos registrados.</div>
           ) : (
-            <div style={{ backgroundColor: '#09130F', borderRadius: '16px', border: '1px solid #1B3D2F', padding: '1.2rem' }}>
-              <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
-                <button onClick={() => setSubTabAdmin('consultas')} style={{ backgroundColor: subTabAdmin === 'consultas' ? '#0F2B20' : 'transparent', color: '#00FF88', border: '1px solid #00FF88', borderRadius: '15px', padding: '0.3rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>💬 Consultas</button>
-                {esAdminAbsoluto && <button onClick={() => setSubTabAdmin('usuarios')} style={{ backgroundColor: subTabAdmin === 'usuarios' ? '#0F2B20' : 'transparent', color: '#00FF88', border: '1px solid #00FF88', borderRadius: '15px', padding: '0.3rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>👥 Usuarios</button>}
-                {esExpertoOAdmin && <button onClick={() => setSubTabAdmin('solicitudes')} style={{ backgroundColor: subTabAdmin === 'solicitudes' ? '#0F2B20' : 'transparent', color: '#00FF88', border: '1px solid #00FF88', borderRadius: '15px', padding: '0.3rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>🎓 Solicitudes <GloboNotificacion count={solicitudesExpertos.length} /></button>}
-                {esExpertoOAdmin && <button onClick={() => setSubTabAdmin('moderacion')} style={{ backgroundColor: subTabAdmin === 'moderacion' ? '#0F2B20' : 'transparent', color: '#00FF88', border: '1px solid #00FF88', borderRadius: '15px', padding: '0.3rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>📋 Moderación <GloboNotificacion count={registros.filter(r => r.estado !== 'VALIDADO').length} /></button>}
-              </div>
-
-              {subTabAdmin === 'consultas' && (
-                <div style={{ backgroundColor: '#060D0A', padding: '0.9rem', borderRadius: '12px' }}>
-                  <button onClick={() => setModalChat(true)} style={{ backgroundColor: '#00E676', padding: '0.5rem', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>Abrir Chat General</button>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
+              {registrosFiltradosGaleria.map((reg) => (
+                <div key={reg.id} onClick={() => setRegistroSeleccionado(reg)} style={{ backgroundColor: '#0F1A16', borderRadius: '12px', overflow: 'hidden', border: '1px solid #1B2E27', cursor: 'pointer' }}>
+                  <img src={reg.img || (reg.fotos && reg.fotos[0])} alt={reg.especie} style={{ width: '100%', height: '180px', objectFit: 'cover' }} />
+                  <div style={{ padding: '0.9rem' }}>
+                    <h3 style={{ margin: '0.3rem 0', color: '#FFF' }}>{reg.nombreComun}</h3>
+                    <p style={{ margin: '0.2rem 0', fontSize: '0.8rem', color: '#8AA398' }}>📍 {esExpertoOAdmin ? reg.ubicacion : reg.ubicacion.split(',')[0]} • 🕒 {reg.horaRegistro.split('(')[0]}</p>
+                  </div>
                 </div>
-              )}
-              {subTabAdmin === 'usuarios' && esAdminAbsoluto && (
-                <table style={{ width: '100%', color: '#FFF' }}>
-                  <tbody>{cuentasRegistradas.map(u => <tr key={u.id}><td>{u.nombre}</td><td>{u.rol}</td></tr>)}</tbody>
-                </table>
-              )}
-              {subTabAdmin === 'solicitudes' && esExpertoOAdmin && (
-                <div>{solicitudesExpertos.map(s => <div key={s.id}>{s.nombre} <button onClick={() => setSolicitudesExpertos(solicitudesExpertos.filter(i => i.id !== s.id))}>Aprobar</button></div>)}</div>
-              )}
-              {subTabAdmin === 'moderacion' && esExpertoOAdmin && (
-                <div>{registros.filter(r => r.estado !== 'VALIDADO').map(r => <div key={r.id}>{r.nombreComun} <button onClick={() => setRegistroSeleccionado(r)}>Revisar</button></div>)}</div>
-              )}
-            </div>
-          )}
-        </div>
-      )}return (
-    <div style={{ backgroundColor: '#070D0B', color: '#E0E6E3', minHeight: '100vh', fontFamily: 'system-ui, sans-serif', paddingBottom: '90px' }}>
-      
-      {alertasFlotantes.map(alerta => (
-        <div key={alerta.id} style={{ position: 'fixed', top: '15px', right: '15px', zIndex: 11000, backgroundColor: alerta.tipo === 'alerta' ? '#FFB300' : '#00E676', color: '#000', padding: '12px 18px', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.5)', fontWeight: 'bold', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <span style={{ fontSize: '1.2rem' }}>{alerta.tipo === 'alerta' ? '🔔' : '✅'}</span>{alerta.mensaje}
-        </div>
-      ))}
-
-      <header style={{ backgroundColor: '#0B1512', padding: '0.9rem 1.4rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1.5px solid #162B23', flexWrap: 'wrap', gap: '0.8rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <div style={{ background: 'linear-gradient(135deg, #0D2E21 0%, #030A07 100%)', border: '2px solid #00FF88', borderRadius: '20px', width: '56px', height: '56px', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
-            <span style={{ fontSize: '1.9rem', zIndex: 2 }}>🐸</span>
-            <div style={{ position: 'absolute', bottom: '5px', right: '5px', backgroundColor: '#00FF88', width: '12px', height: '12px', borderRadius: '50%' }}></div>
-          </div>
-          <div>
-            <h1 style={{ margin: 0, fontSize: '1.3rem', color: '#00FF88', fontWeight: '900' }}>HerpID Costa Rica</h1>
-            <p style={{ margin: 0, fontSize: '0.75rem', color: '#7AA394', fontWeight: 'bold' }}>PLATAFORMA CIENTÍFICA</p>
-          </div>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
-          <span style={{ backgroundColor: '#0D261C', color: getBadgetConexion(estadoConexion).color, padding: '0.3rem 0.7rem', borderRadius: '20px', fontSize: '0.75rem', border: '1px solid #164D36', fontWeight: 'bold' }}>{getBadgetConexion(estadoConexion).icon} {getBadgetConexion(estadoConexion).label}</span>
-          <button onClick={() => { setVistaPerfil(usuario?.isLoggedIn ? 'perfil' : 'login'); setModalPerfil(true); }} style={{ backgroundColor: usuario?.isLoggedIn ? '#00C853' : '#102E23', color: usuario?.isLoggedIn ? '#000' : '#00FF88', border: usuario?.isLoggedIn ? 'none' : '1px solid #00FF88', padding: '0.4rem 0.8rem', borderRadius: '20px', fontWeight: 'bold', fontSize: '0.75rem', cursor: 'pointer' }}>
-            {usuario?.isLoggedIn ? `${usuario.rol.includes('Admin') ? '🛡️' : '👤'} ${usuario.nombre}` : '🔑 INICIAR SESIÓN / REGISTRARSE'}
-          </button>
-        </div>
-      </header>
-
-      {tab === 'mapa' && (
-        <div style={{ position: 'relative' }}>
-          {!esExpertoOAdmin && (
-            <div style={{ position: 'absolute', top: '15px', right: '15px', zIndex: 1000, backgroundColor: 'rgba(0,0,0,0.85)', padding: '0.8rem', borderRadius: '12px', border: '1px solid #FFB300', textAlign: 'center' }}>
-              <span style={{ fontSize: '1.2rem' }}>🛡️</span>
-              <p style={{ color: '#FFB300', fontSize: '0.75rem', margin: 0, fontWeight: 'bold' }}>GPS Oculto para Usuarios.</p>
-              <p style={{ color: '#8AA398', fontSize: '0.65rem', margin: 0 }}>Solo se muestra el cantón.</p>
-            </div>
-          )}
-          <div style={{ position: 'absolute', top: '15px', left: '15px', zIndex: 1000, display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-            <button onClick={() => setMapLayer('callejero')} style={{ backgroundColor: '#0F2B20', color: '#FFF', border: '1px solid #00FF88', borderRadius: '20px', padding: '6px 12px', fontSize: '0.75rem', cursor: 'pointer' }}>🗺️ Calles</button>
-            <button onClick={() => setMapLayer('satelite-hibrido')} style={{ backgroundColor: '#0F2B20', color: '#FFF', border: '1px solid #00FF88', borderRadius: '20px', padding: '6px 12px', fontSize: '0.75rem', cursor: 'pointer' }}>🛰️ Satélite</button>
-          </div>
-          <div style={{ height: 'calc(100vh - 180px)', width: '100%' }}>
-            <MapContainer center={[9.650565, -84.000236]} zoom={11} style={{ height: '100%', width: '100%' }}>
-              {mapLayer === 'callejero' ? <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" /> : <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}" />}
-              {registrosProcesadosMapa.map((reg) => (
-                <Marker key={reg.id} position={reg.coordsMapa} icon={crearIconoPersonalizado(reg.silueta, reg.estado)} eventHandlers={{ click: () => setRegistroSeleccionado(reg) }}>
-                  <Popup>
-                    <strong style={{ color: '#00C853' }}>{reg.nombreComun}</strong><br /><em>{reg.especie}</em><br />📍 {reg.textoUbicacion}<br />🕒 {reg.textoHora}<br />👤 Reporta: {reg.reportante}
-                  </Popup>
-                </Marker>
               ))}
-            </MapContainer>
-          </div>
+            </div>
+          )}
         </div>
       )}
 
-      {tab === 'galeria' && (
-        <div style={{ padding: '1rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
-            <h2 style={{ margin: '0', color: '#00FF88' }}>🌿 Registros Históricos</h2>
-            <button onClick={() => { if (!usuario?.isLoggedIn) setModalPerfil(true); else abrirModalRegistro(); }} style={{ backgroundColor: '#00C853', color: '#000', border: 'none', padding: '0.5rem 1rem', borderRadius: '20px', fontWeight: 'bold', cursor: 'pointer' }}>+ Registrar</button>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
-            {registros.filter(r => esExpertoOAdmin || r.estado === 'VALIDADO').map((reg) => (
-              <div key={reg.id} onClick={() => setRegistroSeleccionado(reg)} style={{ backgroundColor: '#0F1A16', borderRadius: '12px', overflow: 'hidden', border: '1px solid #1B2E27', cursor: 'pointer' }}>
-                <img src={reg.img} alt={reg.especie} style={{ width: '100%', height: '180px', objectFit: 'cover' }} />
-                <div style={{ padding: '0.9rem' }}>
-                  <h3 style={{ margin: '0.3rem 0', color: '#FFF' }}>{reg.nombreComun}</h3>
-                  <p style={{ margin: '0.2rem 0', fontSize: '0.8rem', color: '#8AA398' }}>📍 {esExpertoOAdmin ? reg.ubicacion : reg.ubicacion.split(',')[0]} • 🕒 {reg.horaRegistro.split('(')[0]}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
+      {/* GUÍA */}
       {tab === 'guia' && (
         <div style={{ padding: '1rem' }}>
           <h2 style={{ margin: '0 0 1rem 0', color: '#00FF88' }}>📖 Guía Oficial de Especies Validadas</h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
-            {especiesGuiaDinamica.map((sp, idx) => (
-              <div key={idx} onClick={() => setRegistroSeleccionado(registros.find(r => r.id === sp.id))} style={{ backgroundColor: '#0F1A16', borderRadius: '12px', overflow: 'hidden', border: '1px solid #1B2E27', cursor: 'pointer' }}>
-                <img src={sp.img} alt={sp.especie} style={{ width: '100%', height: '180px', objectFit: 'cover' }} />
-                <div style={{ padding: '1rem' }}>
-                  <span style={{ fontSize: '0.75rem', backgroundColor: '#FFB300', color: '#000', fontWeight: 'bold', padding: '0.2rem 0.5rem', borderRadius: '12px' }}>🔥 {sp.conteo} Avistamiento(s)</span>
-                  <h3 style={{ margin: '0.6rem 0 0.2rem 0', fontSize: '1.2rem', color: '#FFF' }}>{sp.especie}</h3>
-                  <h4 style={{ margin: '0 0 0.6rem 0', fontSize: '0.9rem', color: '#00FF88' }}>{sp.nombreComun}</h4>
+          {especiesGuiaDinamica.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '2rem', color: '#8AA398' }}>Aún no hay especies confirmadas en la guía.</div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
+              {especiesGuiaDinamica.map((sp, idx) => (
+                <div key={idx} onClick={() => setRegistroSeleccionado(registros.find(r => r.id === sp.id))} style={{ backgroundColor: '#0F1A16', borderRadius: '12px', overflow: 'hidden', border: '1px solid #1B2E27', cursor: 'pointer' }}>
+                  <img src={sp.img} alt={sp.especie} style={{ width: '100%', height: '180px', objectFit: 'cover' }} />
+                  <div style={{ padding: '1rem' }}>
+                    <span style={{ fontSize: '0.75rem', backgroundColor: '#FFB300', color: '#000', fontWeight: 'bold', padding: '0.2rem 0.5rem', borderRadius: '12px' }}>🔥 {sp.conteo} Avistamiento(s)</span>
+                    <h3 style={{ margin: '0.6rem 0 0.2rem 0', fontSize: '1.2rem', color: '#FFF' }}>{sp.especie}</h3>
+                    <h4 style={{ margin: '0 0 0.6rem 0', fontSize: '0.9rem', color: '#00FF88' }}>{sp.nombreComun}</h4>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
+      {/* ADMIN */}
       {tab === 'admin' && (
         <div style={{ padding: '1.2rem' }}>
           {!usuario?.isLoggedIn ? (
@@ -566,7 +500,7 @@ export default function App() {
             <div style={{ backgroundColor: '#09130F', borderRadius: '16px', border: '1px solid #1B3D2F', padding: '1.2rem' }}>
               <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
                 <button onClick={() => setSubTabAdmin('consultas')} style={{ backgroundColor: subTabAdmin === 'consultas' ? '#0F2B20' : 'transparent', color: '#00FF88', border: '1px solid #00FF88', borderRadius: '15px', padding: '0.3rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>💬 Consultas</button>
-                {esAdminAbsoluto && <button onClick={() => setSubTabAdmin('usuarios')} style={{ backgroundColor: subTabAdmin === 'usuarios' ? '#0F2B20' : 'transparent', color: '#00FF88', border: '1px solid #00FF88', borderRadius: '15px', padding: '0.3rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>👥 Usuarios</button>}
+                {esAdminAbsoluto && <button onClick={() => { setSubTabAdmin('usuarios'); setNuevosUsuariosCount(0); }} style={{ backgroundColor: subTabAdmin === 'usuarios' ? '#0F2B20' : 'transparent', color: '#00FF88', border: '1px solid #00FF88', borderRadius: '15px', padding: '0.3rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>👥 Usuarios <GloboNotificacion count={nuevosUsuariosCount} /></button>}
                 {esExpertoOAdmin && <button onClick={() => setSubTabAdmin('solicitudes')} style={{ backgroundColor: subTabAdmin === 'solicitudes' ? '#0F2B20' : 'transparent', color: '#00FF88', border: '1px solid #00FF88', borderRadius: '15px', padding: '0.3rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>🎓 Solicitudes <GloboNotificacion count={solicitudesExpertos.length} /></button>}
                 {esExpertoOAdmin && <button onClick={() => setSubTabAdmin('moderacion')} style={{ backgroundColor: subTabAdmin === 'moderacion' ? '#0F2B20' : 'transparent', color: '#00FF88', border: '1px solid #00FF88', borderRadius: '15px', padding: '0.3rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>📋 Moderación <GloboNotificacion count={registros.filter(r => r.estado !== 'VALIDADO').length} /></button>}
               </div>
@@ -582,15 +516,16 @@ export default function App() {
                 </table>
               )}
               {subTabAdmin === 'solicitudes' && esExpertoOAdmin && (
-                <div>{solicitudesExpertos.map(s => <div key={s.id}>{s.nombre} <button onClick={() => setSolicitudesExpertos(solicitudesExpertos.filter(i => i.id !== s.id))}>Aprobar</button></div>)}</div>
+                <div>{solicitudesExpertos.map(s => <div key={s.id} style={{ color: '#FFF' }}>{s.nombre} <button onClick={() => setSolicitudesExpertos(solicitudesExpertos.filter(i => i.id !== s.id))}>Aprobar</button></div>)}</div>
               )}
               {subTabAdmin === 'moderacion' && esExpertoOAdmin && (
-                <div>{registros.filter(r => r.estado !== 'VALIDADO').map(r => <div key={r.id}>{r.nombreComun} <button onClick={() => setRegistroSeleccionado(r)}>Revisar</button></div>)}</div>
+                <div>{registros.filter(r => r.estado !== 'VALIDADO').map(r => <div key={r.id} style={{ color: '#FFF' }}>{r.nombreComun} <button onClick={() => setRegistroSeleccionado(r)}>Revisar</button></div>)}</div>
               )}
             </div>
           )}
         </div>
-      )}{/* 🔍 MODAL DE EDICIÓN Y CURADURÍA */}
+      )}
+      {/* 🔍 MODAL DE EDICIÓN Y CURADURÍA */}
       {registroSeleccionado && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.88)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999, padding: '1rem' }}>
           <div style={{ backgroundColor: '#09130F', borderRadius: '16px', border: '1px solid #1B3D2F', width: '100%', maxWidth: '880px', maxHeight: '92vh', overflowY: 'auto', padding: '1.2rem' }}>
@@ -646,7 +581,7 @@ export default function App() {
                 <p style={{ color: '#00FF88', fontWeight: 'bold' }}>🛡️ ROL: {usuario.rol}</p>
                 <input type="text" value={usuario.nombre} onChange={(e) => setUsuario({ ...usuario, nombre: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', marginBottom: '0.8rem' }} />
                 <button onClick={() => { setModalPerfil(false); alert('Guardado'); }} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#00E676', border: 'none', borderRadius: '10px', fontWeight: 'bold' }}>Guardar Cambios</button>
-                <button onClick={() => { setUsuario({ isLoggedIn: false, rol: 'Usuario Regular' }); localStorage.removeItem('herpid_usuario_sesion_v8'); setVistaPerfil('login'); }} style={{ width: '100%', padding: '0.8rem', backgroundColor: 'transparent', color: '#FF5252', border: 'none', marginTop: '0.5rem', cursor: 'pointer' }}>🔴 Cerrar Sesión</button>
+                <button onClick={() => { setUsuario({ isLoggedIn: false, rol: 'Usuario Regular' }); localStorage.removeItem('herpid_usuario_sesion_v9'); setVistaPerfil('login'); }} style={{ width: '100%', padding: '0.8rem', backgroundColor: 'transparent', color: '#FF5252', border: 'none', marginTop: '0.5rem', cursor: 'pointer' }}>🔴 Cerrar Sesión</button>
               </div>
             )}
 
