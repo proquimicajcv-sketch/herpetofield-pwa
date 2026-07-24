@@ -86,6 +86,7 @@ export default function App() {
   const [modalChat, setModalChat] = useState(false);
   const [modalInstalar, setModalInstalar] = useState(false);
   const [modalSincronizar, setModalSincronizar] = useState(false);
+  const [modalGuiaEdit, setModalGuiaEdit] = useState(false);
   const [registroSeleccionado, setRegistroSeleccionado] = useState(null);
 
   // Autenticación y Perfil
@@ -196,10 +197,15 @@ export default function App() {
   const esExpertoOAdmin = usuario?.isLoggedIn && usuario?.rol && (usuario.rol.includes('Administrador') || usuario.rol.includes('Experto'));
   const esAdminAbsoluto = usuario?.isLoggedIn && usuario?.rol && usuario.rol.includes('Administrador');
 
-  // === EDICIÓN EXPERTA ===
+  // === EDICIÓN EXPERTA (Ahora con variables ecológicas) ===
+  const [modoEdicionExperto, setModoEdicionExperto] = useState(false);
   const [editCientifico, setEditCientifico] = useState('');
   const [editComun, setEditComun] = useState('');
   const [editNotasTaxo, setEditNotasTaxo] = useState('');
+  const [editUbicacion, setEditUbicacion] = useState('');
+  const [editTemp, setEditTemp] = useState('');
+  const [editAltitud, setEditAltitud] = useState('');
+  const [editMicrohabitat, setEditMicrohabitat] = useState('');
   const [editFotoPrincipal, setEditFotoPrincipal] = useState('');
 
   useEffect(() => {
@@ -208,8 +214,17 @@ export default function App() {
       setEditComun(registroSeleccionado.nombreComun !== 'Desconocido (Por determinar por experto)' ? registroSeleccionado.nombreComun : '');
       setEditNotasTaxo(registroSeleccionado.notasTaxo || '');
       setEditFotoPrincipal(registroSeleccionado.img || (registroSeleccionado.fotos && registroSeleccionado.fotos[0]) || '');
+      
+      setEditUbicacion(registroSeleccionado.ubicacion || '');
+      setEditTemp(registroSeleccionado.temp ? registroSeleccionado.temp.replace(' °C', '') : '');
+      setEditAltitud(registroSeleccionado.altitud ? registroSeleccionado.altitud.replace(' msnm', '') : '');
+      setEditMicrohabitat(registroSeleccionado.microhabitat || 'Vegetación / Finca Cafetalera');
+
+      setModoEdicionExperto(registroSeleccionado.estado !== 'VALIDADO' && esExpertoOAdmin);
+    } else {
+      setModoEdicionExperto(false);
     }
-  }, [registroSeleccionado]);
+  }, [registroSeleccionado, esExpertoOAdmin]);
 
   // === FORMULARIOS Y CHAT ===
   const [formLogin, setFormLogin] = useState({ emailOrTel: '', pass: '' });
@@ -693,7 +708,7 @@ export default function App() {
                     <button onClick={() => setSubTabAdmin('consultas')} style={{ backgroundColor: subTabAdmin === 'consultas' ? '#0F2B20' : 'transparent', color: subTabAdmin === 'consultas' ? '#00FF88' : '#8AA398', border: subTabAdmin === 'consultas' ? '1px solid #00FF88' : 'none', borderRadius: '15px', padding: '0.3rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>💬 Consultas 1 a 1</button>
                     {esExpertoOAdmin && <button onClick={() => setSubTabAdmin('metricas')} style={{ backgroundColor: subTabAdmin === 'metricas' ? '#0F2B20' : 'transparent', color: subTabAdmin === 'metricas' ? '#00FF88' : '#8AA398', border: subTabAdmin === 'metricas' ? '1px solid #00FF88' : 'none', borderRadius: '15px', padding: '0.3rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>📊 Métricas</button>}
                     {/* BOTON DE USUARIOS ESTRICTAMENTE GUARDADO POR esAdminAbsoluto */}
-                    {esAdminAbsoluto && <button onClick={() => setSubTabAdmin('usuarios')} style={{ backgroundColor: subTabAdmin === 'usuarios' ? '#0F2B20' : 'transparent', color: subTabAdmin === 'usuarios' ? '#00FF88' : '#8AA398', border: subTabAdmin === 'usuarios' ? '1px solid #00FF88' : 'none', borderRadius: '15px', padding: '0.3rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>👥 Usuarios (Mantenimiento)</button>}
+                    {esAdminAbsoluto && <button onClick={() => setSubTabAdmin('usuarios')} style={{ backgroundColor: subTabAdmin === 'usuarios' ? '#0F2B20' : 'transparent', color: subTabAdmin === 'usuarios' ? '#00FF88' : '#8AA398', border: subTabAdmin === 'usuarios' ? '1px solid #00FF88' : 'none', borderRadius: '15px', padding: '0.3rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>👥 Usuarios</button>}
                     {esExpertoOAdmin && <button onClick={() => setSubTabAdmin('solicitudes')} style={{ backgroundColor: subTabAdmin === 'solicitudes' ? '#0F2B20' : 'transparent', color: subTabAdmin === 'solicitudes' ? '#00FF88' : '#8AA398', border: subTabAdmin === 'solicitudes' ? '1px solid #00FF88' : 'none', borderRadius: '15px', padding: '0.3rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>🎓 Solicitudes Expertos</button>}
                     {esExpertoOAdmin && <button onClick={() => setSubTabAdmin('moderacion')} style={{ backgroundColor: subTabAdmin === 'moderacion' ? '#0F2B20' : 'transparent', color: subTabAdmin === 'moderacion' ? '#00FF88' : '#8AA398', border: subTabAdmin === 'moderacion' ? '1px solid #00FF88' : 'none', borderRadius: '15px', padding: '0.3rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>📋 Moderación</button>}
                   </div>
@@ -767,7 +782,7 @@ export default function App() {
                             <th style={{ padding: '0.6rem' }}>NOMBRE DEL USUARIO</th>
                             <th style={{ padding: '0.6rem' }}>CONTACTO DIRECTO</th>
                             <th style={{ padding: '0.6rem' }}>ROL ASIGNADO</th>
-                            <th style={{ padding: '0.6rem' }}>ACCIÓN DE BANEADO</th>
+                            <th style={{ padding: '0.6rem' }}>ACCIÓN</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -853,7 +868,7 @@ export default function App() {
         </div>
       )}
 
-      {/* 🔍 MODAL: FICHA DEL AVISTAMIENTO & CURADURÍA (Ocultamiento Inteligente del Panel de Edición) */}
+      {/* 🔍 MODAL: FICHA DEL AVISTAMIENTO & CURADURÍA CON MODO DE EDICIÓN PROFUNDO PARA ADMINS */}
       {registroSeleccionado && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.88)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999, padding: '1rem' }}>
           <div style={{ backgroundColor: '#09130F', borderRadius: '16px', border: '1px solid #1B3D2F', width: '100%', maxWidth: '880px', maxHeight: '92vh', overflowY: 'auto', padding: '1.2rem' }}>
@@ -862,7 +877,7 @@ export default function App() {
               <h3 style={{ margin: 0, color: '#FFF', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 🔍 Ficha del Avistamiento & Curaduría
               </h3>
-              <button onClick={() => setRegistroSeleccionado(null)} style={{ backgroundColor: 'transparent', border: 'none', color: '#FFF', fontSize: '1.3rem', cursor: 'pointer' }}>✕</button>
+              <button onClick={() => { setRegistroSeleccionado(null); setModoEdicionExperto(false); }} style={{ backgroundColor: 'transparent', border: 'none', color: '#FFF', fontSize: '1.3rem', cursor: 'pointer' }}>✕</button>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.2rem' }}>
@@ -879,8 +894,8 @@ export default function App() {
                       {registroSeleccionado.fotos.map((fUrl, idx) => (
                         <div 
                           key={idx} 
-                          onClick={() => setEditFotoPrincipal(fUrl)}
-                          style={{ width: '60px', height: '60px', borderRadius: '8px', overflow: 'hidden', border: editFotoPrincipal === fUrl ? '2px solid #00E676' : '1px solid #1B3D2F', cursor: 'pointer', opacity: editFotoPrincipal === fUrl ? 1 : 0.6 }}
+                          onClick={() => { if(esExpertoOAdmin) setEditFotoPrincipal(fUrl); }}
+                          style={{ width: '60px', height: '60px', borderRadius: '8px', overflow: 'hidden', border: editFotoPrincipal === fUrl ? '2px solid #00E676' : '1px solid #1B3D2F', cursor: esExpertoOAdmin ? 'pointer' : 'default', opacity: editFotoPrincipal === fUrl ? 1 : 0.6 }}
                         >
                           <img src={fUrl} alt={`Evidencia ${idx+1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                         </div>
@@ -904,7 +919,7 @@ export default function App() {
                 </button>
               </div>
 
-              {/* COLUMNA DERECHA: ESTADO, VALIDACIÓN Y PANEL DE EDICIÓN (OCULTAMIENTO INTELIGENTE) */}
+              {/* COLUMNA DERECHA: ESTADO, VALIDACIÓN Y PANEL DE EDICIÓN EXPANSIBLE */}
               <div>
                 <span style={{ fontSize: '0.75rem', color: '#00FF88', fontWeight: 'bold' }}>
                   🐸 {registroSeleccionado.categoria} • <span style={{ color: registroSeleccionado.estado === 'VALIDADO' ? '#00E676' : '#FFB300' }}>{registroSeleccionado.estado}</span>
@@ -913,74 +928,108 @@ export default function App() {
                 <h2 style={{ margin: '0.2rem 0', color: '#FFF', fontSize: '1.2rem' }}>{registroSeleccionado.nombreComun}</h2>
                 <h4 style={{ margin: '0 0 0.8rem 0', color: '#00C853', fontStyle: 'italic', fontSize: '0.9rem', fontWeight: 'normal' }}>{registroSeleccionado.especie}</h4>
 
-                {/* Si la ficha YA fue validada, mostramos esta placa limpia y NO mostramos el formulario de edición */}
-                {registroSeleccionado.editadoPor && (
-                  <div style={{ backgroundColor: '#0A1E16', border: '1px solid #00FF88', color: '#00FF88', padding: '0.8rem', borderRadius: '8px', fontSize: '0.85rem', marginBottom: '1rem', textAlign: 'center' }}>
-                    ✅ <strong>AUTORIZADO Y VALIDADO POR:</strong><br />
-                    <span style={{ color: '#FFF', marginTop: '0.3rem', display: 'block' }}>{registroSeleccionado.editadoPor}</span>
-                    <span style={{ color: '#8AA398', fontSize: '0.75rem' }}>📅 {registroSeleccionado.fechaEdicion}</span>
-                  </div>
+                {/* VISTA NORMAL (NO MODO EDICIÓN) */}
+                {registroSeleccionado.estado === 'VALIDADO' && !modoEdicionExperto && (
+                  <>
+                    {registroSeleccionado.editadoPor && (
+                      <div style={{ backgroundColor: '#0A1E16', border: '1px solid #00FF88', color: '#00FF88', padding: '0.8rem', borderRadius: '8px', fontSize: '0.85rem', marginBottom: '1rem', textAlign: 'center' }}>
+                        ✅ <strong>AUTORIZADO Y VALIDADO POR:</strong><br />
+                        <span style={{ color: '#FFF', marginTop: '0.3rem', display: 'block' }}>{registroSeleccionado.editadoPor}</span>
+                        <span style={{ color: '#8AA398', fontSize: '0.75rem' }}>📅 {registroSeleccionado.fechaEdicion}</span>
+                      </div>
+                    )}
+
+                    {registroSeleccionado.notasTaxo && (
+                      <div style={{ backgroundColor: '#050A08', border: '1px solid #1B3D2F', borderRadius: '12px', padding: '0.9rem', marginBottom: '1rem' }}>
+                        <strong style={{ color: '#00FF88', fontSize: '0.85rem' }}>📝 Notas Taxonómicas del Experto:</strong>
+                        <p style={{ margin: '0.4rem 0 0 0', color: '#A0C2B4', fontSize: '0.8rem', lineHeight: '1.4' }}>{registroSeleccionado.notasTaxo}</p>
+                      </div>
+                    )}
+
+                    {/* BOTÓN PARA ABRIR LA EDICIÓN A PESAR DE ESTAR VALIDADO (SOLO ADMINS/EXPERTOS) */}
+                    {esExpertoOAdmin && (
+                      <button onClick={() => setModoEdicionExperto(true)} style={{ width: '100%', padding: '0.7rem', backgroundColor: '#1A1807', color: '#FFB300', border: '1px solid #5C4D0A', borderRadius: '8px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 'bold' }}>
+                        ✏️ Editar / Corregir Ficha
+                      </button>
+                    )}
+                  </>
                 )}
 
-                {/* Si NO está validado, Y eres Admin/Experto, mostramos el Panel de Diagnóstico */}
-                {registroSeleccionado.estado !== 'VALIDADO' && esExpertoOAdmin && (
+                {/* MODO EDICIÓN EXPERTO (Para corregir ubicación, taxonomía, altitud, etc) */}
+                {(modoEdicionExperto && esExpertoOAdmin) && (
                   <div style={{ backgroundColor: '#1A1807', border: '1px solid #5C4D0A', borderRadius: '12px', padding: '0.9rem' }}>
-                    <h4 style={{ margin: '0 0 0.6rem 0', color: '#FFB300', fontSize: '0.85rem' }}>✏️ PANEL DE DIAGNÓSTICO EXPERTO</h4>
+                    <h4 style={{ margin: '0 0 0.6rem 0', color: '#FFB300', fontSize: '0.85rem' }}>✏️ PANEL DE EDICIÓN Y DIAGNÓSTICO EXPERTO</h4>
                     
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-                      <div>
-                        <label style={{ display: 'block', fontSize: '0.7rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.2rem' }}>NOMBRE CIENTÍFICO CONFIRMADO:</label>
-                        <input type="text" placeholder="Ej. Agalychnis annae" value={editCientifico} onChange={(e) => setEditCientifico(e.target.value)} style={{ width: '100%', padding: '0.5rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '6px', fontSize: '0.8rem' }} />
+                      
+                      {/* BLOQUE TAXONÓMICO */}
+                      <div><label style={{ display: 'block', fontSize: '0.7rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.2rem' }}>NOMBRE CIENTÍFICO CONFIRMADO:</label><input type="text" value={editCientifico} onChange={(e) => setEditCientifico(e.target.value)} style={{ width: '100%', padding: '0.5rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '6px', fontSize: '0.8rem' }} /></div>
+                      <div><label style={{ display: 'block', fontSize: '0.7rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.2rem' }}>NOMBRE COMÚN CONFIRMADO:</label><input type="text" value={editComun} onChange={(e) => setEditComun(e.target.value)} style={{ width: '100%', padding: '0.5rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '6px', fontSize: '0.8rem' }} /></div>
+                      
+                      {/* BLOQUE ECOLÓGICO / CORRECCIONES DE CAMPO */}
+                      <div><label style={{ display: 'block', fontSize: '0.7rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.2rem' }}>UBICACIÓN / COMUNIDAD:</label><input type="text" value={editUbicacion} onChange={(e) => setEditUbicacion(e.target.value)} style={{ width: '100%', padding: '0.5rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '6px', fontSize: '0.8rem' }} /></div>
+                      
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <div style={{ flex: 1 }}><label style={{ display: 'block', fontSize: '0.7rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.2rem' }}>TEMPERATURA (°C):</label><input type="text" value={editTemp} onChange={(e) => setEditTemp(e.target.value)} style={{ width: '100%', padding: '0.5rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '6px', fontSize: '0.8rem' }} /></div>
+                        <div style={{ flex: 1 }}><label style={{ display: 'block', fontSize: '0.7rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.2rem' }}>ALTITUD (msnm):</label><input type="text" value={editAltitud} onChange={(e) => setEditAltitud(e.target.value)} style={{ width: '100%', padding: '0.5rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '6px', fontSize: '0.8rem' }} /></div>
                       </div>
 
                       <div>
-                        <label style={{ display: 'block', fontSize: '0.7rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.2rem' }}>NOMBRE COMÚN CONFIRMADO:</label>
-                        <input type="text" placeholder="Ej. Rana verde de palmera" value={editComun} onChange={(e) => setEditComun(e.target.value)} style={{ width: '100%', padding: '0.5rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '6px', fontSize: '0.8rem' }} />
+                        <label style={{ display: 'block', fontSize: '0.7rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.2rem' }}>MICROHÁBITAT:</label>
+                        <select value={editMicrohabitat} onChange={(e) => setEditMicrohabitat(e.target.value)} style={{ width: '100%', padding: '0.5rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '6px', fontSize: '0.8rem' }}>
+                          <option value="Vegetación / Finca Cafetalera">☕ Vegetación / Finca Cafetalera</option>
+                          <option value="Hojarasca de bosque de roble">🍃 Hojarasca de bosque de roble</option>
+                          <option value="Quebrada / Río / Estanque">🌊 Quebrada / Río / Estanque</option>
+                          <option value="Tronco en descomposición / Arbusto">🪵 Tronco en descomposición / Arbusto</option>
+                          <option value="Sobre / bajo Roca">🪨 Sobre / bajo Roca</option>
+                          <option value="Entorno antrópico / Infraestructura">🏠 Entorno antrópico / Infraestructura</option>
+                        </select>
                       </div>
 
-                      <div>
-                        <label style={{ display: 'block', fontSize: '0.7rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.2rem' }}>NOTAS DE DIAGNÓSTICO TAXONÓMICO:</label>
-                        <textarea rows="2" placeholder="Detalla los caracteres o patrones de color..." value={editNotasTaxo} onChange={(e) => setEditNotasTaxo(e.target.value)} style={{ width: '100%', padding: '0.5rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '6px', fontSize: '0.8rem' }} />
+                      <div><label style={{ display: 'block', fontSize: '0.7rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.2rem' }}>NOTAS DE DIAGNÓSTICO TAXONÓMICO:</label><textarea rows="2" value={editNotasTaxo} onChange={(e) => setEditNotasTaxo(e.target.value)} style={{ width: '100%', padding: '0.5rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '6px', fontSize: '0.8rem' }} /></div>
+
+                      <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.4rem' }}>
+                        <button 
+                          onClick={() => {
+                            const fechaHoy = new Date().toLocaleString();
+                            const nombreEditor = `${usuario.nombre} (${usuario.rol})`;
+
+                            const registrosActualizados = registros.map(r => {
+                              if (r.id === registroSeleccionado.id) {
+                                return {
+                                  ...r,
+                                  especie: editCientifico || r.especie,
+                                  nombreComun: editComun || r.nombreComun,
+                                  notasTaxo: editNotasTaxo,
+                                  img: editFotoPrincipal || r.img,
+                                  ubicacion: editUbicacion || r.ubicacion,
+                                  temp: editTemp ? `${editTemp} °C` : r.temp,
+                                  altitud: editAltitud ? `${editAltitud} msnm` : r.altitud,
+                                  microhabitat: editMicrohabitat || r.microhabitat,
+                                  estado: 'VALIDADO',
+                                  editadoPor: nombreEditor,
+                                  fechaEdicion: fechaHoy
+                                };
+                              }
+                              return r;
+                            });
+
+                            setRegistros(registrosActualizados);
+                            alert(`¡Ficha actualizada y validada con éxito por ${nombreEditor}!`);
+                            setRegistroSeleccionado(null);
+                            setModoEdicionExperto(false);
+                          }} 
+                          style={{ flex: 1, padding: '0.7rem', backgroundColor: '#00E676', color: '#000', fontWeight: 'bold', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '0.85rem' }}
+                        >
+                          ✔ Guardar y Publicar
+                        </button>
+
+                        {registroSeleccionado.estado === 'VALIDADO' && (
+                          <button onClick={() => setModoEdicionExperto(false)} style={{ padding: '0.7rem', backgroundColor: 'transparent', color: '#FFF', border: '1px solid #FFF', borderRadius: '8px', cursor: 'pointer', fontSize: '0.85rem' }}>Cancelar</button>
+                        )}
                       </div>
 
-                      <button 
-                        onClick={() => {
-                          const fechaHoy = new Date().toLocaleString();
-                          const nombreEditor = `${usuario.nombre} (${usuario.rol})`;
-
-                          const registrosActualizados = registros.map(r => {
-                            if (r.id === registroSeleccionado.id) {
-                              return {
-                                ...r,
-                                especie: editCientifico || r.especie,
-                                nombreComun: editComun || r.nombreComun,
-                                notasTaxo: editNotasTaxo,
-                                img: editFotoPrincipal || r.img,
-                                estado: 'VALIDADO',
-                                editadoPor: nombreEditor,
-                                fechaEdicion: fechaHoy
-                              };
-                            }
-                            return r;
-                          });
-
-                          setRegistros(registrosActualizados);
-                          alert(`¡Ficha curada, validada y publicada con éxito por ${nombreEditor}!`);
-                          setRegistroSeleccionado(null);
-                        }} 
-                        style={{ width: '100%', padding: '0.7rem', backgroundColor: '#00E676', color: '#000', fontWeight: 'bold', border: 'none', borderRadius: '8px', cursor: 'pointer', marginTop: '0.4rem', fontSize: '0.85rem' }}
-                      >
-                        ✔ Aprobar, Guardar Cambios y Publicar
-                      </button>
                     </div>
-                  </div>
-                )}
-
-                {/* Si ya está validado, mostramos las notas taxonómicas que dejó el experto de forma elegante */}
-                {registroSeleccionado.estado === 'VALIDADO' && registroSeleccionado.notasTaxo && (
-                  <div style={{ backgroundColor: '#050A08', border: '1px solid #1B3D2F', borderRadius: '12px', padding: '0.9rem', marginTop: '1rem' }}>
-                    <strong style={{ color: '#00FF88', fontSize: '0.85rem' }}>📝 Notas Taxonómicas del Experto:</strong>
-                    <p style={{ margin: '0.4rem 0 0 0', color: '#A0C2B4', fontSize: '0.8rem', lineHeight: '1.4' }}>{registroSeleccionado.notasTaxo}</p>
                   </div>
                 )}
 
