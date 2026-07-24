@@ -79,6 +79,7 @@ export default function App() {
   const [modalChat, setModalChat] = useState(false);
   const [modalInstalar, setModalInstalar] = useState(false);
   const [modalSincronizar, setModalSincronizar] = useState(false);
+  const [modalGuiaEdit, setModalGuiaEdit] = useState(false);
   const [registroSeleccionado, setRegistroSeleccionado] = useState(null);
 
   // Vistas de Autenticación ('perfil', 'login', 'registro', 'recuperar')
@@ -94,7 +95,25 @@ export default function App() {
   // Estado de Cobertura Red
   const [estadoConexion, setEstadoConexion] = useState('online');
 
-  // REGISTROS PENDIENTES DE SINCRONIZACIÓN OFFLINE (LocalStorage Persistente)
+  // 🔒 SESIÓN DE USUARIO PERSISTENTE CON LOCALSTORAGE
+  const [usuario, setUsuario] = useState(() => {
+    const sesionGuardada = localStorage.getItem('herpid_usuario_sesion');
+    return sesionGuardada ? JSON.parse(sesionGuardada) : {
+      isLoggedIn: false,
+      id: null,
+      nombre: '',
+      email: '',
+      telefono: '',
+      comunidad: '',
+      rol: 'Usuario Regular'
+    };
+  });
+
+  useEffect(() => {
+    localStorage.setItem('herpid_usuario_sesion', JSON.stringify(usuario));
+  }, [usuario]);
+
+  // REGISTROS PENDIENTES DE SINCRONIZACIÓN OFFLINE
   const [pendientesOffline, setPendientesOffline] = useState(() => {
     const guardados = localStorage.getItem('herpid_pendientes_offline');
     return guardados ? JSON.parse(guardados) : [];
@@ -123,26 +142,15 @@ export default function App() {
     }
   };
 
-  // Base de datos de cuentas registradas con sus contraseñas
+  // Cuentas registradas
   const [cuentasRegistradas, setCuentasRegistradas] = useState([
     { id: 1, nombre: 'Jorge Carvajal', email: 'jorge.carvajal@docente.edu', tel: '+506 8888-9999', comunidad: 'Tarrazú (San Marcos, San Lorenzo, Carlos)', rol: 'Administrador Experto (Máximo Rango)', pass: 'admin123', estadoConexion: 'online' },
     { id: 2, nombre: 'Dra. Sofía Herpetóloga', email: 'sofia.herpeto@ucr.ac.cr', tel: '+506 8765-4321', comunidad: 'Dota (Santa María, Copey, Jardín)', rol: 'Experto Herpetólogo', pass: 'sofia123', estadoConexion: 'online' },
     { id: 3, nombre: 'Carlos Picado', email: 'cpicado@comunidad.cr', tel: '+506 8555-1234', comunidad: 'León Cortés (San Pablo, San Rafael)', rol: 'Usuario Regular', pass: 'carlos123', estadoConexion: 'offline' }
   ]);
 
-  // USUARIO ACTIVO (Sin sesión activa por defecto al abrir)
-  const [usuario, setUsuario] = useState({
-    isLoggedIn: false,
-    id: null,
-    nombre: '',
-    email: '',
-    telefono: '',
-    comunidad: '',
-    rol: 'Usuario Regular'
-  });
-
-  // Permiso de edición taxonómica y moderación (Solo si la cuenta activa ya fue aprobada como Admin o Experto)
   const esExpertoOAdmin = usuario.isLoggedIn && (usuario.rol.includes('Administrador') || usuario.rol.includes('Experto'));
+  const esAdminAbsoluto = usuario.isLoggedIn && usuario.rol.includes('Administrador');
 
   // Formulario temporal de edición en Ficha
   const [editCientifico, setEditCientifico] = useState('');
@@ -162,7 +170,7 @@ export default function App() {
   const [formReg, setFormReg] = useState({ nombre: '', email: '', telefono: '', comunidad: 'Tarrazú (San Marcos, San Lorenzo, Carlos)', pass: '', confirmPass: '', solicitaExperto: false });
   const [formRecuperar, setFormRecuperar] = useState({ contacto: '' });
 
-  // Solicitudes pendientes de biólogos/expertos para revisión de Admin
+  // Solicitudes pendientes de biólogos
   const [solicitudesExpertos, setSolicitudesExpertos] = useState([
     { id: 101, userId: 3, nombre: 'MSc. Juan Abarca', email: 'jabarca@herpeto.org', tel: '+506 8333-4444', atencedentes: 'Biólogo especialista en Isthmohyla nacientes.', fecha: '24/07/2026' }
   ]);
@@ -191,7 +199,7 @@ export default function App() {
   const [notas, setNotas] = useState('');
   const [fotoPreview, setFotoPreview] = useState('https://images.unsplash.com/photo-1590005354167-6da97870c757?auto=format&fit=crop&w=600&q=80');
 
-  // Grabador Audio
+  // Grabador
   const [grabandoAudio, setGrabandoAudio] = useState(false);
   const [tiempoGrabacion, setTiempoGrabacion] = useState(0);
   const [audioURL, setAudioURL] = useState(null);
@@ -298,7 +306,7 @@ export default function App() {
     setModalSincronizar(false);
   };
 
-  // Registros de la base de datos
+  // Registros
   const [registros, setRegistros] = useState([
     {
       id: 1,
@@ -360,8 +368,10 @@ export default function App() {
     }
   ]);
 
-  const especiesGuia = [
+  // GUÍA DE ESPECIES EDITABLE
+  const [especiesGuia, setEspeciesGuia] = useState([
     {
+      id: 1,
       nombre: 'Agalychnis annae',
       comun: 'Rana Verde de Palmera',
       tipo: 'ANFIBIO • IUCN: EN (En Peligro)',
@@ -370,6 +380,7 @@ export default function App() {
       img: 'https://images.unsplash.com/photo-1548802673-380ab8ebc7b7?auto=format&fit=crop&w=600&q=80'
     },
     {
+      id: 2,
       nombre: 'Cerrophidion godmani',
       comun: 'Toboba de Montaña',
       tipo: 'REPTIL • IUCN: LC (Preocupación Menor)',
@@ -377,7 +388,38 @@ export default function App() {
       desc: 'Serpiente venenosa pequeña de hábitos terrestres.',
       img: 'https://images.unsplash.com/photo-1531386151447-fd76ad50012f?auto=format&fit=crop&w=600&q=80'
     }
-  ];
+  ]);
+
+  // Formulario temporal para crear/editar especie en la Guía
+  const [especieGuiaEditando, setEspecieGuiaEditando] = useState(null);
+  const [formGuia, setFormGuia] = useState({ nombre: '', comun: '', tipo: 'ANFIBIO • IUCN: LC', habitat: '', desc: '', img: '' });
+
+  const abrirEdicionGuia = (item) => {
+    if (item) {
+      setEspecieGuiaEditando(item);
+      setFormGuia({ nombre: item.nombre, comun: item.comun, tipo: item.tipo, habitat: item.habitat, desc: item.desc, img: item.img });
+    } else {
+      setEspecieGuiaEditando(null);
+      setFormGuia({ nombre: '', comun: '', tipo: 'ANFIBIO • IUCN: Preocupación Menor', habitat: '', desc: '', img: 'https://images.unsplash.com/photo-1590005354167-6da97870c757?auto=format&fit=crop&w=600&q=80' });
+    }
+    setModalGuiaEdit(true);
+  };
+
+  const guardarEspecieGuia = () => {
+    if (!formGuia.nombre || !formGuia.comun) {
+      alert('Nombre científico y nombre común son obligatorios.');
+      return;
+    }
+
+    if (especieGuiaEditando) {
+      setEspeciesGuia(especiesGuia.map(sp => sp.id === especieGuiaEditando.id ? { ...sp, ...formGuia } : sp));
+      alert('¡Ficha de la Guía actualizada con éxito!');
+    } else {
+      setEspeciesGuia([...especiesGuia, { id: Date.now(), ...formGuia }]);
+      alert('¡Nueva especie agregada a la Guía!');
+    }
+    setModalGuiaEdit(false);
+  };
 
   const registrosFiltrados = registros.filter((r) => {
     const coincideBusqueda = r.nombreComun.toLowerCase().includes(busquedaGaleria.toLowerCase()) || r.especie.toLowerCase().includes(busquedaGaleria.toLowerCase()) || r.ubicacion.toLowerCase().includes(busquedaGaleria.toLowerCase());
@@ -552,18 +594,37 @@ export default function App() {
         </div>
       )}
 
-      {/* 📖 GUÍA */}
+      {/* 📖 GUÍA CON OPCIÓN DE EDICIÓN EXCLUSIVA PARA ADMIN */}
       {tab === 'guia' && (
         <div style={{ padding: '1rem' }}>
-          <h2 style={{ margin: 0, fontSize: '1.2rem', color: '#00FF88' }}>📖 Guía de Especies Comunes de Los Santos</h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '1rem', marginTop: '1rem' }}>
-            {especiesGuia.map((sp, i) => (
-              <div key={i} style={{ backgroundColor: '#0F1A16', borderRadius: '12px', overflow: 'hidden', border: '1px solid #1B2E27' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.8rem' }}>
+            <h2 style={{ margin: 0, fontSize: '1.2rem', color: '#00FF88' }}>📖 Guía de Especies Comunes de Los Santos</h2>
+            {esAdminAbsoluto && (
+              <button onClick={() => abrirEdicionGuia(null)} style={{ backgroundColor: '#FFB300', color: '#000', border: 'none', padding: '0.5rem 1rem', borderRadius: '20px', fontWeight: 'bold', fontSize: '0.8rem', cursor: 'pointer' }}>
+                ➕ Agregar Nueva Especie a la Guía
+              </button>
+            )}
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem', marginTop: '1rem' }}>
+            {especiesGuia.map((sp) => (
+              <div key={sp.id} style={{ backgroundColor: '#0F1A16', borderRadius: '12px', overflow: 'hidden', border: '1px solid #1B2E27', display: 'flex', flexDirection: 'column' }}>
                 <img src={sp.img} alt={sp.nombre} style={{ width: '100%', height: '160px', objectFit: 'cover' }} />
-                <div style={{ padding: '0.9rem' }}>
-                  <span style={{ fontSize: '0.7rem', color: '#00FF88', fontWeight: 'bold' }}>{sp.tipo}</span>
-                  <h3 style={{ margin: '0.2rem 0', fontSize: '1.1rem', fontStyle: 'italic', color: '#FFF' }}>{sp.nombre}</h3>
-                  <p style={{ margin: '0.3rem 0', fontSize: '0.75rem', color: '#A0C2B4' }}>🏡 {sp.habitat}</p>
+                <div style={{ padding: '0.9rem', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                  <div>
+                    <span style={{ fontSize: '0.7rem', color: '#00FF88', fontWeight: 'bold' }}>{sp.tipo}</span>
+                    <h3 style={{ margin: '0.2rem 0', fontSize: '1.1rem', fontStyle: 'italic', color: '#FFF' }}>{sp.nombre}</h3>
+                    <h4 style={{ margin: '0 0 0.4rem 0', fontSize: '0.85rem', color: '#FFB300', fontWeight: 'bold' }}>{sp.comun}</h4>
+                    <p style={{ margin: '0.3rem 0', fontSize: '0.75rem', color: '#A0C2B4' }}>🏡 {sp.habitat}</p>
+                    <p style={{ margin: '0.3rem 0', fontSize: '0.75rem', color: '#8AA398' }}>{sp.desc}</p>
+                  </div>
+
+                  {/* BOTÓN EDICIÓN SOLO VISIBLE PARA ADMIN */}
+                  {esAdminAbsoluto && (
+                    <button onClick={() => abrirEdicionGuia(sp)} style={{ width: '100%', marginTop: '0.8rem', padding: '0.5rem', backgroundColor: '#1A1807', color: '#FFB300', border: '1px solid #5C4D0A', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}>
+                      ✏️ Editar Especie (ADMIN)
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
@@ -571,7 +632,7 @@ export default function App() {
         </div>
       )}
 
-      {/* 📊 PANEL ADMIN (ACCESO RESTRINGIDO SI NO HA INICIADO SESIÓN) */}
+      {/* 📊 PANEL ADMIN */}
       {tab === 'admin' && (
         <div style={{ padding: '1.2rem' }}>
           {!usuario.isLoggedIn ? (
@@ -688,7 +749,6 @@ export default function App() {
                                     onChange={(e) => {
                                       const nuevoRol = e.target.value;
                                       setCuentasRegistradas(cuentasRegistradas.map(item => item.id === u.id ? { ...item, rol: nuevoRol } : item));
-                                      // Si el usuario modificado es el actual, actualizamos la sesión activa
                                       if (usuario.id === u.id) {
                                         setUsuario({ ...usuario, rol: nuevoRol });
                                       }
@@ -731,10 +791,7 @@ export default function App() {
                             <div style={{ display: 'flex', gap: '0.5rem' }}>
                               <button 
                                 onClick={() => {
-                                  // Promover cuenta en cuentasRegistradas de Usuario Regular -> Experto Herpetólogo
                                   const cuentasActualizadas = cuentasRegistradas.map(u => u.id === s.userId ? { ...u, rol: 'Experto Herpetólogo' } : u);
-                                  
-                                  // Si no estaba en la lista de cuentas, se agrega
                                   const existe = cuentasRegistradas.some(u => u.id === s.userId);
                                   if (!existe) {
                                     cuentasActualizadas.push({ id: s.userId || Date.now(), nombre: s.nombre, email: s.email, tel: s.tel, comunidad: 'Zona de los Santos', rol: 'Experto Herpetólogo', pass: '123456', estadoConexion: 'online' });
@@ -742,7 +799,6 @@ export default function App() {
 
                                   setCuentasRegistradas(cuentasActualizadas);
 
-                                  // Si el usuario promovido es el que está en sesión actual, actualiza inmediatamente su rol
                                   if (usuario.id === s.userId || usuario.email === s.email) {
                                     setUsuario(prev => ({ ...prev, rol: 'Experto Herpetólogo' }));
                                   }
@@ -836,7 +892,7 @@ export default function App() {
                   </div>
                 )}
 
-                {/* EDICIÓN TAXONÓMICA RESERVADA EXCLUSIVAMENTE A CUENTAS APROBADAS COMO EXPERTOS O ADMIN */}
+                {/* EDICIÓN TAXONÓMICA EXCLUSIVA PARA CUENTAS EXPERTAS O ADMIN */}
                 {esExpertoOAdmin ? (
                   <div style={{ backgroundColor: '#1A1807', border: '1px solid #5C4D0A', borderRadius: '12px', padding: '0.9rem' }}>
                     <h4 style={{ margin: '0 0 0.6rem 0', color: '#FFB300', fontSize: '0.85rem' }}>✏️ PANEL DE DIAGNÓSTICO Y EDICIÓN EXPERTA</h4>
@@ -901,6 +957,56 @@ export default function App() {
         </div>
       )}
 
+      {/* ✏️ MODAL EDITAR / CREAR ESPECIE EN LA GUÍA (EXCLUSIVO ADMIN) */}
+      {modalGuiaEdit && esAdminAbsoluto && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999, padding: '1rem' }}>
+          <div style={{ backgroundColor: '#09130F', borderRadius: '16px', border: '1px solid #1B3D2F', width: '100%', maxWidth: '520px', padding: '1.2rem', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid #122B20', paddingBottom: '0.5rem' }}>
+              <h3 style={{ color: '#FFF', margin: 0, fontSize: '1.1rem' }}>
+                {especieGuiaEditando ? '✏️ Editar Especie en la Guía' : '➕ Agregar Especie a la Guía'}
+              </h3>
+              <button onClick={() => setModalGuiaEdit(false)} style={{ backgroundColor: 'transparent', border: 'none', color: '#FFF', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.3rem' }}>NOMBRE CIENTÍFICO *</label>
+                <input type="text" placeholder="Ej. Isthmohyla nacientes" value={formGuia.nombre} onChange={(e) => setFormGuia({ ...formGuia, nombre: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }} />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.3rem' }}>NOMBRE COMÚN *</label>
+                <input type="text" placeholder="Ej. Rana de manantial" value={formGuia.comun} onChange={(e) => setFormGuia({ ...formGuia, comun: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }} />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.3rem' }}>CATEGORÍA Y ESTADO IUCN</label>
+                <input type="text" placeholder="Ej. ANFIBIO • IUCN: CR (En Peligro Crítico)" value={formGuia.tipo} onChange={(e) => setFormGuia({ ...formGuia, tipo: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }} />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.3rem' }}>HÁBITAT Y ALTITUD</label>
+                <input type="text" placeholder="Ej. Quebradas de bosque nublado (>1600 msnm)" value={formGuia.habitat} onChange={(e) => setFormGuia({ ...formGuia, habitat: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }} />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.3rem' }}>DESCRIPCIÓN TAXONÓMICA</label>
+                <textarea rows="3" placeholder="Detalles visuales e historia natural..." value={formGuia.desc} onChange={(e) => setFormGuia({ ...formGuia, desc: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }} />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.3rem' }}>URL DE FOTO DE REFERENCIA</label>
+                <input type="text" placeholder="URL de la imagen" value={formGuia.img} onChange={(e) => setFormGuia({ ...formGuia, img: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }} />
+              </div>
+
+              <button onClick={guardarEspecieGuia} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#00E676', color: '#000', fontWeight: 'bold', border: 'none', borderRadius: '10px', cursor: 'pointer', marginTop: '0.5rem' }}>
+                {especieGuiaEditando ? 'Guardar Cambios en la Guía' : 'Publicar Especie en la Guía'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 👤 MODAL PERFIL CON CONTROL DE ACCESO */}
       {modalPerfil && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999, padding: '1rem' }}>
@@ -922,7 +1028,7 @@ export default function App() {
               </div>
             )}
 
-            {/* VISTA 1: PERFIL DE USUARIO ACTIVO (EDITABLE POR EL PROPIO USUARIO) */}
+            {/* VISTA 1: PERFIL DE USUARIO ACTIVO */}
             {vistaPerfil === 'perfil' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
                 <div style={{ backgroundColor: '#060D0A', border: '1px solid #1B3D2F', borderRadius: '12px', padding: '0.8rem', textAlign: 'center' }}>
@@ -963,7 +1069,7 @@ export default function App() {
                 <button onClick={() => { setModalPerfil(false); alert('¡Perfil actualizado con éxito!'); }} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#00E676', color: '#000', fontWeight: 'bold', border: 'none', borderRadius: '10px', cursor: 'pointer' }}>Guardar Cambios en Perfil</button>
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.5rem' }}>
-                  <button onClick={() => { setUsuario({ isLoggedIn: false, id: null, nombre: '', email: '', telefono: '', comunidad: '', rol: 'Usuario Regular' }); setVistaPerfil('login'); }} style={{ backgroundColor: 'transparent', border: 'none', color: '#FF5252', fontSize: '0.75rem', cursor: 'pointer', textDecoration: 'underline' }}>🔴 Cerrar Sesión</button>
+                  <button onClick={() => { setUsuario({ isLoggedIn: false, id: null, nombre: '', email: '', telefono: '', comunidad: '', rol: 'Usuario Regular' }); localStorage.removeItem('herpid_usuario_sesion'); setVistaPerfil('login'); }} style={{ backgroundColor: 'transparent', border: 'none', color: '#FF5252', fontSize: '0.75rem', cursor: 'pointer', textDecoration: 'underline' }}>🔴 Cerrar Sesión</button>
                   <button onClick={() => setVistaPerfil('login')} style={{ backgroundColor: 'transparent', border: 'none', color: '#00FF88', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>Cambiar de Cuenta</button>
                 </div>
               </div>
@@ -1020,7 +1126,7 @@ export default function App() {
               </div>
             )}
 
-            {/* VISTA 3: REGISTRO DE CUENTA NUEVA (INGRESA DIRECTO COMO USUARIO REGULAR Y SOLICITUD A ADMIN) */}
+            {/* VISTA 3: REGISTRO DE CUENTA NUEVA */}
             {vistaPerfil === 'registro' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
                 <div>
@@ -1068,7 +1174,7 @@ export default function App() {
                       email: formReg.email,
                       tel: formReg.telefono,
                       comunidad: formReg.comunidad,
-                      rol: 'Usuario Regular', // INICIA SIEMPRE COMO USUARIO REGULAR
+                      rol: 'Usuario Regular',
                       pass: formReg.pass,
                       estadoConexion: 'online'
                     };
@@ -1079,7 +1185,6 @@ export default function App() {
                       setSolicitudesExpertos([...solicitudesExpertos, { id: Date.now(), userId: newId, nombre: formReg.nombre, email: formReg.email, tel: formReg.telefono, atencedentes: 'Solicitó rango de Experto Herpetólogo al registrarse.', fecha: 'Hoy' }]);
                     }
 
-                    // Inicia sesión de inmediato como Usuario Regular
                     setUsuario({
                       isLoggedIn: true,
                       id: newId,
