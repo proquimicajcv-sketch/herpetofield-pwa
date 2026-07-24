@@ -149,8 +149,10 @@ export default function App() {
     { id: 3, nombre: 'Carlos Picado', email: 'cpicado@comunidad.cr', tel: '+506 8555-1234', comunidad: 'León Cortés (San Pablo, San Rafael)', rol: 'Usuario Regular', pass: 'carlos123', estadoConexion: 'offline' }
   ]);
 
+  // ROLES Y NIVELES DE PERMISOS
   const esExpertoOAdmin = usuario.isLoggedIn && (usuario.rol.includes('Administrador') || usuario.rol.includes('Experto'));
   const esAdminAbsoluto = usuario.isLoggedIn && usuario.rol.includes('Administrador');
+  const esUsuarioRegular = usuario.isLoggedIn && !esExpertoOAdmin;
 
   // Formulario temporal de edición en Ficha
   const [editCientifico, setEditCientifico] = useState('');
@@ -421,8 +423,14 @@ export default function App() {
     setModalGuiaEdit(false);
   };
 
+  // REGLA CRÍTICA DE FILTRADO:
+  // Los usuarios regulares sólo ven reportes "VALIDADO". 
+  // Los Expertos y Admin ven TODOS los reportes (incluyendo los que están EN REVISIÓN EXPERTA).
   const registrosFiltrados = registros.filter((r) => {
+    const esVisiblePorRol = esExpertoOAdmin || r.estado === 'VALIDADO';
     const coincideBusqueda = r.nombreComun.toLowerCase().includes(busquedaGaleria.toLowerCase()) || r.especie.toLowerCase().includes(busquedaGaleria.toLowerCase()) || r.ubicacion.toLowerCase().includes(busquedaGaleria.toLowerCase());
+    
+    if (!esVisiblePorRol) return false;
     if (filtroEspecie === 'anfibios') return r.categoria === 'ANFIBIO' && coincideBusqueda;
     if (filtroEspecie === 'reptiles') return r.categoria === 'REPTIL' && coincideBusqueda;
     return coincideBusqueda;
@@ -544,7 +552,7 @@ export default function App() {
         </div>
       )}
 
-      {/* 🖼️ GALERÍA */}
+      {/* 🖼️ GALERÍA (MUESTRA SOLO VALIDADOS A USUARIOS REGULARES) */}
       {tab === 'galeria' && (
         <div style={{ padding: '1rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.8rem' }}>
@@ -594,11 +602,11 @@ export default function App() {
         </div>
       )}
 
-      {/* 📖 GUÍA CON OPCIÓN DE EDICIÓN EXCLUSIVA PARA ADMIN */}
+      {/* 📖 GUÍA EDITABLE SOLO POR ADMIN */}
       {tab === 'guia' && (
         <div style={{ padding: '1rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.8rem' }}>
-            <h2 style={{ margin: 0, fontSize: '1.2rem', color: '#00FF88' }}>📖 Guía de Especies Comunes de Los Santos</h2>
+            <h2 style={{ margin: 0, fontSize: '1.2rem', color: '#00FF88' }}>📖 Guía Oficial de Especies Validadas en Los Santos</h2>
             {esAdminAbsoluto && (
               <button onClick={() => abrirEdicionGuia(null)} style={{ backgroundColor: '#FFB300', color: '#000', border: 'none', padding: '0.5rem 1rem', borderRadius: '20px', fontWeight: 'bold', fontSize: '0.8rem', cursor: 'pointer' }}>
                 ➕ Agregar Nueva Especie a la Guía
@@ -619,7 +627,6 @@ export default function App() {
                     <p style={{ margin: '0.3rem 0', fontSize: '0.75rem', color: '#8AA398' }}>{sp.desc}</p>
                   </div>
 
-                  {/* BOTÓN EDICIÓN SOLO VISIBLE PARA ADMIN */}
                   {esAdminAbsoluto && (
                     <button onClick={() => abrirEdicionGuia(sp)} style={{ width: '100%', marginTop: '0.8rem', padding: '0.5rem', backgroundColor: '#1A1807', color: '#FFB300', border: '1px solid #5C4D0A', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}>
                       ✏️ Editar Especie (ADMIN)
@@ -632,14 +639,14 @@ export default function App() {
         </div>
       )}
 
-      {/* 📊 PANEL ADMIN */}
+      {/* 📊 PANEL ADMIN / BUZÓN DE CONSULTAS CON PERMISOS RESTRINGIDOS SEGÚN ROL */}
       {tab === 'admin' && (
         <div style={{ padding: '1.2rem' }}>
           {!usuario.isLoggedIn ? (
             <div style={{ backgroundColor: '#09130F', borderRadius: '16px', border: '1px solid #1B3D2F', padding: '2rem', textAlign: 'center' }}>
               <span style={{ fontSize: '3rem' }}>🔒</span>
-              <h2 style={{ color: '#FFF', fontSize: '1.2rem', margin: '0.8rem 0' }}>Acceso Restringido a la Administración</h2>
-              <p style={{ color: '#8AA398', fontSize: '0.85rem', marginBottom: '1.2rem' }}>Debes iniciar sesión con tu correo/teléfono y contraseña autorizada para ingresar al buzón y panel de control.</p>
+              <h2 style={{ color: '#FFF', fontSize: '1.2rem', margin: '0.8rem 0' }}>Acceso Restringido al Buzón y Panel</h2>
+              <p style={{ color: '#8AA398', fontSize: '0.85rem', marginBottom: '1.2rem' }}>Debes iniciar sesión con tu usuario y contraseña para enviar mensajes a los expertos o ingresar al panel de control.</p>
               <button onClick={() => { setVistaPerfil('login'); setModalPerfil(true); }} style={{ backgroundColor: '#00E676', color: '#000', border: 'none', padding: '0.8rem 1.5rem', borderRadius: '20px', fontWeight: 'bold', cursor: 'pointer' }}>
                 🔑 Iniciar Sesión Ahora
               </button>
@@ -647,29 +654,50 @@ export default function App() {
           ) : (
             <div>
               <h2 style={{ fontSize: '1.2rem', color: '#FFF', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                🛡️ Panel de Administración & Mensajería Directa
+                {esAdminAbsoluto ? '🛡️ Panel de Administración & Gestión' : esExpertoOAdmin ? '🎓 Panel de Curaduría Herpetológica' : '💬 Buzón de Consultas a Expertos'}
               </h2>
+              
               <div style={{ backgroundColor: '#09130F', borderRadius: '16px', border: '1px solid #1B3D2F', padding: '1.2rem' }}>
                 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #162B23', paddingBottom: '0.8rem', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
                   <h3 style={{ margin: 0, color: '#00FF88', fontSize: '1.05rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                    📫 Buzón de Consultas Directas & Gestión
+                    📫 Buzón & Herramientas
                   </h3>
                   
+                  {/* PESTAÑAS SEGÚN ROL DILIGENCIADO */}
                   <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', backgroundColor: '#050A08', padding: '0.3rem', borderRadius: '20px', border: '1px solid #122B20' }}>
+                    
+                    {/* VISIBLE PARA TODOS LOS USUARIOS AUTENTICADOS */}
                     <button onClick={() => setSubTabAdmin('consultas')} style={{ backgroundColor: subTabAdmin === 'consultas' ? '#0F2B20' : 'transparent', color: subTabAdmin === 'consultas' ? '#00FF88' : '#8AA398', border: subTabAdmin === 'consultas' ? '1px solid #00FF88' : 'none', borderRadius: '15px', padding: '0.3rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>💬 Consultas 1 a 1</button>
-                    <button onClick={() => setSubTabAdmin('metricas')} style={{ backgroundColor: subTabAdmin === 'metricas' ? '#0F2B20' : 'transparent', color: subTabAdmin === 'metricas' ? '#00FF88' : '#8AA398', border: subTabAdmin === 'metricas' ? '1px solid #00FF88' : 'none', borderRadius: '15px', padding: '0.3rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>📊 Métricas</button>
-                    <button onClick={() => setSubTabAdmin('usuarios')} style={{ backgroundColor: subTabAdmin === 'usuarios' ? '#0F2B20' : 'transparent', color: subTabAdmin === 'usuarios' ? '#00FF88' : '#8AA398', border: subTabAdmin === 'usuarios' ? '1px solid #00FF88' : 'none', borderRadius: '15px', padding: '0.3rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>👥 Usuarios ({cuentasRegistradas.length})</button>
-                    <button onClick={() => setSubTabAdmin('solicitudes')} style={{ backgroundColor: subTabAdmin === 'solicitudes' ? '#0F2B20' : 'transparent', color: subTabAdmin === 'solicitudes' ? '#00FF88' : '#8AA398', border: subTabAdmin === 'solicitudes' ? '1px solid #00FF88' : 'none', borderRadius: '15px', padding: '0.3rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>🎓 Solicitudes ({solicitudesExpertos.length})</button>
-                    <button onClick={() => setSubTabAdmin('moderacion')} style={{ backgroundColor: subTabAdmin === 'moderacion' ? '#0F2B20' : 'transparent', color: subTabAdmin === 'moderacion' ? '#00FF88' : '#8AA398', border: subTabAdmin === 'moderacion' ? '1px solid #00FF88' : 'none', borderRadius: '15px', padding: '0.3rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>📋 Moderación</button>
+                    
+                    {/* VISIBLE PARA EXPERTOS Y ADMIN */}
+                    {esExpertoOAdmin && (
+                      <button onClick={() => setSubTabAdmin('metricas')} style={{ backgroundColor: subTabAdmin === 'metricas' ? '#0F2B20' : 'transparent', color: subTabAdmin === 'metricas' ? '#00FF88' : '#8AA398', border: subTabAdmin === 'metricas' ? '1px solid #00FF88' : 'none', borderRadius: '15px', padding: '0.3rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>📊 Métricas</button>
+                    )}
+
+                    {/* SUBPESTAÑA USUARIOS: EXCLUSIVO ADMIN (LOS EXPERTOS NO TIENEN ESTE CONTROL) */}
+                    {esAdminAbsoluto && (
+                      <button onClick={() => setSubTabAdmin('usuarios')} style={{ backgroundColor: subTabAdmin === 'usuarios' ? '#0F2B20' : 'transparent', color: subTabAdmin === 'usuarios' ? '#00FF88' : '#8AA398', border: subTabAdmin === 'usuarios' ? '1px solid #00FF88' : 'none', borderRadius: '15px', padding: '0.3rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>👥 Usuarios ({cuentasRegistradas.length})</button>
+                    )}
+
+                    {/* VISIBLE PARA EXPERTOS Y ADMIN */}
+                    {esExpertoOAdmin && (
+                      <button onClick={() => setSubTabAdmin('solicitudes')} style={{ backgroundColor: subTabAdmin === 'solicitudes' ? '#0F2B20' : 'transparent', color: subTabAdmin === 'solicitudes' ? '#00FF88' : '#8AA398', border: subTabAdmin === 'solicitudes' ? '1px solid #00FF88' : 'none', borderRadius: '15px', padding: '0.3rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>🎓 Solicitudes ({solicitudesExpertos.length})</button>
+                    )}
+
+                    {/* VISIBLE PARA EXPERTOS Y ADMIN */}
+                    {esExpertoOAdmin && (
+                      <button onClick={() => setSubTabAdmin('moderacion')} style={{ backgroundColor: subTabAdmin === 'moderacion' ? '#0F2B20' : 'transparent', color: subTabAdmin === 'moderacion' ? '#00FF88' : '#8AA398', border: subTabAdmin === 'moderacion' ? '1px solid #00FF88' : 'none', borderRadius: '15px', padding: '0.3rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>📋 Moderación</button>
+                    )}
+
                   </div>
                 </div>
 
-                {/* CONSULTAS */}
+                {/* CONSULTAS 1 A 1 (VISIBLE PARA USUARIOS REGULARES, EXPERTOS Y ADMIN) */}
                 {subTabAdmin === 'consultas' && (
                   <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                      <span style={{ fontSize: '0.85rem', color: '#FFF', fontWeight: 'bold' }}>💬 Mensajes y Consultas Directas (1 a 1)</span>
+                      <span style={{ fontSize: '0.85rem', color: '#FFF', fontWeight: 'bold' }}>💬 Chat Privado Directo</span>
                       <button onClick={() => setModalChat(true)} style={{ backgroundColor: '#00E676', color: '#000', border: 'none', padding: '0.4rem 0.9rem', borderRadius: '15px', fontWeight: 'bold', fontSize: '0.8rem', cursor: 'pointer' }}>+ Nueva Consulta</button>
                     </div>
 
@@ -685,8 +713,8 @@ export default function App() {
                   </div>
                 )}
 
-                {/* MÉTRICAS */}
-                {subTabAdmin === 'metricas' && (
+                {/* MÉTRICAS (EXPERTOS Y ADMIN) */}
+                {subTabAdmin === 'metricas' && esExpertoOAdmin && (
                   <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                       <h4 style={{ margin: 0, color: '#FFF' }}>📊 Métricas de Biodiversidad en Los Santos</h4>
@@ -716,10 +744,10 @@ export default function App() {
                   </div>
                 )}
 
-                {/* GESTIÓN DE USUARIOS */}
-                {subTabAdmin === 'usuarios' && (
+                {/* GESTIÓN DE USUARIOS (EXCLUSIVO ADMIN: EXPERTOS NO TIENEN ACCESO A ESTO) */}
+                {subTabAdmin === 'usuarios' && esAdminAbsoluto && (
                   <div>
-                    <h4 style={{ margin: '0 0 1rem 0', color: '#FFF', fontSize: '0.95rem' }}>👥 Gestión de Cuentas y Jerarquía de Permisos</h4>
+                    <h4 style={{ margin: '0 0 1rem 0', color: '#FFF', fontSize: '0.95rem' }}>👥 Gestión de Cuentas y Control de Permisos (EXCLUSIVO ADMIN)</h4>
                     <div style={{ overflowX: 'auto' }}>
                       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', textAlign: 'left' }}>
                         <thead>
@@ -773,8 +801,8 @@ export default function App() {
                   </div>
                 )}
 
-                {/* SOLICITUDES DE ACREDITACIÓN A EXPERTO */}
-                {subTabAdmin === 'solicitudes' && (
+                {/* SOLICITUDES DE EXPERTOS (EXPERTOS Y ADMIN) */}
+                {subTabAdmin === 'solicitudes' && esExpertoOAdmin && (
                   <div>
                     <h4 style={{ margin: '0 0 1rem 0', color: '#FFB300', fontSize: '0.95rem' }}>🎓 Solicitudes de Acreditación de Rango Experto (Biólogos)</h4>
                     {solicitudesExpertos.length === 0 ? (
@@ -821,16 +849,16 @@ export default function App() {
                   </div>
                 )}
 
-                {/* MODERACIÓN */}
-                {subTabAdmin === 'moderacion' && (
+                {/* MODERACIÓN (EXPERTOS Y ADMIN) */}
+                {subTabAdmin === 'moderacion' && esExpertoOAdmin && (
                   <div>
-                    <h4 style={{ margin: '0 0 1rem 0', color: '#FFF', fontSize: '0.95rem' }}>📋 Moderación de Reportes</h4>
+                    <h4 style={{ margin: '0 0 1rem 0', color: '#FFF', fontSize: '0.95rem' }}>📋 Moderación y Edición de Reportes Pendientes</h4>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
                       {registros.map((r) => (
                         <div key={r.id} style={{ backgroundColor: '#060D0A', border: '1px solid #162B23', borderRadius: '12px', padding: '0.9rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <div>
                             <strong style={{ color: '#FFF', fontSize: '0.85rem' }}>{r.nombreComun} ({r.especie})</strong>
-                            <div style={{ fontSize: '0.75rem', color: '#8AA398' }}>📍 {r.ubicacion} | Reporta: {r.reportante}</div>
+                            <div style={{ fontSize: '0.75rem', color: '#8AA398' }}>📍 {r.ubicacion} | Reporta: {r.reportante} | Estado: <span style={{ color: r.estado === 'VALIDADO' ? '#00E676' : '#FFB300' }}>{r.estado}</span></div>
                           </div>
                           <button onClick={() => setRegistroSeleccionado(r)} style={{ backgroundColor: '#00E676', color: '#000', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}>Moderar / Editar</button>
                         </div>
@@ -934,7 +962,7 @@ export default function App() {
                           });
 
                           setRegistros(registrosActualizados);
-                          alert(`¡Ficha curada y validada con éxito por ${nombreEditor}!`);
+                          alert(`¡Ficha curada, validada y publicada con éxito por ${nombreEditor}! Ahora es pública en la Guía/Galería.`);
                           setRegistroSeleccionado(null);
                         }} 
                         style={{ width: '100%', padding: '0.7rem', backgroundColor: '#00E676', color: '#000', fontWeight: 'bold', border: 'none', borderRadius: '8px', cursor: 'pointer', marginTop: '0.4rem', fontSize: '0.85rem' }}
@@ -1297,7 +1325,7 @@ export default function App() {
             </div>
 
             <div style={{ backgroundColor: '#060D0A', border: '1px solid #162B23', borderRadius: '12px', padding: '0.6rem', margin: '0.6rem 0' }}>
-              <div style={{ fontSize: '0.65rem', color: '#FFB300', fontWeight: 'bold', marginBottom: '0.4rem', textAlign: 'center' }}>🚨 BARRA DE ALERTAS DE SEGURIDAD (EXCLUSIVO EXPERTOS)</div>
+              <div style={{ fontSize: '0.65rem', color: '#FFB300', fontWeight: 'bold', marginBottom: '0.4rem', textAlign: 'center' }}>🚨 BARRA DE ALERTAS DE SEGURIDAD (EXCLUSIVO EXPERTOS / ADMIN)</div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.4rem' }}>
                 <button onClick={() => enviarMensajeChat('🚨 ATENCIÓN: Organismo VENENOSO (PELIGRO).')} style={{ backgroundColor: '#D32F2F', color: '#FFF', border: 'none', padding: '0.4rem', borderRadius: '6px', fontSize: '0.6rem', fontWeight: 'bold', cursor: 'pointer' }}>🔴 VENENOSA</button>
                 <button onClick={() => enviarMensajeChat('⚠️ PRECAUCIÓN: NO TOCAR / ACERCARSE.')} style={{ backgroundColor: '#E65100', color: '#FFF', border: 'none', padding: '0.4rem', borderRadius: '6px', fontSize: '0.6rem', fontWeight: 'bold', cursor: 'pointer' }}>🟠 NO TOCAR</button>
@@ -1507,7 +1535,7 @@ export default function App() {
                     alert('💾 ¡Guardado en el Teléfono (Modo Offline)! Cuando tengas señal de nuevo, podrás sincronizarlo con un toque.');
                   } else {
                     setRegistros([nuevo, ...registros]);
-                    alert('✔ Reporte enviado a la base de datos para revisión de expertos.');
+                    alert('✔ Reporte enviado para revisión de expertos. Estará visible públicamente en la Galería/Guía en cuanto sea validado.');
                   }
 
                   setModalRegistro(false);
