@@ -7,7 +7,8 @@ import 'leaflet/dist/leaflet.css';
 const crearIconoPersonalizado = (silueta, estado) => {
   let emoji = '🐸';
   if (silueta === 'Serpiente') emoji = '🐍';
-  if (silueta === 'Lagartija' || silueta === 'Salamandra') emoji = '🦎';
+  if (silueta === 'Lagartija' || silueta === 'Tortuga') emoji = '🦎';
+  if (silueta === 'Salamandra') emoji = '🦎';
 
   const colorFondo = estado === 'VALIDADO' ? '#00E676' : '#FFB300';
   const colorBorde = estado === 'VALIDADO' ? '#00FF88' : '#FFD54F';
@@ -56,7 +57,7 @@ const iconoAlfilerRojo = L.divIcon({
 });
 
 // Componente para capturar clic en el mapa del formulario y mover el alfiler rojo
-function EventoMapaPin({ setLat, setLng, setPosPin }) {
+function EventoMapaPin({ setLat, setLng, setPosPin, setTemp, setAltitud }) {
   useMapEvents({
     click(e) {
       const latFija = e.latlng.lat.toFixed(6);
@@ -64,6 +65,12 @@ function EventoMapaPin({ setLat, setLng, setPosPin }) {
       setLat(latFija);
       setLng(lngFija);
       setPosPin([e.latlng.lat, e.latlng.lng]);
+
+      // Autoregistro automático simulado según la latitud/altitud de Los Santos
+      const altEstimada = Math.round(1400 + Math.abs(e.latlng.lat - 9.65) * 15000);
+      const tempEstimada = (24 - (altEstimada / 300)).toFixed(1).replace('.', ',');
+      setTemp(tempEstimada);
+      setAltitud(altEstimada.toString());
     },
   });
   return null;
@@ -87,7 +94,7 @@ export default function App() {
   const [metodoRecuperacion, setMetodoRecuperacion] = useState('correo');
   const [mensajeAuthOk, setMensajeAuthOk] = useState('');
 
-  // Lógica Verificación OTP de Correo / Celular (Enviado al contacto real)
+  // Lógica Verificación OTP de Correo / Celular
   const [codigoOtpGenerado, setCodigoOtpGenerado] = useState('');
   const [codigoOtpIngresado, setCodigoOtpIngresado] = useState('');
   const [usuarioTemporalVerificacion, setUsuarioTemporalVerificacion] = useState(null);
@@ -179,7 +186,7 @@ export default function App() {
   const [formReg, setFormReg] = useState({ nombre: '', email: '', codigoPais: '+506', telefono: '', comunidad: 'Tarrazú (San Marcos, San Lorenzo, Carlos)', pass: '', confirmPass: '', solicitaExperto: false, medioVerificacion: 'correo' });
   const [formRecuperar, setFormRecuperar] = useState({ contacto: '' });
 
-  // Lista de Códigos de Área Internacionales (Costa Rica primero)
+  // Lista de Códigos de Área Internacionales
   const codigosPaises = [
     { code: '+506', label: '🇨🇷 Costa Rica (+506)' },
     { code: '+1', label: '🇺🇸/🇨🇦 Estados Unidos / Canadá (+1)' },
@@ -194,7 +201,7 @@ export default function App() {
   ];
 
   // Solicitudes pendientes de biólogos
-  const [solicitudesExpertos, setSolicitudesExpertos] = useState([
+  const [solicitudesExpertos, setSolicudesExpertos] = useState([
     { id: 101, userId: 3, nombre: 'MSc. Juan Abarca', email: 'jabarca@herpeto.org', tel: '+506 8333-4444', atencedentes: 'Biólogo especialista en Isthmohyla nacientes.', fecha: '24/07/2026' }
   ]);
 
@@ -204,7 +211,7 @@ export default function App() {
   ]);
   const [nuevoMensaje, setNuevoMensaje] = useState('');
 
-  // Formulario 7 Pasos
+  // Formulario 7 Pasos (Con siluetas separadas correctamente para Anfibios y Reptiles)
   const [tipoFauna, setTipoFauna] = useState('Anfibio');
   const [silueta, setSilueta] = useState('Rana Arborícola');
   const [desconocido, setDesconocido] = useState(true);
@@ -217,7 +224,7 @@ export default function App() {
   const [estadoOrganismo, setEstadoOrganismo] = useState('Vivo / Activo');
   const [etapa, setEtapa] = useState('Adulto');
   const [temp, setTemp] = useState('19,5');
-  const [humedad, setHumedad] = useState('88,0');
+  const [altitud, setAltitud] = useState('1650');
   const [microhabitat, setMicrohabitat] = useState('Vegetación / Finca Cafetalera');
   const [notas, setNotas] = useState('');
   const [fotoPreview, setFotoPreview] = useState('https://images.unsplash.com/photo-1590005354167-6da97870c757?auto=format&fit=crop&w=600&q=80');
@@ -282,6 +289,12 @@ export default function App() {
           setLat(l1);
           setLng(l2);
           setPosPin([pos.coords.latitude, pos.coords.longitude]);
+
+          // Autoregistro automático simulado según altitud de Costa Rica
+          const altEstimada = Math.round(1500 + Math.abs(pos.coords.latitude - 9.65) * 12000);
+          const tempEstimada = (24 - (altEstimada / 300)).toFixed(1).replace('.', ',');
+          setTemp(tempEstimada);
+          setAltitud(altEstimada.toString());
         },
         (err) => alert('Error GPS: ' + err.message)
       );
@@ -308,8 +321,8 @@ export default function App() {
   };
 
   const exportarCSV = () => {
-    const headers = "ID,Nombre Comun,Especie,Categoria,Estado,Ubicacion,Reportante,Temperatura,Humedad,EditadoPor\n";
-    const rows = registros.map(r => `${r.id},"${r.nombreComun}","${r.especie}",${r.categoria},${r.estado},"${r.ubicacion}","${r.reportante}",${r.temp},${r.humedad},"${r.editadoPor || 'N/A'}"`).join("\n");
+    const headers = "ID,Nombre Comun,Especie,Categoria,Estado,Ubicacion,Reportante,Temperatura,Altitud,EditadoPor\n";
+    const rows = registros.map(r => `${r.id},"${r.nombreComun}","${r.especie}",${r.categoria},${r.estado},"${r.ubicacion}","${r.reportante}",${r.temp},${r.altitud},"${r.editadoPor || 'N/A'}"`).join("\n");
     const blob = new Blob([headers + rows], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -341,8 +354,8 @@ export default function App() {
       ubicacion: 'San Marcos de Tarrazú',
       reportante: 'Jorge Carvajal',
       contacto: 'jorge.carvajal@docente.edu | 🔒 [Celular Privado]',
-      temp: '21.0°C',
-      humedad: '80% H.R.',
+      temp: '21.0 °C',
+      altitud: '1450 msnm',
       microhabitat: 'Vegetación / Finca Cafetalera',
       estadoVida: 'Vivo / Activo (Adulto)',
       tieneAudio: true,
@@ -361,8 +374,8 @@ export default function App() {
       ubicacion: 'San Pablo de León Cortés',
       reportante: 'Dra. Sofía Herpetóloga',
       contacto: 'sofia.herpeto@ucr.ac.cr | 🔒 [Celular Privado]',
-      temp: '17.5°C',
-      humedad: '90% H.R.',
+      temp: '17.5 °C',
+      altitud: '1900 msnm',
       microhabitat: 'Hojarasca de bosque de roble',
       estadoVida: 'Vivo / Activo (Adulto)',
       tieneAudio: false,
@@ -370,24 +383,6 @@ export default function App() {
       coords: [9.6682, -84.0141],
       editadoPor: 'Dra. Sofía Herpetóloga (Experto Herpetólogo)',
       fechaEdicion: '24/07/2026, 00:30'
-    },
-    {
-      id: 3,
-      especie: 'Especie por identificar',
-      nombreComun: 'Desconocido (Por determinar por experto)',
-      categoria: 'REPTIL',
-      silueta: 'Lagartija',
-      estado: 'EN REVISIÓN EXPERTA',
-      ubicacion: 'Tarrazú',
-      reportante: 'Carlos Picado',
-      contacto: 'cpicado@comunidad.cr | +506 8555-1234',
-      temp: '18.0°C',
-      humedad: '85% H.R.',
-      microhabitat: 'Hojarasca húmeda',
-      estadoVida: 'Vivo / Activo (Adulto)',
-      tieneAudio: false,
-      img: 'https://images.unsplash.com/photo-1531386151447-fd76ad50012f?auto=format&fit=crop&w=600&q=80',
-      coords: [9.6420, -83.9780]
     }
   ]);
 
@@ -413,7 +408,6 @@ export default function App() {
     }
   ]);
 
-  // Formulario temporal para crear/editar especie en la Guía
   const [especieGuiaEditando, setEspecieGuiaEditando] = useState(null);
   const [formGuia, setFormGuia] = useState({ nombre: '', comun: '', tipo: 'ANFIBIO • IUCN: LC', habitat: '', desc: '', img: '' });
 
@@ -444,7 +438,6 @@ export default function App() {
     setModalGuiaEdit(false);
   };
 
-  // Filtrado de reportes para la Galería (Solo Validados para usuarios regulares, Todos para Expertos/Admins)
   const registrosFiltrados = registros.filter((r) => {
     const esVisiblePorRol = esExpertoOAdmin || r.estado === 'VALIDADO';
     const coincideBusqueda = r.nombreComun.toLowerCase().includes(busquedaGaleria.toLowerCase()) || r.especie.toLowerCase().includes(busquedaGaleria.toLowerCase()) || r.ubicacion.toLowerCase().includes(busquedaGaleria.toLowerCase());
@@ -455,7 +448,6 @@ export default function App() {
     return coincideBusqueda;
   });
 
-  // Ordenamiento cronológico de usuarios
   const usuariosOrdenadosYFiltrados = cuentasRegistradas
     .filter(u => filtroEstadoUsuario === 'todos' || u.estadoConexion === filtroEstadoUsuario)
     .sort((a, b) => new Date(b.fechaIngreso) - new Date(a.fechaIngreso));
@@ -463,11 +455,10 @@ export default function App() {
   return (
     <div style={{ backgroundColor: '#070D0B', color: '#E0E6E3', minHeight: '100vh', fontFamily: 'system-ui, sans-serif', paddingBottom: '90px' }}>
       
-      {/* 🟢 BARRA SUPERIOR CON LOGOTIPO DE ALTA GAMA (GRANDE E INNOVADOR) */}
+      {/* 🟢 BARRA SUPERIOR CON LOGOTIPO */}
       <header style={{ backgroundColor: '#0B1512', padding: '0.9rem 1.4rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1.5px solid #162B23', flexWrap: 'wrap', gap: '0.8rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           
-          {/* INSIGNIA LOGOTIPO GRANDE E INNOVADORA */}
           <div style={{
             background: 'linear-gradient(135deg, #0D2E21 0%, #030A07 100%)',
             border: '2px solid #00FF88',
@@ -950,10 +941,10 @@ export default function App() {
                   </div>
                 )}
 
-                {/* MODERACIÓN (MUESTRA TODOS LOS REPORTES PARA QUE LOS EXPERTOS Y ADMINS LOS REVISEN Y AUTORICEN) */}
+                {/* MODERACIÓN */}
                 {subTabAdmin === 'moderacion' && esExpertoOAdmin && (
                   <div>
-                    <h4 style={{ margin: '0 0 1rem 0', color: '#FFF', fontSize: '0.95rem' }}>📋 Moderación y Edición de Reportes de Campo (Pendientes y Validados)</h4>
+                    <h4 style={{ margin: '0 0 1rem 0', color: '#FFF', fontSize: '0.95rem' }}>📋 Moderación y Edición de Reportes de Campo</h4>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
                       {registros.map((r) => (
                         <div key={r.id} style={{ backgroundColor: '#060D0A', border: '1px solid #162B23', borderRadius: '12px', padding: '0.9rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -995,7 +986,8 @@ export default function App() {
 
                 <div style={{ backgroundColor: '#0D1E18', border: '1px solid #1B3D2F', borderRadius: '10px', padding: '0.8rem', fontSize: '0.8rem', display: 'flex', flexDirection: 'column', gap: '0.4rem', marginBottom: '0.8rem' }}>
                   <div>📍 <strong>Ubicación:</strong> {registroSeleccionado.ubicacion}</div>
-                  <div>🌡️ <strong>Temp / Humedad:</strong> {registroSeleccionado.temp} / {registroSeleccionado.humedad}</div>
+                  <div>🌡️ <strong>Temperatura:</strong> {registroSeleccionado.temp}</div>
+                  <div>⛰️ <strong>Altitud:</strong> {registroSeleccionado.altitud}</div>
                   <div>🍃 <strong>Microhábitat:</strong> {registroSeleccionado.microhabitat}</div>
                   <div>👤 <strong>Reportado por:</strong> {registroSeleccionado.reportante}</div>
                   <div>📱 <strong>Contacto:</strong> {registroSeleccionado.contacto}</div>
@@ -1136,7 +1128,7 @@ export default function App() {
         </div>
       )}
 
-      {/* 👤 MODAL PERFIL CON ENVÍO REAL SIMULADO DE CÓDIGO OTP AL CORREO/SMS */}
+      {/* 👤 MODAL PERFIL CON VERIFICACIÓN OTP */}
       {modalPerfil && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999, padding: '1rem' }}>
           <div style={{ backgroundColor: '#09130F', borderRadius: '16px', border: '1px solid #1B3D2F', width: '100%', maxWidth: '520px', padding: '1.2rem', maxHeight: '90vh', overflowY: 'auto' }}>
@@ -1345,7 +1337,6 @@ export default function App() {
                     setCodigoOtpGenerado(codigoGenerado);
                     setUsuarioTemporalVerificacion(nuevaCuentaTemp);
 
-                    // Envío real simulado vía correo o SMS (Alerta al buzón del usuario registrado)
                     const destino = formReg.medioVerificacion === 'correo' ? formReg.email : `${formReg.codigoPais} ${formReg.telefono}`;
                     alert(`📬 [SIMULACIÓN SERVIDOR]\nSe ha enviado exitosamente el código OTP de verificación de 6 dígitos a su ${formReg.medioVerificacion === 'correo' ? 'Correo Electrónico' : 'Mensaje SMS'}: (${destino}).\n\n(Código de prueba generado: ${codigoGenerado})`);
 
@@ -1521,7 +1512,7 @@ export default function App() {
         </div>
       )}
 
-      {/* 📌 MODAL REGISTRAR AVISTAMIENTO (+) */}
+      {/* 📌 MODAL REGISTRAR AVISTAMIENTO (+) CON SILUETAS CORREGIDAS Y AUTOREGISTRO TEMPERATURA/ALTITUD */}
       {modalRegistro && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999, padding: '1rem' }}>
           <div style={{ backgroundColor: '#09130F', borderRadius: '16px', border: '1px solid #1B3D2F', width: '100%', maxWidth: '580px', padding: '1.2rem', maxHeight: '92vh', overflowY: 'auto' }}>
@@ -1540,27 +1531,40 @@ export default function App() {
             <div style={{ marginBottom: '1.2rem' }}>
               <label style={{ display: 'block', fontSize: '0.8rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.5rem' }}>1. TIPO DE FAUNA *</label>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.8rem' }}>
-                <button type="button" onClick={() => setTipoFauna('Anfibio')} style={{ backgroundColor: tipoFauna === 'Anfibio' ? '#0F2B20' : '#0A1410', border: tipoFauna === 'Anfibio' ? '2px solid #00FF88' : '1px solid #1B3D2F', borderRadius: '10px', padding: '0.8rem', color: '#FFF', display: 'flex', alignItems: 'center', gap: '0.8rem', cursor: 'pointer' }}>
+                <button type="button" onClick={() => { setTipoFauna('Anfibio'); setSilueta('Rana Arborícola'); }} style={{ backgroundColor: tipoFauna === 'Anfibio' ? '#0F2B20' : '#0A1410', border: tipoFauna === 'Anfibio' ? '2px solid #00FF88' : '1px solid #1B3D2F', borderRadius: '10px', padding: '0.8rem', color: '#FFF', display: 'flex', alignItems: 'center', gap: '0.8rem', cursor: 'pointer' }}>
                   <span style={{ fontSize: '1.8rem' }}>🐸</span>
                   <div style={{ textAlign: 'left' }}><div style={{ fontWeight: 'bold' }}>Anfibio</div><div style={{ fontSize: '0.65rem', color: '#7A9A8C' }}>Ranas, sapos, salamandras</div></div>
                 </button>
-                <button type="button" onClick={() => setTipoFauna('Reptil')} style={{ backgroundColor: tipoFauna === 'Reptil' ? '#0F2B20' : '#0A1410', border: tipoFauna === 'Reptil' ? '2px solid #00FF88' : '1px solid #1B3D2F', borderRadius: '10px', padding: '0.8rem', color: '#FFF', display: 'flex', alignItems: 'center', gap: '0.8rem', cursor: 'pointer' }}>
+                <button type="button" onClick={() => { setTipoFauna('Reptil'); setSilueta('Serpiente'); }} style={{ backgroundColor: tipoFauna === 'Reptil' ? '#0F2B20' : '#0A1410', border: tipoFauna === 'Reptil' ? '2px solid #00FF88' : '1px solid #1B3D2F', borderRadius: '10px', padding: '0.8rem', color: '#FFF', display: 'flex', alignItems: 'center', gap: '0.8rem', cursor: 'pointer' }}>
                   <span style={{ fontSize: '1.8rem' }}>🦎</span>
                   <div style={{ textAlign: 'left' }}><div style={{ fontWeight: 'bold' }}>Reptil</div><div style={{ fontSize: '0.65rem', color: '#7A9A8C' }}>Serpientes, lagartijas, tortugas</div></div>
                 </button>
               </div>
             </div>
 
-            {/* PASO 2 */}
+            {/* PASO 2: SILUETAS FILTRADAS CORRECTAMENTE (SALAMANDRAS EN ANFIBIOS) */}
             <div style={{ marginBottom: '1.2rem' }}>
               <label style={{ display: 'block', fontSize: '0.8rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.5rem' }}>2. SELECTOR VISUAL DE FORMA POR SILUETA *</label>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem' }}>
-                {[{ id: 'Sapo Terrestre', icon: '🐸' }, { id: 'Rana Arborícola', icon: '🍃' }, { id: 'Serpiente', icon: '🐍' }, { id: 'Lagartija', icon: '🦎' }].map((s) => (
-                  <button key={s.id} type="button" onClick={() => setSilueta(s.id)} style={{ backgroundColor: silueta === s.id ? '#0F2B20' : '#0A1410', border: silueta === s.id ? '2px solid #00FF88' : '1px solid #1B3D2F', borderRadius: '10px', padding: '0.6rem 0.3rem', color: '#FFF', display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer' }}>
-                    <span style={{ fontSize: '1.5rem' }}>{s.icon}</span>
-                    <span style={{ fontSize: '0.65rem', fontWeight: 'bold' }}>{s.id}</span>
-                  </button>
-                ))}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem' }}>
+                {tipoFauna === 'Anfibio' ? (
+                  <>
+                    {[{ id: 'Sapo Terrestre', icon: '🐸' }, { id: 'Rana Arborícola', icon: '🍃' }, { id: 'Salamandra', icon: '🦎' }].map((s) => (
+                      <button key={s.id} type="button" onClick={() => setSilueta(s.id)} style={{ backgroundColor: silueta === s.id ? '#0F2B20' : '#0A1410', border: silueta === s.id ? '2px solid #00FF88' : '1px solid #1B3D2F', borderRadius: '10px', padding: '0.6rem 0.3rem', color: '#FFF', display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer' }}>
+                        <span style={{ fontSize: '1.5rem' }}>{s.icon}</span>
+                        <span style={{ fontSize: '0.65rem', fontWeight: 'bold' }}>{s.id}</span>
+                      </button>
+                    ))}
+                  </>
+                ) : (
+                  <>
+                    {[{ id: 'Serpiente', icon: '🐍' }, { id: 'Lagartija', icon: '🦎' }, { id: 'Tortuga', icon: '🐢' }].map((s) => (
+                      <button key={s.id} type="button" onClick={() => setSilueta(s.id)} style={{ backgroundColor: silueta === s.id ? '#0F2B20' : '#0A1410', border: silueta === s.id ? '2px solid #00FF88' : '1px solid #1B3D2F', borderRadius: '10px', padding: '0.6rem 0.3rem', color: '#FFF', display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer' }}>
+                        <span style={{ fontSize: '1.5rem' }}>{s.icon}</span>
+                        <span style={{ fontSize: '0.65rem', fontWeight: 'bold' }}>{s.id}</span>
+                      </button>
+                    ))}
+                  </>
+                )}
               </div>
             </div>
 
@@ -1589,7 +1593,7 @@ export default function App() {
                   <button type="button" onClick={obtenerGPS} style={{ backgroundColor: '#00E676', color: '#000', border: 'none', padding: '0.3rem 0.8rem', borderRadius: '15px', fontWeight: 'bold', fontSize: '0.75rem', cursor: 'pointer' }}>Mi GPS Actual 🎯</button>
                 </div>
 
-                <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.7rem', color: '#FFB300' }}>👉 Toca cualquier punto en el mapa para colocar el 📍 <strong>Alfiler Rojo</strong> exactamente donde viste al organismo:</p>
+                <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.7rem', color: '#FFB300' }}>👉 Toca cualquier punto en el mapa para colocar el 📍 <strong>Alfiler Rojo</strong> (autoregistra altitud y temperatura):</p>
 
                 <div style={{ height: '180px', borderRadius: '8px', overflow: 'hidden', marginBottom: '0.6rem', border: '1px solid #1B3D2F' }}>
                   <MapContainer center={posPin} zoom={14} style={{ height: '100%', width: '100%' }}>
@@ -1600,9 +1604,14 @@ export default function App() {
                         setLat(nuevaPos.lat.toFixed(6));
                         setLng(nuevaPos.lng.toFixed(6));
                         setPosPin([nuevaPos.lat, nuevaPos.lng]);
+
+                        const altEstimada = Math.round(1500 + Math.abs(nuevaPos.lat - 9.65) * 12000);
+                        const tempEstimada = (24 - (altEstimada / 300)).toFixed(1).replace('.', ',');
+                        setTemp(tempEstimada);
+                        setAltitud(altEstimada.toString());
                       }
                     }} />
-                    <EventoMapaPin setLat={setLat} setLng={setLng} setPosPin={setPosPin} />
+                    <EventoMapaPin setLat={setLat} setLng={setLng} setPosPin={setPosPin} setTemp={setTemp} setAltitud={setAltitud} />
                   </MapContainer>
                 </div>
 
@@ -1653,33 +1662,50 @@ export default function App() {
               </div>
             </div>
 
-            {/* PASO 7 */}
+            {/* PASO 7: MICROHÁBITAT, ESTADO, ETAPA (CON PUESTA/HUEVOS), TEMPERATURA Y ALTITUD AUTOMÁTICAS */}
             <div style={{ marginBottom: '1.2rem' }}>
-              <label style={{ display: 'block', fontSize: '0.8rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.5rem' }}>7. MICROHÁBITAT Y ESTADO</label>
+              <label style={{ display: 'block', fontSize: '0.8rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.5rem' }}>7. MICROHÁBITAT Y ESTADO BIOLÓGICO</label>
+              
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                <select value={estadoOrganismo} onChange={(e) => setEstadoOrganismo(e.target.value)} style={{ padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.8rem' }}>
-                  <option value="Vivo / Activo">Vivo / Activo</option>
-                  <option value="Muerto / Atropellado">Muerto / Atropellado</option>
-                </select>
-                <select value={etapa} onChange={(e) => setEtapa(e.target.value)} style={{ padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.8rem' }}>
-                  <option value="Adulto">Adulto</option>
-                  <option value="Juvenil">Juvenil</option>
-                  <option value="Renacuajo / Larva">Renacuajo / Larva</option>
-                </select>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.65rem', color: '#8AA398', marginBottom: '0.2rem' }}>ESTADO VITAL:</label>
+                  <select value={estadoOrganismo} onChange={(e) => setEstadoOrganismo(e.target.value)} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.8rem' }}>
+                    <option value="Vivo / Activo">Vivo / Activo</option>
+                    <option value="Muerto / Atropellado">Muerto / Atropellado</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.65rem', color: '#8AA398', marginBottom: '0.2rem' }}>ETAPA (INCLUYE PUESTA):</label>
+                  <select value={etapa} onChange={(e) => setEtapa(e.target.value)} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.8rem' }}>
+                    <option value="Adulto">Adulto</option>
+                    <option value="Juvenil">Juvenil</option>
+                    <option value="Renacuajo / Larva">Renacuajo / Larva</option>
+                    <option value="Puesta / Huevos">🥚 Puesta / Huevos</option>
+                  </select>
+                </div>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                <input type="text" value={temp} onChange={(e) => setTemp(e.target.value)} placeholder="Temperatura °C" style={{ padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.8rem' }} />
-                <input type="text" value={humedad} onChange={(e) => setHumedad(e.target.value)} placeholder="Humedad %" style={{ padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.8rem' }} />
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.7rem', color: '#00FF88', fontWeight: 'bold', marginBottom: '0.2rem' }}>🌡️ TEMPERATURA (°C):</label>
+                  <input type="text" value={temp} onChange={(e) => setTemp(e.target.value)} placeholder="Ej. 19,5" style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.8rem' }} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.7rem', color: '#00FF88', fontWeight: 'bold', marginBottom: '0.2rem' }}>⛰️ ALTITUD (msnm):</label>
+                  <input type="text" value={altitud} onChange={(e) => setAltitud(e.target.value)} placeholder="Ej. 1650" style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.8rem' }} />
+                </div>
               </div>
 
-              <select value={microhabitat} onChange={(e) => setMicrohabitat(e.target.value)} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.8rem' }}>
-                <option value="Vegetación / Finca Cafetalera">☕ Vegetación / Finca Cafetalera</option>
-                <option value="Hojarasca de bosque de roble">🍃 Hojarasca de bosque de roble</option>
-                <option value="Quebrada / Río / Estanque">🌊 Quebrada / Río / Estanque</option>
-                <option value="Tronco en descomposición / Arbusto">🪵 Tronco en descomposición / Arbusto</option>
-                <option value="Entorno antrópico / Infraestructura">🏠 Entorno antrópico / Infraestructura</option>
-              </select>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.65rem', color: '#8AA398', marginBottom: '0.2rem' }}>MICROHÁBITAT:</label>
+                <select value={microhabitat} onChange={(e) => setMicrohabitat(e.target.value)} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.8rem' }}>
+                  <option value="Vegetación / Finca Cafetalera">☕ Vegetación / Finca Cafetalera</option>
+                  <option value="Hojarasca de bosque de roble">🍃 Hojarasca de bosque de roble</option>
+                  <option value="Quebrada / Río / Estanque">🌊 Quebrada / Río / Estanque</option>
+                  <option value="Tronco en descomposición / Arbusto">🪵 Tronco en descomposición / Arbusto</option>
+                  <option value="Entorno antrópico / Infraestructura">🏠 Entorno antrópico / Infraestructura</option>
+                </select>
+              </div>
             </div>
 
             <div style={{ marginBottom: '1.2rem' }}>
@@ -1705,8 +1731,8 @@ export default function App() {
                     ubicacion: comunidad || 'Zona de los Santos',
                     reportante: usuario.isLoggedIn ? usuario.nombre : 'Usuario Anónimo',
                     contacto: textoContacto,
-                    temp: `${temp}°C`,
-                    humedad: `${humedad}% H.R.`,
+                    temp: `${temp} °C`,
+                    altitud: `${altitud} msnm`,
                     microhabitat: microhabitat,
                     estadoVida: `${estadoOrganismo} (${etapa})`,
                     tieneAudio: !!audioURL,
@@ -1719,7 +1745,7 @@ export default function App() {
                     alert('💾 ¡Guardado en el Teléfono (Modo Offline)! Cuando tengas señal de nuevo, podrás sincronizarlo con un toque.');
                   } else {
                     setRegistros([nuevo, ...registros]);
-                    alert('✔ Reporte enviado para revisión de expertos. Ya está visible en la pestaña de Moderación para los biólogos/admins.');
+                    alert('✔ Reporte enviado para revisión de expertos. Ya está visible en la pestaña de Moderación.');
                   }
 
                   setModalRegistro(false);
