@@ -57,21 +57,34 @@ export default function App() {
   const [modalChat, setModalChat] = useState(false);
   const [registroSeleccionado, setRegistroSeleccionado] = useState(null);
 
+  // Vistas del Modal Perfil / Autenticación ('perfil', 'login', 'registro', 'recuperar')
+  const [vistaPerfil, setVistaPerfil] = useState('perfil');
+  const [metodoRecuperacion, setMetodoRecuperacion] = useState('correo'); // 'correo' o 'sms'
+  const [mensajeAuthOk, setMensajeAuthOk] = useState('');
+
   // Filtros y Capas
   const [mapLayer, setMapLayer] = useState('callejero');
   const [filtroEspecie, setFiltroEspecie] = useState('todas');
+  const [busquedaGaleria, setBusquedaGaleria] = useState('');
 
-  // Estado de Cobertura / Disponibilidad
+  // Estado de Cobertura
   const [estadoConexion, setEstadoConexion] = useState('online');
 
-  // Datos del Usuario
+  // Usuario Autenticado
   const [usuario, setUsuario] = useState({
+    isLoggedIn: true,
     nombre: 'Jorge Carvajal',
     email: 'jorge.carvajal@docente.edu',
     telefono: '+506 8888-9999',
     comunidad: 'Tarrazú (San Marcos, San Lorenzo, Carlos)',
-    rol: 'Administrador Experto (Control Total)'
+    rol: 'Administrador Experto (Control Total)',
+    pass: '123456'
   });
+
+  // Formulario temporal de Login / Registro
+  const [formLogin, setFormLogin] = useState({ emailOrTel: '', pass: '' });
+  const [formReg, setFormReg] = useState({ nombre: '', email: '', telefono: '', comunidad: 'Tarrazú (San Marcos, San Lorenzo, Carlos)', pass: '', confirmPass: '' });
+  const [formRecuperar, setFormRecuperar] = useState({ contacto: '' });
 
   // Lista de Usuarios
   const [listaUsuarios, setListaUsuarios] = useState([
@@ -86,7 +99,7 @@ export default function App() {
   ]);
   const [nuevoMensaje, setNuevoMensaje] = useState('');
 
-  // Formulario Registro Avistamiento (7 Pasos Completos)
+  // Formulario Registro Avistamiento (7 Pasos)
   const [tipoFauna, setTipoFauna] = useState('Anfibio');
   const [silueta, setSilueta] = useState('Rana Arborícola');
   const [desconocido, setDesconocido] = useState(true);
@@ -103,7 +116,7 @@ export default function App() {
   const [notas, setNotas] = useState('');
   const [fotoPreview, setFotoPreview] = useState('https://images.unsplash.com/photo-1590005354167-6da97870c757?auto=format&fit=crop&w=600&q=80');
 
-  // Lógica de Grabación de Audio Real (15-30s)
+  // Grabación de Audio
   const [grabandoAudio, setGrabandoAudio] = useState(false);
   const [tiempoGrabacion, setTiempoGrabacion] = useState(0);
   const [audioURL, setAudioURL] = useState(null);
@@ -141,7 +154,7 @@ export default function App() {
         });
       }, 1000);
     } catch (err) {
-      alert('Permiso de micrófono no otorgado o no disponible en este dispositivo.');
+      alert('Permiso de micrófono no otorgado o dispositivo incompatible.');
     }
   };
 
@@ -154,7 +167,6 @@ export default function App() {
     }
   };
 
-  // Geolocalización
   const obtenerGPS = () => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -184,6 +196,18 @@ export default function App() {
     if (estado === 'online') return { icon: '🟢', label: 'En línea', color: '#00FF88' };
     if (estado === 'busy') return { icon: '🟠', label: 'Ocupado en campo', color: '#FFB300' };
     return { icon: '🔴', label: 'Fuera de cobertura', color: '#FF5252' };
+  };
+
+  // Exportar datos a CSV
+  const exportarCSV = () => {
+    const headers = "ID,Nombre Comun,Especie,Categoria,Estado,Ubicacion,Reportante,Temperatura,Humedad\n";
+    const rows = registros.map(r => `${r.id},"${r.nombreComun}","${r.especie}",${r.categoria},${r.estado},"${r.ubicacion}","${r.reportante}",${r.temp},${r.humedad}`).join("\n");
+    const blob = new Blob([headers + rows], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `HerpID_LosSantos_Avistamientos.csv`;
+    a.click();
   };
 
   // Registros
@@ -246,9 +270,10 @@ export default function App() {
   ];
 
   const registrosFiltrados = registros.filter((r) => {
-    if (filtroEspecie === 'anfibios') return r.categoria === 'ANFIBIO';
-    if (filtroEspecie === 'reptiles') return r.categoria === 'REPTIL';
-    return true;
+    const coincideBusqueda = r.nombreComun.toLowerCase().includes(busquedaGaleria.toLowerCase()) || r.especie.toLowerCase().includes(busquedaGaleria.toLowerCase()) || r.ubicacion.toLowerCase().includes(busquedaGaleria.toLowerCase());
+    if (filtroEspecie === 'anfibios') return r.categoria === 'ANFIBIO' && coincideBusqueda;
+    if (filtroEspecie === 'reptiles') return r.categoria === 'REPTIL' && coincideBusqueda;
+    return coincideBusqueda;
   });
 
   return (
@@ -267,6 +292,7 @@ export default function App() {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+          {/* Badge del Estado de Conexión Configurable */}
           <span style={{ backgroundColor: '#0D261C', color: getBadgetConexion(estadoConexion).color, padding: '0.3rem 0.7rem', borderRadius: '20px', fontSize: '0.75rem', border: '1px solid #164D36', fontWeight: 'bold' }}>
             {getBadgetConexion(estadoConexion).icon} {getBadgetConexion(estadoConexion).label}
           </span>
@@ -275,8 +301,8 @@ export default function App() {
             💬 Chat 1 a 1
           </button>
 
-          <button onClick={() => setModalPerfil(true)} style={{ backgroundColor: '#00C853', color: '#000', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '20px', fontWeight: 'bold', fontSize: '0.75rem', cursor: 'pointer' }}>
-            👤 {usuario.nombre}
+          <button onClick={() => { setVistaPerfil('perfil'); setModalPerfil(true); }} style={{ backgroundColor: '#00C853', color: '#000', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '20px', fontWeight: 'bold', fontSize: '0.75rem', cursor: 'pointer' }}>
+            👤 {usuario.isLoggedIn ? usuario.nombre : 'Ingresar / Registrarse'}
           </button>
 
           <button style={{ backgroundColor: '#00E676', color: '#000', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '20px', fontWeight: 'bold', fontSize: '0.75rem', cursor: 'pointer' }}>Instalar App</button>
@@ -354,16 +380,25 @@ export default function App() {
         </div>
       )}
 
-      {/* 🖼️ GALERÍA */}
+      {/* 🖼️ GALERÍA CON BUSCADOR */}
       {tab === 'galeria' && (
         <div style={{ padding: '1rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.8rem' }}>
             <h2 style={{ margin: 0, fontSize: '1.2rem', color: '#00FF88' }}>🌿 Herpetofauna de la Zona de los Santos</h2>
-            <button onClick={() => setModalRegistro(true)} style={{ backgroundColor: '#00C853', color: '#000', border: 'none', padding: '0.5rem 1rem', borderRadius: '20px', fontWeight: 'bold', cursor: 'pointer' }}>+ Registrar Avistamiento</button>
+            <div style={{ display: 'flex', gap: '0.5rem', flex: 1, maxWidth: '400px' }}>
+              <input 
+                type="text" 
+                placeholder="🔍 Buscar especie o comunidad..." 
+                value={busquedaGaleria}
+                onChange={(e) => setBusquedaGaleria(e.target.value)}
+                style={{ flex: 1, padding: '0.5rem 0.8rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '20px', fontSize: '0.8rem' }}
+              />
+              <button onClick={() => setModalRegistro(true)} style={{ backgroundColor: '#00C853', color: '#000', border: 'none', padding: '0.5rem 1rem', borderRadius: '20px', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>+ Registrar</button>
+            </div>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
-            {registros.map((reg) => (
+            {registrosFiltrados.map((reg) => (
               <div key={reg.id} onClick={() => setRegistroSeleccionado(reg)} style={{ backgroundColor: '#0F1A16', borderRadius: '12px', overflow: 'hidden', border: '1px solid #1B2E27', cursor: 'pointer' }}>
                 <div style={{ position: 'relative', height: '180px' }}>
                   <img src={reg.img} alt={reg.especie} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -382,7 +417,7 @@ export default function App() {
         </div>
       )}
 
-      {/* 📖 GUÍA */}
+      {/* 📖 GUÍA DE ESPECIES */}
       {tab === 'guia' && (
         <div style={{ padding: '1rem' }}>
           <h2 style={{ margin: 0, fontSize: '1.2rem', color: '#00FF88' }}>📖 Guía de Especies Comunes de Los Santos</h2>
@@ -401,25 +436,165 @@ export default function App() {
         </div>
       )}
 
-      {/* 📊 PANEL ADMIN */}
+      {/* 📊 PANEL ADMIN COMPLETO */}
       {tab === 'admin' && (
         <div style={{ padding: '1.2rem' }}>
-          <h2 style={{ fontSize: '1.2rem', color: '#FFF', marginBottom: '1rem' }}>🛡️ Panel de Administración & Mensajería Directa</h2>
+          <h2 style={{ fontSize: '1.2rem', color: '#FFF', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            🛡️ Panel de Administración & Mensajería Directa
+          </h2>
           <div style={{ backgroundColor: '#09130F', borderRadius: '16px', border: '1px solid #1B3D2F', padding: '1.2rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #162B23', paddingBottom: '0.8rem', marginBottom: '1rem' }}>
-              <h3 style={{ margin: 0, color: '#00FF88', fontSize: '1.05rem' }}>📫 Buzón de Consultas & Moderación</h3>
+            
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #162B23', paddingBottom: '0.8rem', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+              <h3 style={{ margin: 0, color: '#00FF88', fontSize: '1.05rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                📫 Buzón de Consultas Directas & Gestión
+              </h3>
+              
+              <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', backgroundColor: '#050A08', padding: '0.3rem', borderRadius: '20px', border: '1px solid #122B20' }}>
+                <button onClick={() => setSubTabAdmin('consultas')} style={{ backgroundColor: subTabAdmin === 'consultas' ? '#0F2B20' : 'transparent', color: subTabAdmin === 'consultas' ? '#00FF88' : '#8AA398', border: subTabAdmin === 'consultas' ? '1px solid #00FF88' : 'none', borderRadius: '15px', padding: '0.3rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>💬 Consultas 1 a 1</button>
+                <button onClick={() => setSubTabAdmin('metricas')} style={{ backgroundColor: subTabAdmin === 'metricas' ? '#0F2B20' : 'transparent', color: subTabAdmin === 'metricas' ? '#00FF88' : '#8AA398', border: subTabAdmin === 'metricas' ? '1px solid #00FF88' : 'none', borderRadius: '15px', padding: '0.3rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>📊 Métricas</button>
+                <button onClick={() => setSubTabAdmin('usuarios')} style={{ backgroundColor: subTabAdmin === 'usuarios' ? '#0F2B20' : 'transparent', color: subTabAdmin === 'usuarios' ? '#00FF88' : '#8AA398', border: subTabAdmin === 'usuarios' ? '1px solid #00FF88' : 'none', borderRadius: '15px', padding: '0.3rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>👥 Usuarios</button>
+                <button onClick={() => setSubTabAdmin('solicitudes')} style={{ backgroundColor: subTabAdmin === 'solicitudes' ? '#0F2B20' : 'transparent', color: subTabAdmin === 'solicitudes' ? '#00FF88' : '#8AA398', border: subTabAdmin === 'solicitudes' ? '1px solid #00FF88' : 'none', borderRadius: '15px', padding: '0.3rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>🎓 Solicitudes</button>
+                <button onClick={() => setSubTabAdmin('moderacion')} style={{ backgroundColor: subTabAdmin === 'moderacion' ? '#0F2B20' : 'transparent', color: subTabAdmin === 'moderacion' ? '#00FF88' : '#8AA398', border: subTabAdmin === 'moderacion' ? '1px solid #00FF88' : 'none', borderRadius: '15px', padding: '0.3rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>📋 Moderación</button>
+              </div>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
-              {registros.map((r) => (
-                <div key={r.id} style={{ backgroundColor: '#060D0A', border: '1px solid #162B23', borderRadius: '12px', padding: '0.9rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <strong style={{ color: '#FFF' }}>{r.nombreComun} ({r.especie})</strong>
-                    <div style={{ fontSize: '0.75rem', color: '#8AA398' }}>📍 {r.ubicacion} | Estado: {r.estado}</div>
-                  </div>
-                  <button onClick={() => setRegistroSeleccionado(r)} style={{ backgroundColor: '#00E676', color: '#000', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}>Moderar</button>
+
+            {/* CONSULTAS */}
+            {subTabAdmin === 'consultas' && (
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                  <span style={{ fontSize: '0.85rem', color: '#FFF', fontWeight: 'bold' }}>💬 Mensajes y Consultas Directas (1 a 1)</span>
+                  <button onClick={() => setModalChat(true)} style={{ backgroundColor: '#00E676', color: '#000', border: 'none', padding: '0.4rem 0.9rem', borderRadius: '15px', fontWeight: 'bold', fontSize: '0.8rem', cursor: 'pointer' }}>+ Nueva Consulta</button>
                 </div>
-              ))}
-            </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+                  <div style={{ backgroundColor: '#060D0A', border: '1px solid #162B23', borderRadius: '12px', padding: '0.9rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <strong style={{ color: '#FFF', fontSize: '0.9rem' }}>Jorge Carvajal</strong>
+                      <p style={{ margin: '0.3rem 0', color: '#8AA398', fontSize: '0.8rem' }}>"Consulta directa iniciada."</p>
+                    </div>
+                    <button onClick={() => setModalChat(true)} style={{ backgroundColor: 'transparent', border: 'none', color: '#00FF88', fontWeight: 'bold', cursor: 'pointer' }}>Abrir →</button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* MÉTRICAS & EXPORTAR */}
+            {subTabAdmin === 'metricas' && (
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                  <h4 style={{ margin: 0, color: '#FFF' }}>📊 Métricas de Biodiversidad en Los Santos</h4>
+                  <button onClick={exportarCSV} style={{ backgroundColor: '#00E676', color: '#000', border: 'none', padding: '0.4rem 0.9rem', borderRadius: '15px', fontWeight: 'bold', fontSize: '0.75rem', cursor: 'pointer' }}>
+                    📥 Exportar Datos a CSV
+                  </button>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.8rem', marginBottom: '1.5rem' }}>
+                  <div style={{ backgroundColor: '#060D0A', border: '1px solid #162B23', padding: '1.2rem', borderRadius: '12px', textAlign: 'center' }}>
+                    <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#FFF' }}>{registros.length}</div>
+                    <div style={{ fontSize: '0.75rem', color: '#8AA398' }}>Total de Reportes</div>
+                  </div>
+                  <div style={{ backgroundColor: '#060D0A', border: '1px solid #00FF88', padding: '1.2rem', borderRadius: '12px', textAlign: 'center' }}>
+                    <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#00FF88' }}>{registros.filter(r => r.estado === 'VALIDADO').length}</div>
+                    <div style={{ fontSize: '0.75rem', color: '#8AA398' }}>Aprobados</div>
+                  </div>
+                  <div style={{ backgroundColor: '#060D0A', border: '1px solid #FFB300', padding: '1.2rem', borderRadius: '12px', textAlign: 'center' }}>
+                    <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#FFB300' }}>{listaUsuarios.length}</div>
+                    <div style={{ fontSize: '0.75rem', color: '#8AA398' }}>Usuarios Registrados</div>
+                  </div>
+                  <div style={{ backgroundColor: '#060D0A', border: '1px solid #FF5252', padding: '1.2rem', borderRadius: '12px', textAlign: 'center' }}>
+                    <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#FF5252' }}>0</div>
+                    <div style={{ fontSize: '0.75rem', color: '#8AA398' }}>Cuentas Suspendidas</div>
+                  </div>
+                </div>
+
+                <div style={{ backgroundColor: '#060D0A', border: '1px solid #162B23', borderRadius: '12px', padding: '1rem' }}>
+                  <h4 style={{ margin: '0 0 0.8rem 0', color: '#00FF88', fontSize: '0.9rem' }}>🏆 Top Especies Más Avistadas</h4>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.7rem 1rem', backgroundColor: '#0B1A14', borderRadius: '8px', border: '1px solid #122B20' }}>
+                    <span style={{ fontSize: '0.85rem', color: '#FFF' }}><strong>#1</strong> <em>Agalychnis annae</em></span>
+                    <span style={{ backgroundColor: '#0D261C', color: '#00FF88', padding: '0.2rem 0.6rem', borderRadius: '10px', fontSize: '0.75rem', fontWeight: 'bold' }}>1 registros</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* GESTIÓN USUARIOS */}
+            {subTabAdmin === 'usuarios' && (
+              <div>
+                <h4 style={{ margin: '0 0 1rem 0', color: '#FFF', fontSize: '0.95rem' }}>👥 Gestión de Usuarios, Permisos y Estado de Cobertura</h4>
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', textAlign: 'left' }}>
+                    <thead>
+                      <tr style={{ borderBottom: '1px solid #162B23', color: '#00FF88' }}>
+                        <th style={{ padding: '0.6rem' }}>ESTADO</th>
+                        <th style={{ padding: '0.6rem' }}>USUARIO</th>
+                        <th style={{ padding: '0.6rem' }}>CONTACTO</th>
+                        <th style={{ padding: '0.6rem' }}>COMUNIDAD</th>
+                        <th style={{ padding: '0.6rem' }}>ROL ACTUAL</th>
+                        <th style={{ padding: '0.6rem' }}>ACCIÓN</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {listaUsuarios.map((u) => {
+                        const badg = getBadgetConexion(u.id === 1 ? estadoConexion : u.estadoConexion);
+                        return (
+                          <tr key={u.id} style={{ borderBottom: '1px solid #0D1A15' }}>
+                            <td style={{ padding: '0.6rem' }}>
+                              <span style={{ color: badg.color, fontWeight: 'bold' }} title={badg.label}>{badg.icon}</span>
+                            </td>
+                            <td style={{ padding: '0.6rem', fontWeight: 'bold', color: '#FFF' }}>{u.nombre}</td>
+                            <td style={{ padding: '0.6rem', color: '#8AA398' }}>{u.email}<br /><span style={{ fontSize: '0.7rem' }}>{u.tel}</span></td>
+                            <td style={{ padding: '0.6rem', color: '#A0C2B4' }}>{u.comunidad}</td>
+                            <td style={{ padding: '0.6rem' }}>
+                              <select 
+                                value={u.rol} 
+                                onChange={(e) => {
+                                  setListaUsuarios(listaUsuarios.map(item => item.id === u.id ? { ...item, rol: e.target.value } : item));
+                                }} 
+                                style={{ backgroundColor: '#050A08', color: '#00FF88', border: '1px solid #1B3D2F', borderRadius: '12px', padding: '0.3rem 0.5rem', fontSize: '0.75rem' }}
+                              >
+                                <option value="Admin Experto">🛡️ Admin Experto</option>
+                                <option value="Experto">🎓 Experto</option>
+                                <option value="Observador">👤 Observador</option>
+                              </select>
+                            </td>
+                            <td style={{ padding: '0.6rem' }}>
+                              <button onClick={() => alert(`Usuario ${u.nombre} suspendido.`)} style={{ backgroundColor: '#D32F2F', color: '#FFF', border: 'none', borderRadius: '12px', padding: '0.3rem 0.6rem', fontSize: '0.7rem', fontWeight: 'bold', cursor: 'pointer' }}>🚫 Ban</button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* SOLICITUDES */}
+            {subTabAdmin === 'solicitudes' && (
+              <div>
+                <h4 style={{ margin: '0 0 1rem 0', color: '#FFB300', fontSize: '0.95rem' }}>🎓 Solicitudes de Rol Experto</h4>
+                <p style={{ color: '#8AA398', fontSize: '0.85rem' }}>No hay solicitudes de acreditación pendientes en este momento.</p>
+              </div>
+            )}
+
+            {/* MODERACIÓN */}
+            {subTabAdmin === 'moderacion' && (
+              <div>
+                <h4 style={{ margin: '0 0 1rem 0', color: '#FFF', fontSize: '0.95rem' }}>📋 Moderación de Reportes</h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+                  {registros.map((r) => (
+                    <div key={r.id} style={{ backgroundColor: '#060D0A', border: '1px solid #162B23', borderRadius: '12px', padding: '0.9rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div>
+                        <strong style={{ color: '#FFF', fontSize: '0.85rem' }}>{r.nombreComun} ({r.especie})</strong>
+                        <div style={{ fontSize: '0.75rem', color: '#8AA398' }}>📍 {r.ubicacion} | Estado: {r.estado}</div>
+                      </div>
+                      <button onClick={() => setRegistroSeleccionado(r)} style={{ backgroundColor: '#00E676', color: '#000', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}>Moderar</button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
           </div>
         </div>
       )}
@@ -451,12 +626,250 @@ export default function App() {
         </div>
       )}
 
-      {/* 👤 MODAL PERFIL */}
+      {/* 👤 MODAL COMPLETO DE PERFIL, INICIO DE SESIÓN, REGISTRO Y RECUPERACIÓN DE CLAVE */}
       {modalPerfil && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999, padding: '1rem' }}>
-          <div style={{ backgroundColor: '#09130F', borderRadius: '16px', border: '1px solid #1B3D2F', width: '100%', maxWidth: '500px', padding: '1.2rem' }}>
-            <h3 style={{ color: '#FFF', marginTop: 0 }}>👤 Perfil de Usuario</h3>
-            <button onClick={() => setModalPerfil(false)} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#00E676', color: '#000', fontWeight: 'bold', border: 'none', borderRadius: '10px', cursor: 'pointer' }}>Guardar Cambios</button>
+          <div style={{ backgroundColor: '#09130F', borderRadius: '16px', border: '1px solid #1B3D2F', width: '100%', maxWidth: '520px', padding: '1.2rem', maxHeight: '90vh', overflowY: 'auto' }}>
+            
+            {/* Header del Modal */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid #122B20', paddingBottom: '0.5rem' }}>
+              <h3 style={{ color: '#FFF', margin: 0, fontSize: '1.1rem' }}>
+                {vistaPerfil === 'perfil' && '👤 Mi Perfil & Disponibilidad'}
+                {vistaPerfil === 'login' && '🔑 Iniciar Sesión'}
+                {vistaPerfil === 'registro' && '📝 Crear Cuenta Nueva'}
+                {vistaPerfil === 'recuperar' && '📲 Recuperar Contraseña'}
+              </h3>
+              <button onClick={() => setModalPerfil(false)} style={{ backgroundColor: 'transparent', border: 'none', color: '#FFF', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
+            </div>
+
+            {mensajeAuthOk && (
+              <div style={{ backgroundColor: '#0D261C', border: '1px solid #00FF88', color: '#00FF88', padding: '0.6rem', borderRadius: '8px', fontSize: '0.8rem', marginBottom: '1rem', textAlign: 'center' }}>
+                {mensajeAuthOk}
+              </div>
+            )}
+
+            {/* VISTA 1: MI PERFIL */}
+            {vistaPerfil === 'perfil' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
+                <div style={{ backgroundColor: '#060D0A', border: '1px solid #1B3D2F', borderRadius: '12px', padding: '0.8rem', textAlign: 'center' }}>
+                  <span style={{ color: '#E53935', fontWeight: 'bold', fontSize: '0.85rem' }}>🛡️ {usuario.rol.toUpperCase()}</span>
+                  <div style={{ fontSize: '0.7rem', color: '#7A9A8C', marginTop: '0.2rem' }}>Comunidad HerpID Los Santos CR</div>
+                </div>
+
+                {/* Selector de Cobertura */}
+                <div style={{ backgroundColor: '#0A1E16', border: '1px solid #00FF88', padding: '0.8rem', borderRadius: '10px' }}>
+                  <label style={{ display: 'block', fontSize: '0.75rem', color: '#00FF88', fontWeight: 'bold', marginBottom: '0.4rem' }}>
+                    📡 ESTADO DE COBERTURA Y DISPONIBILIDAD
+                  </label>
+                  <select 
+                    value={estadoConexion} 
+                    onChange={(e) => setEstadoConexion(e.target.value)} 
+                    style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }}
+                  >
+                    <option value="online">🟢 En línea (Disponible para consultas)</option>
+                    <option value="busy">🟠 Ocupado en campo (Sin respuesta inmediata)</option>
+                    <option value="offline">🔴 Fuera de cobertura (Sin señal en montaña)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.3rem' }}>NOMBRE COMPLETO *</label>
+                  <input type="text" value={usuario.nombre} onChange={(e) => setUsuario({ ...usuario, nombre: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }} />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.3rem' }}>CORREO ELECTRÓNICO *</label>
+                  <input type="email" value={usuario.email} onChange={(e) => setUsuario({ ...usuario, email: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }} />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.3rem' }}>NÚMERO DE CELULAR *</label>
+                  <input type="text" value={usuario.telefono} onChange={(e) => setUsuario({ ...usuario, telefono: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }} />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.3rem' }}>COMUNIDAD EN LOS SANTOS</label>
+                  <select value={usuario.comunidad} onChange={(e) => setUsuario({ ...usuario, comunidad: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }}>
+                    <option value="Tarrazú (San Marcos, San Lorenzo, Carlos)">Tarrazú (San Marcos, San Lorenzo, Carlos)</option>
+                    <option value="Dota (Santa María, Copey, Jardín)">Dota (Santa María, Copey, Jardín)</option>
+                    <option value="León Cortés (San Pablo, San Rafael)">León Cortés (San Pablo, San Rafael)</option>
+                  </select>
+                </div>
+
+                {/* Conmutador de Rol para Pruebas */}
+                <div style={{ backgroundColor: '#1A1807', border: '1px solid #5C4D0A', padding: '0.8rem', borderRadius: '10px' }}>
+                  <label style={{ display: 'block', fontSize: '0.75rem', color: '#FFB300', fontWeight: 'bold', marginBottom: '0.4rem' }}>⚙️ CONMUTAR ROL DE USUARIO (PRUEBAS)</label>
+                  <select value={usuario.rol} onChange={(e) => setUsuario({ ...usuario, rol: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#0A1410', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }}>
+                    <option value="Observador de Campo">👤 Observador de Campo</option>
+                    <option value="Experto Herpetólogo">🎓 Experto Herpetólogo</option>
+                    <option value="Administrador Experto (Control Total)">🛡️ Administrador Experto (Control Total)</option>
+                  </select>
+                </div>
+
+                <button onClick={() => setModalPerfil(false)} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#00E676', color: '#000', fontWeight: 'bold', border: 'none', borderRadius: '10px', cursor: 'pointer' }}>Guardar Cambios</button>
+                
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.5rem' }}>
+                  <button onClick={() => setVistaPerfil('login')} style={{ backgroundColor: 'transparent', border: 'none', color: '#8AA398', fontSize: '0.75rem', cursor: 'pointer', textDecoration: 'underline' }}>Cambiar de cuenta</button>
+                  <button onClick={() => setVistaPerfil('registro')} style={{ backgroundColor: 'transparent', border: 'none', color: '#00FF88', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>+ Registrar otra cuenta</button>
+                </div>
+              </div>
+            )}
+
+            {/* VISTA 2: INICIAR SESIÓN */}
+            {vistaPerfil === 'login' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.3rem' }}>CORREO O CELULAR *</label>
+                  <input type="text" placeholder="ej. jorge@docente.edu o +506 8888-9999" value={formLogin.emailOrTel} onChange={(e) => setFormLogin({ ...formLogin, emailOrTel: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }} />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.3rem' }}>CONTRASEÑA PERSONAL *</label>
+                  <input type="password" placeholder="••••••••" value={formLogin.pass} onChange={(e) => setFormLogin({ ...formLogin, pass: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }} />
+                </div>
+
+                <div style={{ textAlign: 'right' }}>
+                  <button onClick={() => setVistaPerfil('recuperar')} style={{ backgroundColor: 'transparent', border: 'none', color: '#FFB300', fontSize: '0.75rem', cursor: 'pointer', textDecoration: 'underline' }}>¿Olvidaste tu contraseña?</button>
+                </div>
+
+                <button 
+                  onClick={() => {
+                    setUsuario({ ...usuario, isLoggedIn: true });
+                    setMensajeAuthOk('¡Sesión iniciada con éxito!');
+                    setTimeout(() => { setMensajeAuthOk(''); setVistaPerfil('perfil'); }, 1500);
+                  }} 
+                  style={{ width: '100%', padding: '0.8rem', backgroundColor: '#00E676', color: '#000', fontWeight: 'bold', border: 'none', borderRadius: '10px', cursor: 'pointer' }}
+                >
+                  Ingresar a HerpID
+                </button>
+
+                <div style={{ textAlign: 'center', marginTop: '0.5rem' }}>
+                  <span style={{ fontSize: '0.75rem', color: '#8AA398' }}>¿No tienes cuenta? </span>
+                  <button onClick={() => setVistaPerfil('registro')} style={{ backgroundColor: 'transparent', border: 'none', color: '#00FF88', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}>Regístrate aquí</button>
+                </div>
+              </div>
+            )}
+
+            {/* VISTA 3: CREAR CUENTA NUEVA */}
+            {vistaPerfil === 'registro' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.3rem' }}>NOMBRE COMPLETO *</label>
+                  <input type="text" placeholder="ej. María Fernández" value={formReg.nombre} onChange={(e) => setFormReg({ ...formReg, nombre: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }} />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.3rem' }}>CORREO ELECTRÓNICO *</label>
+                  <input type="email" placeholder="maria@ejemplo.com" value={formReg.email} onChange={(e) => setFormReg({ ...formReg, email: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }} />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.3rem' }}>NÚMERO DE CELULAR *</label>
+                  <input type="text" placeholder="+506 8888-0000" value={formReg.telefono} onChange={(e) => setFormReg({ ...formReg, telefono: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }} />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.3rem' }}>COMUNIDAD EN LOS SANTOS *</label>
+                  <select value={formReg.comunidad} onChange={(e) => setFormReg({ ...formReg, comunidad: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }}>
+                    <option value="Tarrazú (San Marcos, San Lorenzo, Carlos)">Tarrazú (San Marcos, San Lorenzo, Carlos)</option>
+                    <option value="Dota (Santa María, Copey, Jardín)">Dota (Santa María, Copey, Jardín)</option>
+                    <option value="León Cortés (San Pablo, San Rafael)">León Cortés (San Pablo, San Rafael)</option>
+                  </select>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.7rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.3rem' }}>CONTRASEÑA *</label>
+                    <input type="password" placeholder="••••••••" value={formReg.pass} onChange={(e) => setFormReg({ ...formReg, pass: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }} />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.7rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.3rem' }}>CONFIRMAR *</label>
+                    <input type="password" placeholder="••••••••" value={formReg.confirmPass} onChange={(e) => setFormReg({ ...formReg, confirmPass: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }} />
+                  </div>
+                </div>
+
+                <button 
+                  onClick={() => {
+                    if (!formReg.nombre || !formReg.email || !formReg.pass) {
+                      alert('Por favor completa los campos requeridos.');
+                      return;
+                    }
+                    setUsuario({
+                      isLoggedIn: true,
+                      nombre: formReg.nombre,
+                      email: formReg.email,
+                      telefono: formReg.telefono,
+                      comunidad: formReg.comunidad,
+                      rol: 'Observador de Campo',
+                      pass: formReg.pass
+                    });
+                    setMensajeAuthOk('¡Cuenta creada exitosamente!');
+                    setTimeout(() => { setMensajeAuthOk(''); setVistaPerfil('perfil'); }, 1500);
+                  }} 
+                  style={{ width: '100%', padding: '0.8rem', backgroundColor: '#00E676', color: '#000', fontWeight: 'bold', border: 'none', borderRadius: '10px', cursor: 'pointer', marginTop: '0.5rem' }}
+                >
+                  Registrarme en HerpID
+                </button>
+
+                <div style={{ textAlign: 'center', marginTop: '0.3rem' }}>
+                  <button onClick={() => setVistaPerfil('login')} style={{ backgroundColor: 'transparent', border: 'none', color: '#8AA398', fontSize: '0.75rem', cursor: 'pointer' }}>¿Ya tienes cuenta? Inicia sesión</button>
+                </div>
+              </div>
+            )}
+
+            {/* VISTA 4: RECUPERAR CONTRASEÑA (VÍA CORREO O SMS) */}
+            {vistaPerfil === 'recuperar' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
+                <p style={{ fontSize: '0.8rem', color: '#8AA398', margin: 0 }}>Selecciona el método de recuperación para recibir las instrucciones y restablecer tu clave:</p>
+                
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                  <button 
+                    onClick={() => setMetodoRecuperacion('correo')} 
+                    style={{ backgroundColor: metodoRecuperacion === 'correo' ? '#0F2B20' : '#050A08', color: '#FFF', border: metodoRecuperacion === 'correo' ? '2px solid #00FF88' : '1px solid #1B3D2F', padding: '0.6rem', borderRadius: '8px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 'bold' }}
+                  >
+                    ✉️ Por Correo
+                  </button>
+                  <button 
+                    onClick={() => setMetodoRecuperacion('sms')} 
+                    style={{ backgroundColor: metodoRecuperacion === 'sms' ? '#0F2B20' : '#050A08', color: '#FFF', border: metodoRecuperacion === 'sms' ? '2px solid #00FF88' : '1px solid #1B3D2F', padding: '0.6rem', borderRadius: '8px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 'bold' }}
+                  >
+                    💬 Por Mensaje (SMS)
+                  </button>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.3rem' }}>
+                    {metodoRecuperacion === 'correo' ? 'INGRESA TU CORREO REGISTRADO *' : 'INGRESA TU CELULAR REGISTRADO *'}
+                  </label>
+                  <input 
+                    type="text" 
+                    placeholder={metodoRecuperacion === 'correo' ? 'ej. usuario@docente.edu' : 'ej. +506 8888-9999'} 
+                    value={formRecuperar.contacto} 
+                    onChange={(e) => setFormRecuperar({ contacto: e.target.value })} 
+                    style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }} 
+                  />
+                </div>
+
+                <button 
+                  onClick={() => {
+                    if (!formRecuperar.contacto) {
+                      alert('Por favor ingresa tu contacto.');
+                      return;
+                    }
+                    setMensajeAuthOk(`¡Enlace/Código de recuperación enviado vía ${metodoRecuperacion === 'correo' ? 'Correo' : 'SMS'}!`);
+                    setTimeout(() => { setMensajeAuthOk(''); setVistaPerfil('login'); }, 2500);
+                  }} 
+                  style={{ width: '100%', padding: '0.8rem', backgroundColor: '#00E676', color: '#000', fontWeight: 'bold', border: 'none', borderRadius: '10px', cursor: 'pointer' }}
+                >
+                  Enviar Instrucciones
+                </button>
+
+                <div style={{ textAlign: 'center' }}>
+                  <button onClick={() => setVistaPerfil('login')} style={{ backgroundColor: 'transparent', border: 'none', color: '#8AA398', fontSize: '0.75rem', cursor: 'pointer' }}>Volver al Inicio de Sesión</button>
+                </div>
+              </div>
+            )}
+
           </div>
         </div>
       )}
@@ -469,14 +882,25 @@ export default function App() {
               <h3 style={{ margin: 0, color: '#FFF', fontSize: '1.05rem' }}>💭 Chat Privado</h3>
               <button onClick={() => setModalChat(false)} style={{ backgroundColor: 'transparent', border: 'none', color: '#FFF', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
             </div>
-            <div style={{ flex: 1, backgroundColor: '#050A08', border: '1px solid #122B20', borderRadius: '12px', padding: '1rem', overflowY: 'auto' }}>
+            
+            <div style={{ flex: 1, backgroundColor: '#050A08', border: '1px solid #122B20', borderRadius: '12px', padding: '1rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
               {chatMensajes.map((m) => (
-                <div key={m.id} style={{ marginBottom: '0.5rem', color: '#FFF', fontSize: '0.85rem' }}>{m.texto}</div>
+                <div key={m.id} style={{ backgroundColor: m.emisor === 'usuario' ? '#0F2B20' : '#101C17', padding: '0.6rem', borderRadius: '8px', color: '#FFF', fontSize: '0.85rem' }}>{m.texto}</div>
               ))}
             </div>
-            <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.8rem' }}>
+
+            <div style={{ backgroundColor: '#060D0A', border: '1px solid #162B23', borderRadius: '12px', padding: '0.6rem', margin: '0.6rem 0' }}>
+              <div style={{ fontSize: '0.65rem', color: '#FFB300', fontWeight: 'bold', marginBottom: '0.4rem', textAlign: 'center' }}>🚨 BARRA DE ALERTAS DE SEGURIDAD (EXCLUSIVO EXPERTOS)</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.4rem' }}>
+                <button onClick={() => enviarMensajeChat('🚨 ATENCIÓN: Organismo VENENOSO (PELIGRO).')} style={{ backgroundColor: '#D32F2F', color: '#FFF', border: 'none', padding: '0.4rem', borderRadius: '6px', fontSize: '0.6rem', fontWeight: 'bold', cursor: 'pointer' }}>🔴 VENENOSA</button>
+                <button onClick={() => enviarMensajeChat('⚠️ PRECAUCIÓN: NO TOCAR / ACERCARSE.')} style={{ backgroundColor: '#E65100', color: '#FFF', border: 'none', padding: '0.4rem', borderRadius: '6px', fontSize: '0.6rem', fontWeight: 'bold', cursor: 'pointer' }}>🟠 NO TOCAR</button>
+                <button onClick={() => enviarMensajeChat('🆘 SOLICITAR AYUDA / RESCATE.')} style={{ backgroundColor: '#F57F17', color: '#FFF', border: 'none', padding: '0.4rem', borderRadius: '6px', fontSize: '0.6rem', fontWeight: 'bold', cursor: 'pointer' }}>🟡 AYUDA</button>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
               <input type="text" placeholder="Escribe..." value={nuevoMensaje} onChange={(e) => setNuevoMensaje(e.target.value)} style={{ flex: 1, padding: '0.7rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '20px' }} />
-              <button onClick={() => enviarMensajeChat(nuevoMensaje)} style={{ backgroundColor: '#00E676', color: '#000', border: 'none', padding: '0.7rem 1rem', borderRadius: '20px', fontWeight: 'bold' }}>Enviar</button>
+              <button onClick={() => enviarMensajeChat(nuevoMensaje)} style={{ backgroundColor: '#00E676', color: '#000', border: 'none', padding: '0.7rem 1.2rem', borderRadius: '20px', fontWeight: 'bold' }}>Enviar</button>
             </div>
           </div>
         </div>
@@ -492,13 +916,12 @@ export default function App() {
               <button onClick={() => setModalRegistro(false)} style={{ backgroundColor: 'transparent', border: 'none', color: '#FFF', fontSize: '1.3rem', cursor: 'pointer' }}>✕</button>
             </div>
 
-            {/* PROTOCOLO DE SEGURIDAD */}
             <div style={{ backgroundColor: '#1C1B0A', border: '1px solid #5C4D0A', color: '#EEDC82', padding: '0.8rem', borderRadius: '10px', fontSize: '0.75rem', marginBottom: '1.2rem', display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
               <span>🛡️</span>
               <div><strong>Protocolo de Seguridad:</strong> Mantén una distancia mínima de 1.5 a 2 metros con cualquier serpiente u organismo desconocido. No manipules fauna venenosa.</div>
             </div>
 
-            {/* PASO 1: TIPO DE FAUNA */}
+            {/* PASO 1 */}
             <div style={{ marginBottom: '1.2rem' }}>
               <label style={{ display: 'block', fontSize: '0.8rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.5rem' }}>1. TIPO DE FAUNA *</label>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.8rem' }}>
@@ -513,7 +936,7 @@ export default function App() {
               </div>
             </div>
 
-            {/* PASO 2: SELECTOR VISUAL DE FORMA POR SILUETA */}
+            {/* PASO 2 */}
             <div style={{ marginBottom: '1.2rem' }}>
               <label style={{ display: 'block', fontSize: '0.8rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.5rem' }}>2. SELECTOR VISUAL DE FORMA POR SILUETA *</label>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem' }}>
@@ -526,7 +949,7 @@ export default function App() {
               </div>
             </div>
 
-            {/* PASO 3: TAXONOMÍA / ESPECIE */}
+            {/* PASO 3 */}
             <div style={{ marginBottom: '1.2rem' }}>
               <label style={{ display: 'block', fontSize: '0.8rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.5rem' }}>3. TAXONOMÍA / ESPECIE</label>
               <div onClick={() => setDesconocido(!desconocido)} style={{ backgroundColor: '#0D1E18', border: '1px solid #1B3D2F', padding: '0.7rem', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.6rem' }}>
@@ -541,7 +964,7 @@ export default function App() {
               )}
             </div>
 
-            {/* PASO 4: COORDENADAS GPS */}
+            {/* PASO 4 */}
             <div style={{ marginBottom: '1.2rem' }}>
               <label style={{ display: 'block', fontSize: '0.8rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.5rem' }}>4. COORDENADAS GPS (LATITUD, LONGITUD) *</label>
               <div style={{ backgroundColor: '#0D1E18', border: '1px border-dashed #1B3D2F', borderRadius: '8px', padding: '0.8rem' }}>
@@ -557,7 +980,7 @@ export default function App() {
               </div>
             </div>
 
-            {/* PASO 5: FOTOGRAFÍA DEL EJEMPLAR */}
+            {/* PASO 5 */}
             <div style={{ marginBottom: '1.2rem' }}>
               <label style={{ display: 'block', fontSize: '0.8rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.5rem' }}>5. FOTOGRAFÍA DEL EJEMPLAR *</label>
               <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', border: '2px dashed #1B3D2F', borderRadius: '10px', padding: '1rem', cursor: 'pointer', backgroundColor: '#0A1410' }}>
@@ -572,11 +995,10 @@ export default function App() {
               )}
             </div>
 
-            {/* PASO 6: GRABACIÓN DEL CANTO DE ANFIBIOS REAL (15-30s) */}
+            {/* PASO 6: GRABACIÓN MEDIARECORDER */}
             <div style={{ marginBottom: '1.2rem' }}>
               <label style={{ display: 'block', fontSize: '0.8rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.5rem' }}>6. GRABACIÓN DEL CANTO / VOCALIZACIÓN (OPCIONAL)</label>
               <div style={{ backgroundColor: '#0D1E18', border: '1px border-dashed #1B3D2F', borderRadius: '10px', padding: '0.8rem' }}>
-                
                 {!grabandoAudio ? (
                   <button type="button" onClick={iniciarGrabacion} style={{ width: '100%', padding: '0.7rem', backgroundColor: '#E53935', color: '#FFF', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
                     🎙️ Grabar Canto (Nota de Voz 15-30s)
@@ -596,16 +1018,14 @@ export default function App() {
               </div>
             </div>
 
-            {/* PASO 7: MICROHÁBITAT Y ESTADO COMPLETO */}
+            {/* PASO 7 */}
             <div style={{ marginBottom: '1.2rem' }}>
               <label style={{ display: 'block', fontSize: '0.8rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.5rem' }}>7. MICROHÁBITAT Y ESTADO</label>
-              
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '0.5rem' }}>
                 <select value={estadoOrganismo} onChange={(e) => setEstadoOrganismo(e.target.value)} style={{ padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.8rem' }}>
                   <option value="Vivo / Activo">Vivo / Activo</option>
                   <option value="Muerto / Atropellado">Muerto / Atropellado</option>
                 </select>
-
                 <select value={etapa} onChange={(e) => setEtapa(e.target.value)} style={{ padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.8rem' }}>
                   <option value="Adulto">Adulto</option>
                   <option value="Juvenil">Juvenil</option>
@@ -627,13 +1047,11 @@ export default function App() {
               </select>
             </div>
 
-            {/* NOTAS ADICIONALES */}
             <div style={{ marginBottom: '1.2rem' }}>
               <label style={{ display: 'block', fontSize: '0.8rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.5rem' }}>NOTAS ADICIONALES</label>
               <textarea rows="3" placeholder="Detalles observados..." value={notas} onChange={(e) => setNotas(e.target.value)} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.8rem' }} />
             </div>
 
-            {/* BOTONES CANCELAR Y ENVIAR */}
             <div style={{ display: 'flex', gap: '0.8rem', marginTop: '1.5rem' }}>
               <button onClick={() => setModalRegistro(false)} style={{ flex: 1, padding: '0.8rem', backgroundColor: '#14211C', color: '#A0C2B4', border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: 'bold' }}>Cancelar</button>
               <button 
@@ -670,7 +1088,7 @@ export default function App() {
         </div>
       )}
 
-      {/* 🧭 NAVEGACIÓN INFERIOR (TABBAR) */}
+      {/* 🧭 NAVEGACIÓN INFERIOR */}
       <nav style={{ position: 'fixed', bottom: 0, left: 0, right: 0, backgroundColor: '#0A120E', display: 'flex', borderTop: '1px solid #162B23', height: '65px', alignItems: 'center', zIndex: 1000 }}>
         <button onClick={() => setTab('mapa')} style={{ flex: 1, backgroundColor: 'transparent', border: 'none', color: tab === 'mapa' ? '#00FF88' : '#6A8A7D', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', cursor: 'pointer' }}>
           <span style={{ fontSize: '1.2rem' }}>🗺️</span>
