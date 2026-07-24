@@ -3,7 +3,7 @@ import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
-// Función para crear marcadores circulares estilizados en el mapa
+// Marcadores circulares Antigravity con bordes de estado
 const crearIconoPersonalizado = (silueta, estado) => {
   let emoji = '🐸';
   if (silueta === 'Serpiente') emoji = '🐍';
@@ -57,11 +57,15 @@ export default function App() {
   const [modalChat, setModalChat] = useState(false);
   const [registroSeleccionado, setRegistroSeleccionado] = useState(null);
 
-  // Filtros y Capas del Mapa
+  // Filtros y Capas
   const [mapLayer, setMapLayer] = useState('callejero');
   const [filtroEspecie, setFiltroEspecie] = useState('todas');
 
-  // Perfil del Usuario
+  // Estado de Cobertura / Disponibilidad del Usuario
+  // Opciones: 'online' (🟢 En línea), 'busy' (🟠 Ocupado), 'offline' (🔴 Fuera de cobertura)
+  const [estadoConexion, setEstadoConexion] = useState('online');
+
+  // Datos del Usuario
   const [usuario, setUsuario] = useState({
     nombre: 'Jorge Carvajal',
     email: 'jorge.carvajal@docente.edu',
@@ -70,13 +74,14 @@ export default function App() {
     rol: 'Administrador Experto (Control Total)'
   });
 
+  // Lista de Usuarios en el Admin con estado dinámico
   const [listaUsuarios, setListaUsuarios] = useState([
-    { id: 1, nombre: 'Jorge Carvajal', email: 'jorge.carvajal@docente.edu', tel: '+506 8888-9999', comunidad: 'San Marcos de Tarrazú', rol: 'Admin Experto' },
-    { id: 2, nombre: 'Dra. Sofía Herpetóloga', email: 'sofia.herpeto@ucr.ac.cr', tel: '+506 8765-4321', comunidad: 'Santa María de Dota', rol: 'Experto' },
-    { id: 3, nombre: 'Carlos Picado', email: 'cpicado@comunidad.cr', tel: '+506 8555-1234', comunidad: 'San Pablo de León Cortés', rol: 'Observador' }
+    { id: 1, nombre: 'Jorge Carvajal', email: 'jorge.carvajal@docente.edu', tel: '+506 8888-9999', comunidad: 'San Marcos de Tarrazú', rol: 'Admin Experto', estadoConexion: 'online' },
+    { id: 2, nombre: 'Dra. Sofía Herpetóloga', email: 'sofia.herpeto@ucr.ac.cr', tel: '+506 8765-4321', comunidad: 'Santa María de Dota', rol: 'Experto', estadoConexion: 'online' },
+    { id: 3, nombre: 'Carlos Picado', email: 'cpicado@comunidad.cr', tel: '+506 8555-1234', comunidad: 'San Pablo de León Cortés', rol: 'Observador', estadoConexion: 'offline' }
   ]);
 
-  // Chat Privado
+  // Mensajería Chat
   const [chatMensajes, setChatMensajes] = useState([
     { id: 1, texto: '👋 Has iniciado una consulta privada directa. Escribe tu mensaje abajo.', emisor: 'sistema' }
   ]);
@@ -98,9 +103,11 @@ export default function App() {
   const [humedad, setHumedad] = useState('88.0');
   const [microhabitat, setMicrohabitat] = useState('Vegetación / Finca Cafetalera');
   const [notas, setNotas] = useState('');
+  
+  // CORRECCIÓN: Foto inicial limpia de fauna silvestre (sin manzanas)
   const [fotoPreview, setFotoPreview] = useState('https://images.unsplash.com/photo-1590005354167-6da97870c757?auto=format&fit=crop&w=600&q=80');
 
-  // GPS real
+  // Funciones auxiliares
   const obtenerGPS = () => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -126,7 +133,13 @@ export default function App() {
     setNuevoMensaje('');
   };
 
-  // Registros de Muestra
+  const getBadgetConexion = (estado) => {
+    if (estado === 'online') return { icon: '🟢', label: 'En línea', color: '#00FF88' };
+    if (estado === 'busy') return { icon: '🟠', label: 'Ocupado en campo', color: '#FFB300' };
+    return { icon: '🔴', label: 'Fuera de cobertura', color: '#FF5252' };
+  };
+
+  // Registros de muestra
   const [registros, setRegistros] = useState([
     {
       id: 1,
@@ -167,7 +180,7 @@ export default function App() {
     {
       id: 3,
       especie: 'Especie por identificar',
-      nombreComun: 'Desconocido (Por determinar)',
+      nombreComun: 'Desconocido (Por determinar por experto)',
       categoria: 'ANFIBIO',
       silueta: 'Sapo Terrestre',
       estado: 'EN REVISIÓN EXPERTA',
@@ -212,7 +225,7 @@ export default function App() {
   return (
     <div style={{ backgroundColor: '#070D0B', color: '#E0E6E3', minHeight: '100vh', fontFamily: 'system-ui, sans-serif', paddingBottom: '90px' }}>
       
-      {/* 🟢 BARRA SUPERIOR CON LOGO OFICIAL RANA Y CAFÉ */}
+      {/* 🟢 BARRA SUPERIOR DE LA APP */}
       <header style={{ backgroundColor: '#0B1512', padding: '0.8rem 1.2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #162B23', flexWrap: 'wrap', gap: '0.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
           <div style={{ backgroundColor: '#0A1E16', border: '1px solid #00FF88', borderRadius: '12px', padding: '3px 8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -225,7 +238,10 @@ export default function App() {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
-          <span style={{ backgroundColor: '#0D261C', color: '#00FF88', padding: '0.3rem 0.6rem', borderRadius: '20px', fontSize: '0.75rem', border: '1px solid #164D36' }}>🟢 2 Experto(s) En Línea</span>
+          {/* Badge del Estado de Conexión Configurable */}
+          <span style={{ backgroundColor: '#0D261C', color: getBadgetConexion(estadoConexion).color, padding: '0.3rem 0.7rem', borderRadius: '20px', fontSize: '0.75rem', border: '1px solid #164D36', fontWeight: 'bold' }}>
+            {getBadgetConexion(estadoConexion).icon} {getBadgetConexion(estadoConexion).label}
+          </span>
           
           <button onClick={() => setModalChat(true)} style={{ backgroundColor: '#0A2E23', color: '#00FF88', border: '1px solid #16523B', padding: '0.4rem 0.8rem', borderRadius: '20px', fontWeight: 'bold', fontSize: '0.75rem', cursor: 'pointer' }}>
             💬 Chat 1 a 1
@@ -239,7 +255,7 @@ export default function App() {
         </div>
       </header>
 
-      {/* 🗺️ MAPA INTERACTIVO */}
+      {/* 🗺️ PESTAÑA: MAPA INTERACTIVO */}
       {tab === 'mapa' && (
         <div style={{ position: 'relative' }}>
           <div style={{ position: 'absolute', top: '15px', left: '15px', zIndex: 1000, display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -289,6 +305,7 @@ export default function App() {
             </MapContainer>
           </div>
 
+          {/* Tarjetas de Métricas Rápidas en Mapa */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem', padding: '0.8rem 1rem', backgroundColor: '#0A120E', position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 1000 }}>
             <div style={{ backgroundColor: '#101C17', padding: '0.5rem', borderRadius: '8px', textAlign: 'center', border: '1px solid #1A2E26' }}>
               <div style={{ color: '#00FF88', fontSize: '1.2rem', fontWeight: 'bold' }}>{registros.filter(r => r.estado === 'VALIDADO').length}</div>
@@ -310,7 +327,7 @@ export default function App() {
         </div>
       )}
 
-      {/* 🖼️ GALERÍA */}
+      {/* 🖼️ PESTAÑA: GALERÍA */}
       {tab === 'galeria' && (
         <div style={{ padding: '1rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
@@ -338,7 +355,7 @@ export default function App() {
         </div>
       )}
 
-      {/* 📖 GUÍA */}
+      {/* 📖 PESTAÑA: GUÍA */}
       {tab === 'guia' && (
         <div style={{ padding: '1rem' }}>
           <h2 style={{ margin: 0, fontSize: '1.2rem', color: '#00FF88' }}>📖 Guía de Especies Comunes de Los Santos</h2>
@@ -357,14 +374,18 @@ export default function App() {
         </div>
       )}
 
-      {/* 📊 PANEL ADMIN */}
+      {/* 📊 PESTAÑA: PANEL ADMIN COMPLETO */}
       {tab === 'admin' && (
         <div style={{ padding: '1.2rem' }}>
-          <h2 style={{ fontSize: '1.2rem', color: '#FFF', marginBottom: '1rem' }}>🛡️ Panel de Administración & Mensajería Directa</h2>
+          <h2 style={{ fontSize: '1.2rem', color: '#FFF', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            🛡️ Panel de Administración & Mensajería Directa
+          </h2>
           <div style={{ backgroundColor: '#09130F', borderRadius: '16px', border: '1px solid #1B3D2F', padding: '1.2rem' }}>
             
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #162B23', paddingBottom: '0.8rem', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-              <h3 style={{ margin: 0, color: '#00FF88', fontSize: '1.05rem' }}>📫 Buzón de Consultas & Gestión</h3>
+              <h3 style={{ margin: 0, color: '#00FF88', fontSize: '1.05rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                📫 Buzón de Consultas Directas & Gestión
+              </h3>
               
               <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', backgroundColor: '#050A08', padding: '0.3rem', borderRadius: '20px', border: '1px solid #122B20' }}>
                 <button onClick={() => setSubTabAdmin('consultas')} style={{ backgroundColor: subTabAdmin === 'consultas' ? '#0F2B20' : 'transparent', color: subTabAdmin === 'consultas' ? '#00FF88' : '#8AA398', border: subTabAdmin === 'consultas' ? '1px solid #00FF88' : 'none', borderRadius: '15px', padding: '0.3rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>💬 Consultas 1 a 1</button>
@@ -375,6 +396,7 @@ export default function App() {
               </div>
             </div>
 
+            {/* SUB-PESTAÑA: CONSULTAS */}
             {subTabAdmin === 'consultas' && (
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
@@ -394,6 +416,101 @@ export default function App() {
               </div>
             )}
 
+            {/* SUB-PESTAÑA: MÉTRICAS COMPLETAS */}
+            {subTabAdmin === 'metricas' && (
+              <div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.8rem', marginBottom: '1.5rem' }}>
+                  <div style={{ backgroundColor: '#060D0A', border: '1px solid #162B23', padding: '1.2rem', borderRadius: '12px', textAlign: 'center' }}>
+                    <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#FFF' }}>3</div>
+                    <div style={{ fontSize: '0.75rem', color: '#8AA398', marginTop: '0.2rem' }}>Total de Reportes</div>
+                  </div>
+                  <div style={{ backgroundColor: '#060D0A', border: '1px solid #00FF88', padding: '1.2rem', borderRadius: '12px', textAlign: 'center' }}>
+                    <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#00FF88' }}>1</div>
+                    <div style={{ fontSize: '0.75rem', color: '#8AA398', marginTop: '0.2rem' }}>Reportes Aprobados (33%)</div>
+                  </div>
+                  <div style={{ backgroundColor: '#060D0A', border: '1px solid #FFB300', padding: '1.2rem', borderRadius: '12px', textAlign: 'center' }}>
+                    <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#FFB300' }}>3</div>
+                    <div style={{ fontSize: '0.75rem', color: '#8AA398', marginTop: '0.2rem' }}>Usuarios Registrados</div>
+                  </div>
+                  <div style={{ backgroundColor: '#060D0A', border: '1px solid #FF5252', padding: '1.2rem', borderRadius: '12px', textAlign: 'center' }}>
+                    <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#FF5252' }}>0</div>
+                    <div style={{ fontSize: '0.75rem', color: '#8AA398', marginTop: '0.2rem' }}>Cuentas Suspendidas</div>
+                  </div>
+                </div>
+
+                <div style={{ backgroundColor: '#060D0A', border: '1px solid #162B23', borderRadius: '12px', padding: '1rem' }}>
+                  <h4 style={{ margin: '0 0 0.8rem 0', color: '#00FF88', fontSize: '0.9rem' }}>🏆 Top Especies Más Avistadas en Los Santos</h4>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.7rem 1rem', backgroundColor: '#0B1A14', borderRadius: '8px', border: '1px solid #122B20' }}>
+                    <span style={{ fontSize: '0.85rem', color: '#FFF' }}><strong>#1</strong> <em>Agalychnis annae</em></span>
+                    <span style={{ backgroundColor: '#0D261C', color: '#00FF88', padding: '0.2rem 0.6rem', borderRadius: '10px', fontSize: '0.75rem', fontWeight: 'bold' }}>1 registros</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* SUB-PESTAÑA: GESTIÓN DE USUARIOS Y COBERTURA */}
+            {subTabAdmin === 'usuarios' && (
+              <div>
+                <h4 style={{ margin: '0 0 1rem 0', color: '#FFF', fontSize: '0.95rem' }}>👥 Gestión de Usuarios, Permisos y Estado de Cobertura</h4>
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', textAlign: 'left' }}>
+                    <thead>
+                      <tr style={{ borderBottom: '1px solid #162B23', color: '#00FF88' }}>
+                        <th style={{ padding: '0.6rem' }}>ESTADO</th>
+                        <th style={{ padding: '0.6rem' }}>USUARIO</th>
+                        <th style={{ padding: '0.6rem' }}>CONTACTO</th>
+                        <th style={{ padding: '0.6rem' }}>COMUNIDAD</th>
+                        <th style={{ padding: '0.6rem' }}>ROL ACTUAL</th>
+                        <th style={{ padding: '0.6rem' }}>ACCIÓN</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {listaUsuarios.map((u) => {
+                        const badg = getBadgetConexion(u.id === 1 ? estadoConexion : u.estadoConexion);
+                        return (
+                          <tr key={u.id} style={{ borderBottom: '1px solid #0D1A15' }}>
+                            <td style={{ padding: '0.6rem' }}>
+                              <span style={{ color: badg.color, fontWeight: 'bold', fontSize: '0.8rem' }} title={badg.label}>
+                                {badg.icon}
+                              </span>
+                            </td>
+                            <td style={{ padding: '0.6rem', fontWeight: 'bold', color: '#FFF' }}>{u.nombre}</td>
+                            <td style={{ padding: '0.6rem', color: '#8AA398' }}>{u.email}<br /><span style={{ fontSize: '0.7rem' }}>{u.tel}</span></td>
+                            <td style={{ padding: '0.6rem', color: '#A0C2B4' }}>{u.comunidad}</td>
+                            <td style={{ padding: '0.6rem' }}>
+                              <select 
+                                value={u.rol} 
+                                onChange={(e) => {
+                                  setListaUsuarios(listaUsuarios.map(item => item.id === u.id ? { ...item, rol: e.target.value } : item));
+                                }} 
+                                style={{ backgroundColor: '#050A08', color: '#00FF88', border: '1px solid #1B3D2F', borderRadius: '12px', padding: '0.3rem 0.5rem', fontSize: '0.75rem' }}
+                              >
+                                <option value="Admin Experto">🛡️ Admin Experto</option>
+                                <option value="Experto">🎓 Experto</option>
+                                <option value="Observador">👤 Observador</option>
+                              </select>
+                            </td>
+                            <td style={{ padding: '0.6rem' }}>
+                              <button onClick={() => alert(`Usuario ${u.nombre} suspendido.`)} style={{ backgroundColor: '#D32F2F', color: '#FFF', border: 'none', borderRadius: '12px', padding: '0.3rem 0.6rem', fontSize: '0.7rem', fontWeight: 'bold', cursor: 'pointer' }}>🚫 Ban</button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* SUB-PESTAÑA: SOLICITUDES */}
+            {subTabAdmin === 'solicitudes' && (
+              <div>
+                <h4 style={{ margin: '0 0 1rem 0', color: '#FFB300', fontSize: '0.95rem' }}>🎓 Solicitudes de Rol Experto</h4>
+                <p style={{ color: '#8AA398', fontSize: '0.85rem' }}>No hay solicitudes de acreditación pendientes en este momento.</p>
+              </div>
+            )}
+
+            {/* SUB-PESTAÑA: MODERACIÓN */}
             {subTabAdmin === 'moderacion' && (
               <div>
                 <h4 style={{ margin: '0 0 1rem 0', color: '#FFF', fontSize: '0.95rem' }}>📋 Moderación de Reportes</h4>
@@ -442,16 +559,44 @@ export default function App() {
         </div>
       )}
 
-      {/* 👤 MODAL PERFIL */}
+      {/* 👤 MODAL PERFIL CON PERSONALIZACIÓN DE ESTADO Y COBERTURA */}
       {modalPerfil && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999, padding: '1rem' }}>
           <div style={{ backgroundColor: '#09130F', borderRadius: '16px', border: '1px solid #1B3D2F', width: '100%', maxWidth: '500px', padding: '1.2rem' }}>
-            <h3 style={{ color: '#FFF', marginTop: 0 }}>👤 Perfil de Usuario & Nivel</h3>
-            <div style={{ marginBottom: '1rem' }}>
-              <label style={{ display: 'block', fontSize: '0.75rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.3rem' }}>NOMBRE COMPLETO *</label>
-              <input type="text" value={usuario.nombre} onChange={(e) => setUsuario({ ...usuario, nombre: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px' }} />
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h3 style={{ color: '#FFF', margin: 0 }}>👤 Perfil de Usuario & Disponibilidad</h3>
+              <button onClick={() => setModalPerfil(false)} style={{ backgroundColor: 'transparent', border: 'none', color: '#FFF', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
             </div>
-            <button onClick={() => setModalPerfil(false)} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#00E676', color: '#000', fontWeight: 'bold', border: 'none', borderRadius: '10px', cursor: 'pointer' }}>Guardar Cambios</button>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.3rem' }}>NOMBRE COMPLETO *</label>
+                <input type="text" value={usuario.nombre} onChange={(e) => setUsuario({ ...usuario, nombre: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px' }} />
+              </div>
+
+              {/* Selector de Estado de Conexión en Campo */}
+              <div style={{ backgroundColor: '#0A1E16', border: '1px solid #00FF88', padding: '0.8rem', borderRadius: '10px' }}>
+                <label style={{ display: 'block', fontSize: '0.75rem', color: '#00FF88', fontWeight: 'bold', marginBottom: '0.4rem' }}>
+                  📡 ESTADO DE COBERTURA Y DISPONIBILIDAD
+                </label>
+                <select 
+                  value={estadoConexion} 
+                  onChange={(e) => setEstadoConexion(e.target.value)} 
+                  style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }}
+                >
+                  <option value="online">🟢 En línea (Disponible para consultas)</option>
+                  <option value="busy">🟠 Ocupado (En trabajo de campo)</option>
+                  <option value="offline">🔴 Fuera de cobertura (Sin señal en montaña)</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.3rem' }}>CORREO ELECTRÓNICO *</label>
+                <input type="email" value={usuario.email} onChange={(e) => setUsuario({ ...usuario, email: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px' }} />
+              </div>
+            </div>
+
+            <button onClick={() => setModalPerfil(false)} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#00E676', color: '#000', fontWeight: 'bold', border: 'none', borderRadius: '10px', marginTop: '1.2rem', cursor: 'pointer' }}>Guardar Cambios</button>
           </div>
         </div>
       )}
@@ -488,7 +633,7 @@ export default function App() {
         </div>
       )}
 
-      {/* 📌 MODAL REGISTRAR AVISTAMIENTO (+) */}
+      {/* 📌 MODAL REGISTRAR AVISTAMIENTO (+) LIMPIO SIN MANZANAS */}
       {modalRegistro && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999, padding: '1rem' }}>
           <div style={{ backgroundColor: '#09130F', borderRadius: '16px', border: '1px solid #1B3D2F', width: '100%', maxWidth: '550px', padding: '1.2rem', maxHeight: '92vh', overflowY: 'auto' }}>
@@ -499,14 +644,16 @@ export default function App() {
 
             <div style={{ marginBottom: '1rem' }}>
               <label style={{ display: 'block', fontSize: '0.8rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.5rem' }}>5. FOTOGRAFÍA DEL EJEMPLAR *</label>
-              <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', border: '2px dashed #1B3D2F', borderRadius: '10px', padding: '1rem', cursor: 'pointer', backgroundColor: '#0A1410' }}>
+              <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', border: '2px dashed #1B3D2F', borderRadius: '10px', padding: '1.2rem', cursor: 'pointer', backgroundColor: '#0A1410' }}>
                 <span style={{ fontSize: '2rem' }}>📷</span>
                 <span style={{ fontSize: '0.8rem', color: '#00FF88', fontWeight: 'bold' }}>Tomar Foto con Cámara o Elegir Archivo</span>
                 <input type="file" accept="image/*" capture="environment" onChange={handleFotoUpload} style={{ display: 'none' }} />
               </label>
+              
+              {/* VISTA PREVIA LIMPIA DE FAUNA SILVESTRE */}
               {fotoPreview && (
-                <div style={{ marginTop: '0.6rem', borderRadius: '8px', overflow: 'hidden', height: '120px' }}>
-                  <img src={fotoPreview} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <div style={{ marginTop: '0.8rem', borderRadius: '10px', overflow: 'hidden', height: '160px', border: '1px solid #1B3D2F' }}>
+                  <img src={fotoPreview} alt="Vista previa del ejemplar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 </div>
               )}
             </div>
