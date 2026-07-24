@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -47,6 +47,28 @@ const crearIconoPersonalizado = (silueta, estado) => {
   });
 };
 
+// Icono de Alfiler Rojo para selección exacta en mapa
+const iconoAlfilerRojo = L.divIcon({
+  className: 'red-pin-marker',
+  html: `<div style="font-size: 32px; filter: drop-shadow(0px 3px 5px rgba(255,0,0,0.6)); cursor: pointer;">📍</div>`,
+  iconSize: [32, 32],
+  iconAnchor: [16, 32]
+});
+
+// Componente para capturar clic en el mapa del formulario y mover el alfiler rojo
+function EventoMapaPin({ setLat, setLng, setPosPin }) {
+  useMapEvents({
+    click(e) {
+      const latFija = e.latlng.lat.toFixed(6);
+      const lngFija = e.latlng.lng.toFixed(6);
+      setLat(latFija);
+      setLng(lngFija);
+      setPosPin([e.latlng.lat, e.latlng.lng]);
+    },
+  });
+  return null;
+}
+
 export default function App() {
   const [tab, setTab] = useState('mapa');
   const [subTabAdmin, setSubTabAdmin] = useState('consultas');
@@ -56,6 +78,7 @@ export default function App() {
   const [modalPerfil, setModalPerfil] = useState(false);
   const [modalChat, setModalChat] = useState(false);
   const [modalInstalar, setModalInstalar] = useState(false);
+  const [modalSincronizar, setModalSincronizar] = useState(false);
   const [registroSeleccionado, setRegistroSeleccionado] = useState(null);
 
   // Vistas de Autenticación ('perfil', 'login', 'registro', 'recuperar')
@@ -68,8 +91,18 @@ export default function App() {
   const [filtroEspecie, setFiltroEspecie] = useState('todas');
   const [busquedaGaleria, setBusquedaGaleria] = useState('');
 
-  // Estado de Cobertura
+  // Estado de Cobertura Red
   const [estadoConexion, setEstadoConexion] = useState('online');
+
+  // REGISTROS PENDIENTES DE SINCRONIZACIÓN OFFLINE (LocalStorage Persistente)
+  const [pendientesOffline, setPendientesOffline] = useState(() => {
+    const guardados = localStorage.getItem('herpid_pendientes_offline');
+    return guardados ? JSON.parse(guardados) : [];
+  });
+
+  useEffect(() => {
+    localStorage.setItem('herpid_pendientes_offline', JSON.stringify(pendientesOffline));
+  }, [pendientesOffline]);
 
   // Evento PWA para instalación nativa
   const [deferredPrompt, setDeferredPrompt] = useState(null);
@@ -90,14 +123,14 @@ export default function App() {
     }
   };
 
-  // Base de datos de cuentas registradas con sus contraseñas
+  // Cuentas registradas
   const [cuentasRegistradas, setCuentasRegistradas] = useState([
     { id: 1, nombre: 'Jorge Carvajal', email: 'jorge.carvajal@docente.edu', tel: '+506 8888-9999', comunidad: 'Tarrazú (San Marcos, San Lorenzo, Carlos)', rol: 'Administrador Experto (Máximo Rango)', pass: 'admin123', estadoConexion: 'online' },
     { id: 2, nombre: 'Dra. Sofía Herpetóloga', email: 'sofia.herpeto@ucr.ac.cr', tel: '+506 8765-4321', comunidad: 'Dota (Santa María, Copey, Jardín)', rol: 'Experto Herpetólogo', pass: 'sofia123', estadoConexion: 'online' },
     { id: 3, nombre: 'Carlos Picado', email: 'cpicado@comunidad.cr', tel: '+506 8555-1234', comunidad: 'León Cortés (San Pablo, San Rafael)', rol: 'Usuario Regular', pass: 'carlos123', estadoConexion: 'offline' }
   ]);
 
-  // USUARIO ACTIVO (Inicia en FALSE / SIN SESIÓN ACTIVA por defecto)
+  // USUARIO ACTIVO (Sin sesión por defecto)
   const [usuario, setUsuario] = useState({
     isLoggedIn: false,
     nombre: '',
@@ -107,7 +140,6 @@ export default function App() {
     rol: 'Usuario Regular'
   });
 
-  // Permiso de edición taxonómica (solo si está autenticado como Admin o Experto)
   const esExpertoOAdmin = usuario.isLoggedIn && (usuario.rol.includes('Administrador') || usuario.rol.includes('Experto'));
 
   // Formulario temporal de edición en Ficha
@@ -147,6 +179,7 @@ export default function App() {
   const [nombreComun, setNombreComun] = useState('');
   const [lat, setLat] = useState('9.650746');
   const [lng, setLng] = useState('-84.000193');
+  const [posPin, setPosPin] = useState([9.650746, -84.000193]);
   const [comunidad, setComunidad] = useState('');
   const [estadoOrganismo, setEstadoOrganismo] = useState('Vivo / Activo');
   const [etapa, setEtapa] = useState('Adulto');
@@ -156,7 +189,7 @@ export default function App() {
   const [notas, setNotas] = useState('');
   const [fotoPreview, setFotoPreview] = useState('https://images.unsplash.com/photo-1590005354167-6da97870c757?auto=format&fit=crop&w=600&q=80');
 
-  // Grabador
+  // Grabador Audio
   const [grabandoAudio, setGrabandoAudio] = useState(false);
   const [tiempoGrabacion, setTiempoGrabacion] = useState(0);
   const [audioURL, setAudioURL] = useState(null);
@@ -211,8 +244,11 @@ export default function App() {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
-          setLat(pos.coords.latitude.toFixed(6));
-          setLng(pos.coords.longitude.toFixed(6));
+          const l1 = pos.coords.latitude.toFixed(6);
+          const l2 = pos.coords.longitude.toFixed(6);
+          setLat(l1);
+          setLng(l2);
+          setPosPin([pos.coords.latitude, pos.coords.longitude]);
         },
         (err) => alert('Error GPS: ' + err.message)
       );
@@ -235,7 +271,7 @@ export default function App() {
   const getBadgetConexion = (estado) => {
     if (estado === 'online') return { icon: '🟢', label: 'En línea', color: '#00FF88' };
     if (estado === 'busy') return { icon: '🟠', label: 'Ocupado en campo', color: '#FFB300' };
-    return { icon: '🔴', label: 'Fuera de cobertura', color: '#FF5252' };
+    return { icon: '🔴', label: 'Fuera de cobertura (Offline)', color: '#FF5252' };
   };
 
   const exportarCSV = () => {
@@ -247,6 +283,18 @@ export default function App() {
     a.href = url;
     a.download = `HerpID_LosSantos_Avistamientos.csv`;
     a.click();
+  };
+
+  // Función para sincronizar pendientes acumulados offline
+  const sincronizarPendientes = () => {
+    if (pendientesOffline.length === 0) {
+      alert('No hay registros almacenados offline para sincronizar.');
+      return;
+    }
+    setRegistros([...pendientesOffline, ...registros]);
+    setPendientesOffline([]);
+    alert('¡Sincronización exitosa! Se subieron todos los reportes guardados en la memoria local.');
+    setModalSincronizar(false);
   };
 
   // Registros
@@ -340,7 +388,7 @@ export default function App() {
   return (
     <div style={{ backgroundColor: '#070D0B', color: '#E0E6E3', minHeight: '100vh', fontFamily: 'system-ui, sans-serif', paddingBottom: '90px' }}>
       
-      {/* 🟢 BARRA SUPERIOR SIN NOMBRE HASTA INICIAR SESIÓN */}
+      {/* 🟢 BARRA SUPERIOR DINÁMICA CON INDICADOR DE SINCRONIZACIÓN OFFLINE */}
       <header style={{ backgroundColor: '#0B1512', padding: '0.8rem 1.2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #162B23', flexWrap: 'wrap', gap: '0.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
           <div style={{ backgroundColor: '#0A1E16', border: '1px solid #00FF88', borderRadius: '12px', padding: '3px 8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -353,6 +401,14 @@ export default function App() {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+          
+          {/* Botón de Sincronización Offline si hay guardados en memoria */}
+          {pendientesOffline.length > 0 && (
+            <button onClick={() => setModalSincronizar(true)} style={{ backgroundColor: '#FFB300', color: '#000', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '20px', fontWeight: 'bold', fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              ⏳ {pendientesOffline.length} Pendiente(s) Offline
+            </button>
+          )}
+
           <span style={{ backgroundColor: '#0D261C', color: getBadgetConexion(estadoConexion).color, padding: '0.3rem 0.7rem', borderRadius: '20px', fontSize: '0.75rem', border: '1px solid #164D36', fontWeight: 'bold' }}>
             {getBadgetConexion(estadoConexion).icon} {getBadgetConexion(estadoConexion).label}
           </span>
@@ -361,7 +417,6 @@ export default function App() {
             💬 Chat 1 a 1
           </button>
 
-          {/* BOTÓN SUPERIOR: Solo muestra nombre al estar autenticado */}
           <button 
             onClick={() => { setVistaPerfil(usuario.isLoggedIn ? 'perfil' : 'login'); setModalPerfil(true); }} 
             style={{ backgroundColor: usuario.isLoggedIn ? '#00C853' : '#102E23', color: usuario.isLoggedIn ? '#000' : '#00FF88', border: usuario.isLoggedIn ? 'none' : '1px solid #00FF88', padding: '0.4rem 0.8rem', borderRadius: '20px', fontWeight: 'bold', fontSize: '0.75rem', cursor: 'pointer' }}
@@ -516,7 +571,7 @@ export default function App() {
         </div>
       )}
 
-      {/* 📊 PANEL ADMIN (ACCESO RESTRINGIDO SI NO HA INICIADO SESIÓN) */}
+      {/* 📊 PANEL ADMIN */}
       {tab === 'admin' && (
         <div style={{ padding: '1.2rem' }}>
           {!usuario.isLoggedIn ? (
@@ -827,7 +882,7 @@ export default function App() {
         </div>
       )}
 
-      {/* 👤 MODAL PERFIL CON CONTROL DE ACCESO (INICIAR SESIÓN / REGISTRARSE / PERFIL) */}
+      {/* 👤 MODAL PERFIL CON CONTROL DE ACCESO */}
       {modalPerfil && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999, padding: '1rem' }}>
           <div style={{ backgroundColor: '#09130F', borderRadius: '16px', border: '1px solid #1B3D2F', width: '100%', maxWidth: '520px', padding: '1.2rem', maxHeight: '90vh', overflowY: 'auto' }}>
@@ -864,7 +919,7 @@ export default function App() {
                   <select value={estadoConexion} onChange={(e) => setEstadoConexion(e.target.value)} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }}>
                     <option value="online">🟢 En línea (Disponible para consultas)</option>
                     <option value="busy">🟠 Ocupado en campo (Sin respuesta inmediata)</option>
-                    <option value="offline">🔴 Fuera de cobertura (Sin señal en montaña)</option>
+                    <option value="offline">🔴 Fuera de cobertura (Modo Offline activo)</option>
                   </select>
                 </div>
 
@@ -1021,6 +1076,32 @@ export default function App() {
         </div>
       )}
 
+      {/* 🔄 MODAL SINCRONIZACIÓN OFFLINE */}
+      {modalSincronizar && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999, padding: '1rem' }}>
+          <div style={{ backgroundColor: '#09130F', borderRadius: '16px', border: '1px solid #1B3D2F', width: '100%', maxWidth: '520px', padding: '1.2rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid #122B20', paddingBottom: '0.5rem' }}>
+              <h3 style={{ margin: 0, color: '#FFF', fontSize: '1.1rem' }}>⏳ Sincronización de Registros Offline</h3>
+              <button onClick={() => setModalSincronizar(false)} style={{ backgroundColor: 'transparent', border: 'none', color: '#FFF', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
+            </div>
+
+            <p style={{ fontSize: '0.85rem', color: '#8AA398' }}>Tienes <strong>{pendientesOffline.length}</strong> registro(s) guardado(s) localmente en la memoria del teléfono mientras estabas sin señal de internet.</p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '200px', overflowY: 'auto', margin: '1rem 0' }}>
+              {pendientesOffline.map((item, idx) => (
+                <div key={idx} style={{ backgroundColor: '#060D0A', border: '1px solid #162B23', padding: '0.6rem', borderRadius: '8px', fontSize: '0.75rem', color: '#FFF' }}>
+                  🐸 <strong>{item.nombreComun}</strong> - 📍 Lat {item.coords[0]}, Lng {item.coords[1]}
+                </div>
+              ))}
+            </div>
+
+            <button onClick={sincronizarPendientes} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#00E676', color: '#000', fontWeight: 'bold', border: 'none', borderRadius: '10px', cursor: 'pointer', fontSize: '0.9rem' }}>
+              🔄 Subir y Sincronizar Registros Ahora
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* 📲 MODAL PWA INSTALACIÓN */}
       {modalInstalar && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999, padding: '1rem' }}>
@@ -1086,7 +1167,7 @@ export default function App() {
         </div>
       )}
 
-      {/* 📌 MODAL REGISTRAR AVISTAMIENTO (+) */}
+      {/* 📌 MODAL REGISTRAR AVISTAMIENTO CON MAPA DE ALFILER ROJO Y SOPORTE OFFLINE */}
       {modalRegistro && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999, padding: '1rem' }}>
           <div style={{ backgroundColor: '#09130F', borderRadius: '16px', border: '1px solid #1B3D2F', width: '100%', maxWidth: '580px', padding: '1.2rem', maxHeight: '92vh', overflowY: 'auto' }}>
@@ -1144,19 +1225,40 @@ export default function App() {
               )}
             </div>
 
-            {/* PASO 4 */}
+            {/* PASO 4: COORDENADAS CON ALFILER ROJO INTERACTIVO */}
             <div style={{ marginBottom: '1.2rem' }}>
-              <label style={{ display: 'block', fontSize: '0.8rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.5rem' }}>4. COORDENADAS GPS (LATITUD, LONGITUD) *</label>
+              <label style={{ display: 'block', fontSize: '0.8rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.5rem' }}>4. UBICACIÓN GPS Y ALFILER ROJO EN EL MAPA *</label>
               <div style={{ backgroundColor: '#0D1E18', border: '1px border-dashed #1B3D2F', borderRadius: '8px', padding: '0.8rem' }}>
+                
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                  <span style={{ fontSize: '0.75rem', color: '#00FF88' }}>✅ GPS Capturado: Lat {lat}, Lng {lng}</span>
-                  <button type="button" onClick={obtenerGPS} style={{ backgroundColor: '#00E676', color: '#000', border: 'none', padding: '0.3rem 0.8rem', borderRadius: '15px', fontWeight: 'bold', fontSize: '0.75rem', cursor: 'pointer' }}>GPS 🎯</button>
+                  <span style={{ fontSize: '0.75rem', color: '#00FF88' }}>📍 Lat: {lat}, Lng: {lng}</span>
+                  <button type="button" onClick={obtenerGPS} style={{ backgroundColor: '#00E676', color: '#000', border: 'none', padding: '0.3rem 0.8rem', borderRadius: '15px', fontWeight: 'bold', fontSize: '0.75rem', cursor: 'pointer' }}>Mi GPS Actual 🎯</button>
                 </div>
+
+                <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.7rem', color: '#FFB300' }}>👉 Toca cualquier punto en el mapa para colocar el 📍 <strong>Alfiler Rojo</strong> exactamente donde viste al organismo:</p>
+
+                {/* MAPA INTERACTIVO MINI PARA EL ALFILER ROJO */}
+                <div style={{ height: '180px', borderRadius: '8px', overflow: 'hidden', marginBottom: '0.6rem', border: '1px solid #1B3D2F' }}>
+                  <MapContainer center={posPin} zoom={14} style={{ height: '100%', width: '100%' }}>
+                    <TileLayer attribution='&copy; OpenStreetMap' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                    <Marker position={posPin} icon={iconoAlfilerRojo} draggable={true} eventHandlers={{
+                      dragend(e) {
+                        const nuevaPos = e.target.getLatLng();
+                        setLat(nuevaPos.lat.toFixed(6));
+                        setLng(nuevaPos.lng.toFixed(6));
+                        setPosPin([nuevaPos.lat, nuevaPos.lng]);
+                      }
+                    }} />
+                    <EventoMapaPin setLat={setLat} setLng={setLng} setPosPin={setPosPin} />
+                  </MapContainer>
+                </div>
+
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                  <input type="text" value={lat} readOnly style={{ padding: '0.5rem', backgroundColor: '#050A08', border: '1px solid #1B3D2F', color: '#FFF', borderRadius: '6px', fontSize: '0.8rem' }} />
-                  <input type="text" value={lng} readOnly style={{ padding: '0.5rem', backgroundColor: '#050A08', border: '1px solid #1B3D2F', color: '#FFF', borderRadius: '6px', fontSize: '0.8rem' }} />
+                  <input type="text" value={lat} onChange={(e) => setLat(e.target.value)} placeholder="Latitud" style={{ padding: '0.5rem', backgroundColor: '#050A08', border: '1px solid #1B3D2F', color: '#FFF', borderRadius: '6px', fontSize: '0.8rem' }} />
+                  <input type="text" value={lng} onChange={(e) => setLng(e.target.value)} placeholder="Longitud" style={{ padding: '0.5rem', backgroundColor: '#050A08', border: '1px solid #1B3D2F', color: '#FFF', borderRadius: '6px', fontSize: '0.8rem' }} />
                 </div>
-                <input type="text" placeholder="Comunidad (ej. San Marcos de Tarrazú)" value={comunidad} onChange={(e) => setComunidad(e.target.value)} style={{ width: '100%', padding: '0.5rem', backgroundColor: '#050A08', border: '1px solid #1B3D2F', color: '#FFF', borderRadius: '6px', fontSize: '0.8rem' }} />
+
+                <input type="text" placeholder="Comunidad (ej. San Marcos, Copey, Dota)" value={comunidad} onChange={(e) => setComunidad(e.target.value)} style={{ width: '100%', padding: '0.5rem', backgroundColor: '#050A08', border: '1px solid #1B3D2F', color: '#FFF', borderRadius: '6px', fontSize: '0.8rem' }} />
               </div>
             </div>
 
@@ -1232,8 +1334,8 @@ export default function App() {
               <textarea rows="3" placeholder="Detalles observados..." value={notas} onChange={(e) => setNotas(e.target.value)} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.8rem' }} />
             </div>
 
-            <div style={{ display: 'flex', gap: '0.8rem', marginTop: '1.5rem' }}>
-              <button onClick={() => setModalRegistro(false)} style={{ flex: 1, padding: '0.8rem', backgroundColor: '#14211C', color: '#A0C2B4', border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: 'bold' }}>Cancelar</button>
+            <div style={{ display: 'flex', gap: '0.8rem', marginTop: '1.5rem', flexDirection: 'column' }}>
+              
               <button 
                 onClick={() => {
                   const nuevo = {
@@ -1244,8 +1346,8 @@ export default function App() {
                     silueta: silueta,
                     estado: 'EN REVISIÓN EXPERTA',
                     ubicacion: comunidad || 'Zona de los Santos',
-                    reportante: usuario.nombre,
-                    contacto: usuario.email,
+                    reportante: usuario.isLoggedIn ? usuario.nombre : 'Usuario Anónimo',
+                    contacto: usuario.isLoggedIn ? usuario.email : 'Sin contacto',
                     temp: `${temp}°C`,
                     humedad: `${humedad}% H.R.`,
                     microhabitat: microhabitat,
@@ -1254,14 +1356,24 @@ export default function App() {
                     img: fotoPreview,
                     coords: [parseFloat(lat), parseFloat(lng)]
                   };
-                  setRegistros([nuevo, ...registros]);
+
+                  if (estadoConexion === 'offline') {
+                    setPendientesOffline([...pendientesOffline, nuevo]);
+                    alert('💾 ¡Guardado en el Teléfono (Modo Offline)! Cuando tengas señal de nuevo, podrás sincronizarlo con un toque.');
+                  } else {
+                    setRegistros([nuevo, ...registros]);
+                    alert('✔ Reporte enviado a la base de datos para revisión de expertos.');
+                  }
+
                   setModalRegistro(false);
                   setTab('galeria');
                 }} 
-                style={{ flex: 2, padding: '0.8rem', backgroundColor: '#00E676', color: '#000', fontWeight: 'bold', border: 'none', borderRadius: '10px', cursor: 'pointer', fontSize: '0.9rem' }}
+                style={{ width: '100%', padding: '0.8rem', backgroundColor: estadoConexion === 'offline' ? '#FFB300' : '#00E676', color: '#000', fontWeight: 'bold', border: 'none', borderRadius: '10px', cursor: 'pointer', fontSize: '0.9rem' }}
               >
-                Enviar a Revisión de Expertos
+                {estadoConexion === 'offline' ? '💾 Guardar Registro Localmente (Modo Offline)' : 'Enviar a Revisión de Expertos (En línea)'}
               </button>
+
+              <button onClick={() => setModalRegistro(false)} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#14211C', color: '#A0C2B4', border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.8rem' }}>Cancelar</button>
             </div>
 
           </div>
