@@ -708,7 +708,7 @@ export default function App() {
         </div>
       )}
 
-      {/* 📊 PANEL ADMIN / BUZÓN DE CONSULTAS */}
+      {/* 📊 PANEL ADMIN / BUZÓN DE CONSULTAS CON TODOS LOS BLOQUES RESTAURADOS */}
       {tab === 'admin' && (
         <div style={{ padding: '1.2rem' }}>
           {!usuario?.isLoggedIn ? (
@@ -742,7 +742,200 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* MODERACIÓN */}
+                {/* 1. CONSULTAS 1 A 1 */}
+                {subTabAdmin === 'consultas' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                      <span style={{ fontSize: '0.85rem', color: '#FFF', fontWeight: 'bold' }}>💬 Chat Privado Directo</span>
+                      <button onClick={() => setModalChat(true)} style={{ backgroundColor: '#00E676', color: '#000', border: 'none', padding: '0.4rem 0.9rem', borderRadius: '15px', fontWeight: 'bold', fontSize: '0.8rem', cursor: 'pointer' }}>+ Nueva Consulta</button>
+                    </div>
+
+                    <div style={{ backgroundColor: '#060D0A', border: '1px solid #162B23', borderRadius: '12px', padding: '0.9rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div>
+                        <strong style={{ color: '#FFF', fontSize: '0.9rem' }}>{usuario.nombre} ({usuario.rol})</strong>
+                        <p style={{ margin: '0.3rem 0', color: '#8AA398', fontSize: '0.8rem' }}>"Consulta de campo iniciada."</p>
+                      </div>
+                      <button onClick={() => setModalChat(true)} style={{ backgroundColor: 'transparent', border: 'none', color: '#00FF88', fontWeight: 'bold', cursor: 'pointer' }}>Abrir →</button>
+                    </div>
+                  </div>
+                )}
+
+                {/* 2. MÉTRICAS */}
+                {subTabAdmin === 'metricas' && esExpertoOAdmin && (
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                      <h4 style={{ margin: 0, color: '#FFF' }}>📊 Métricas de Biodiversidad en Los Santos</h4>
+                      <button onClick={exportarCSV} style={{ backgroundColor: '#00E676', color: '#000', border: 'none', padding: '0.4rem 0.9rem', borderRadius: '15px', fontWeight: 'bold', fontSize: '0.75rem', cursor: 'pointer' }}>
+                        📥 Exportar CSV
+                      </button>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.8rem', marginBottom: '1.5rem' }}>
+                      <div style={{ backgroundColor: '#060D0A', border: '1px solid #162B23', padding: '1.2rem', borderRadius: '12px', textAlign: 'center' }}>
+                        <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#FFF' }}>{registros.length}</div>
+                        <div style={{ fontSize: '0.75rem', color: '#8AA398' }}>Total Reportes</div>
+                      </div>
+                      <div style={{ backgroundColor: '#060D0A', border: '1px solid #00FF88', padding: '1.2rem', borderRadius: '12px', textAlign: 'center' }}>
+                        <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#00FF88' }}>{registros.filter(r => r.estado === 'VALIDADO').length}</div>
+                        <div style={{ fontSize: '0.75rem', color: '#8AA398' }}>Aprobados</div>
+                      </div>
+                      <div style={{ backgroundColor: '#060D0A', border: '1px solid #FFB300', padding: '1.2rem', borderRadius: '12px', textAlign: 'center' }}>
+                        <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#FFB300' }}>{cuentasRegistradas.length}</div>
+                        <div style={{ fontSize: '0.75rem', color: '#8AA398' }}>Usuarios</div>
+                      </div>
+                      <div style={{ backgroundColor: '#060D0A', border: '1px solid #FF5252', padding: '1.2rem', borderRadius: '12px', textAlign: 'center' }}>
+                        <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#FF5252' }}>0</div>
+                        <div style={{ fontSize: '0.75rem', color: '#8AA398' }}>Suspendidos</div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* 3. USUARIOS */}
+                {subTabAdmin === 'usuarios' && esAdminAbsoluto && (
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.8rem' }}>
+                      <h4 style={{ margin: 0, color: '#FFF', fontSize: '0.95rem' }}>👥 Gestión de Usuarios</h4>
+                      
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <label style={{ fontSize: '0.75rem', color: '#00FF88', fontWeight: 'bold' }}>🔍 Filtrar:</label>
+                        <select 
+                          value={filtroEstadoUsuario} 
+                          onChange={(e) => setFiltroEstadoUsuario(e.target.value)} 
+                          style={{ backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '12px', padding: '0.4rem 0.8rem', fontSize: '0.75rem', fontWeight: 'bold' }}
+                        >
+                          <option value="todos">🌐 Todos</option>
+                          <option value="online">🟢 En línea</option>
+                          <option value="busy">🟠 Ocupado</option>
+                          <option value="offline">🔴 Offline</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div style={{ overflowX: 'auto' }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', textAlign: 'left' }}>
+                        <thead>
+                          <tr style={{ borderBottom: '1px solid #162B23', color: '#00FF88' }}>
+                            <th style={{ padding: '0.6rem' }}>ESTADO</th>
+                            <th style={{ padding: '0.6rem' }}>NOMBRE</th>
+                            <th style={{ padding: '0.6rem' }}>CONTACTO</th>
+                            <th style={{ padding: '0.6rem' }}>ROL</th>
+                            <th style={{ padding: '0.6rem' }}>ACCIONES</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {usuariosOrdenadosYFiltrados.map((u) => {
+                            const badg = getBadgetConexion(u.estadoConexion || 'online');
+                            const esContactoOculto = (u.rol.includes('Experto') || u.rol.includes('Admin')) && !u.mostrarTelefono;
+
+                            return (
+                              <tr key={u.id} style={{ borderBottom: '1px solid #0D1A15' }}>
+                                <td style={{ padding: '0.6rem' }}>
+                                  <span style={{ color: badg.color, fontWeight: 'bold' }} title={badg.label}>{badg.icon}</span>
+                                </td>
+                                <td style={{ padding: '0.6rem', fontWeight: 'bold', color: '#FFF' }}>
+                                  {u.nombre}<br />
+                                  <span style={{ fontSize: '0.65rem', color: u.cuentaVerificada ? '#00FF88' : '#FFB300' }}>
+                                    {u.cuentaVerificada ? '✅ Verificado' : '⏳ Pendiente'}
+                                  </span>
+                                </td>
+                                <td style={{ padding: '0.6rem', color: '#8AA398' }}>
+                                  📧 {u.email}<br />
+                                  <span style={{ fontSize: '0.7rem', color: esContactoOculto ? '#FFB300' : '#A0C2B4' }}>
+                                    📱 {esContactoOculto ? '🔒 [Celular Privado]' : `${u.codigoPais || '+506'} ${u.tel}`}
+                                  </span>
+                                </td>
+                                <td style={{ padding: '0.6rem' }}>
+                                  <select 
+                                    value={u.rol} 
+                                    onChange={(e) => {
+                                      const nuevoRol = e.target.value;
+                                      setCuentasRegistradas(cuentasRegistradas.map(item => item.id === u.id ? { ...item, rol: nuevoRol } : item));
+                                      if (usuario.id === u.id) {
+                                        setUsuario({ ...usuario, rol: nuevoRol });
+                                      }
+                                    }} 
+                                    style={{ backgroundColor: '#050A08', color: '#00FF88', border: '1px solid #1B3D2F', borderRadius: '12px', padding: '0.3rem 0.5rem', fontSize: '0.75rem' }}
+                                  >
+                                    <option value="Administrador Experto (Máximo Rango)">🛡️ Administrador Experto</option>
+                                    <option value="Administrador">⚔️ Administrador</option>
+                                    <option value="Experto Herpetólogo">🎓 Experto Herpetólogo</option>
+                                    <option value="Usuario Regular">👤 Usuario Regular</option>
+                                  </select>
+                                </td>
+                                <td style={{ padding: '0.6rem' }}>
+                                  <div style={{ display: 'flex', gap: '0.4rem' }}>
+                                    <button 
+                                      onClick={() => {
+                                        setCuentasRegistradas(cuentasRegistradas.map(item => item.id === u.id ? { ...item, estatusCuenta: 'suspendido' } : item));
+                                        alert(`⚠️ La cuenta de ${u.nombre} ha sido baneada.`);
+                                      }} 
+                                      style={{ backgroundColor: '#D32F2F', color: '#FFF', border: 'none', borderRadius: '8px', padding: '0.3rem 0.5rem', fontSize: '0.7rem', fontWeight: 'bold', cursor: 'pointer' }}
+                                    >
+                                      🚫
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* 4. SOLICITUDES DE EXPERTOS */}
+                {subTabAdmin === 'solicitudes' && esExpertoOAdmin && (
+                  <div>
+                    <h4 style={{ margin: '0 0 1rem 0', color: '#FFB300', fontSize: '0.95rem' }}>🎓 Solicitudes de Acreditación (Biólogos)</h4>
+                    {solicitudesExpertos.length === 0 ? (
+                      <p style={{ color: '#8AA398', fontSize: '0.85rem' }}>No hay solicitudes pendientes.</p>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+                        {solicitudesExpertos.map((s) => (
+                          <div key={s.id} style={{ backgroundColor: '#060D0A', border: '1px solid #162B23', borderRadius: '12px', padding: '0.9rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+                            <div>
+                              <strong style={{ color: '#FFF', fontSize: '0.9rem' }}>{s.nombre}</strong>
+                              <div style={{ fontSize: '0.75rem', color: '#8AA398' }}>📧 {s.email} | 📞 {s.tel}</div>
+                              <div style={{ fontSize: '0.75rem', color: '#00FF88', marginTop: '0.2rem' }}>📜 {s.atencedentes}</div>
+                            </div>
+                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                              <button 
+                                onClick={() => {
+                                  const fechaHoraActual = new Date().toISOString().replace('T', ' ').substring(0, 19);
+                                  const cuentasActualizadas = cuentasRegistradas.map(u => u.id === s.userId ? { ...u, rol: 'Experto Herpetólogo', mostrarTelefono: false } : u);
+                                  const existe = cuentasRegistradas.some(u => u.id === s.userId);
+                                  
+                                  if (!existe) {
+                                    cuentasActualizadas.push({ id: s.userId || Date.now(), nombre: s.nombre, email: s.email, codigoPais: '+506', tel: s.tel, comunidad: 'Zona de los Santos', rol: 'Experto Herpetólogo', pass: '123456', estadoConexion: 'online', fechaIngreso: fechaHoraActual, mostrarTelefono: false, estatusCuenta: 'activo', cuentaVerificada: true });
+                                  }
+
+                                  setCuentasRegistradas(cuentasActualizadas);
+
+                                  if (usuario.id === s.userId || usuario.email === s.email) {
+                                    setUsuario(prev => ({ ...prev, rol: 'Experto Herpetólogo', mostrarTelefono: false }));
+                                  }
+
+                                  setSolicitudesExpertos(solicitudesExpertos.filter(item => item.id !== s.id));
+                                  alert(`¡Acreditación Aprobada! ${s.nombre} ahora tiene el rango EXPERTO.`);
+                                }} 
+                                style={{ backgroundColor: '#00E676', color: '#000', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}
+                              >
+                                ✔ Aprobar
+                              </button>
+                              <button onClick={() => setSolicitudesExpertos(solicitudesExpertos.filter(item => item.id !== s.id))} style={{ backgroundColor: '#D32F2F', color: '#FFF', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}>
+                                ✕
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* 5. MODERACIÓN */}
                 {subTabAdmin === 'moderacion' && esExpertoOAdmin && (
                   <div>
                     <h4 style={{ margin: '0 0 1rem 0', color: '#FFF', fontSize: '0.95rem' }}>📋 Moderación y Edición de Reportes</h4>
@@ -759,18 +952,7 @@ export default function App() {
                     </div>
                   </div>
                 )}
-                {/* CONSULTAS 1 A 1 */}
-                {subTabAdmin === 'consultas' && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
-                    <div style={{ backgroundColor: '#060D0A', border: '1px solid #162B23', borderRadius: '12px', padding: '0.9rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div>
-                        <strong style={{ color: '#FFF', fontSize: '0.9rem' }}>{usuario.nombre} ({usuario.rol})</strong>
-                        <p style={{ margin: '0.3rem 0', color: '#8AA398', fontSize: '0.8rem' }}>"Consulta de campo iniciada."</p>
-                      </div>
-                      <button onClick={() => setModalChat(true)} style={{ backgroundColor: 'transparent', border: 'none', color: '#00FF88', fontWeight: 'bold', cursor: 'pointer' }}>Abrir →</button>
-                    </div>
-                  </div>
-                )}
+
               </div>
             </div>
           )}
