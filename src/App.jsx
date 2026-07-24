@@ -149,7 +149,7 @@ export default function App() {
     }
   };
 
-  // Base de Cuentas Registradas con estado de Verificación
+  // Base de Cuentas Registradas
   const [cuentasRegistradas, setCuentasRegistradas] = useState([
     { id: 1, nombre: 'Jorge Carvajal', email: 'jorge.carvajal@docente.edu', tel: '+506 8888-9999', comunidad: 'Tarrazú (San Marcos, San Lorenzo, Carlos)', rol: 'Administrador Experto (Máximo Rango)', pass: 'admin123', estadoConexion: 'online', fechaIngreso: '2026-03-01 08:30:00', mostrarTelefono: false, estatusCuenta: 'activo', cuentaVerificada: true },
     { id: 2, nombre: 'Dra. Sofía Herpetóloga', email: 'sofia.herpeto@ucr.ac.cr', tel: '+506 8765-4321', comunidad: 'Dota (Santa María, Copey, Jardín)', rol: 'Experto Herpetólogo', pass: 'sofia123', estadoConexion: 'online', fechaIngreso: '2026-04-12 14:15:00', mostrarTelefono: false, estatusCuenta: 'activo', cuentaVerificada: true },
@@ -448,15 +448,41 @@ export default function App() {
   return (
     <div style={{ backgroundColor: '#070D0B', color: '#E0E6E3', minHeight: '100vh', fontFamily: 'system-ui, sans-serif', paddingBottom: '90px' }}>
       
-      {/* 🟢 BARRA SUPERIOR DINÁMICA */}
+      {/* 🟢 BARRA SUPERIOR DINÁMICA CON NUEVO LOGOTIPO INNOVADOR (VECTORIAL) */}
       <header style={{ backgroundColor: '#0B1512', padding: '0.8rem 1.2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #162B23', flexWrap: 'wrap', gap: '0.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
-          <div style={{ backgroundColor: '#0A1E16', border: '1px solid #00FF88', borderRadius: '12px', padding: '3px 8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ fontSize: '1.4rem' }}>🐸☕</span>
+          
+          {/* LOGOTIPO INNOVADOR ESTILIZADO */}
+          <div style={{
+            background: 'linear-gradient(135deg, #0A261C 0%, #04100B 100%)',
+            border: '1.5px solid #00FF88',
+            borderRadius: '16px',
+            width: '46px',
+            height: '46px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: '0 0 14px rgba(0,230,118,0.3)',
+            position: 'relative',
+            overflow: 'hidden'
+          }}>
+            <div style={{ position: 'absolute', width: '32px', height: '32px', border: '1px dashed rgba(0,255,136,0.4)', borderRadius: '50%' }}></div>
+            <span style={{ fontSize: '1.5rem', filter: 'drop-shadow(0 2px 4px rgba(0,255,136,0.5))' }}>🐸</span>
+            <div style={{
+              position: 'absolute',
+              bottom: '4px',
+              right: '4px',
+              backgroundColor: '#FFB300',
+              width: '10px',
+              height: '10px',
+              borderRadius: '50%',
+              border: '1.5px solid #070D0B'
+            }}></div>
           </div>
+
           <div>
-            <h1 style={{ margin: 0, fontSize: '1.1rem', color: '#00FF88', fontWeight: 'bold' }}>HerpID Los Santos CR</h1>
-            <p style={{ margin: 0, fontSize: '0.7rem', color: '#6A8A7D', letterSpacing: '0.5px' }}>IDENTIFICADOR DE HERPETOFAUNA</p>
+            <h1 style={{ margin: 0, fontSize: '1.1rem', color: '#00FF88', fontWeight: 'bold', letterSpacing: '0.3px' }}>HerpID Los Santos CR</h1>
+            <p style={{ margin: 0, fontSize: '0.7rem', color: '#6A8A7D', letterSpacing: '0.8px', fontWeight: '500' }}>IDENTIFICADOR DE HERPETOFAUNA</p>
           </div>
         </div>
 
@@ -680,7 +706,6 @@ export default function App() {
                       <button onClick={() => setSubTabAdmin('metricas')} style={{ backgroundColor: subTabAdmin === 'metricas' ? '#0F2B20' : 'transparent', color: subTabAdmin === 'metricas' ? '#00FF88' : '#8AA398', border: subTabAdmin === 'metricas' ? '1px solid #00FF88' : 'none', borderRadius: '15px', padding: '0.3rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>📊 Métricas</button>
                     )}
 
-                    {/* PESTAÑA USUARIOS EXCLUSIVA PARA ADMIN */}
                     {esAdminAbsoluto && (
                       <button onClick={() => setSubTabAdmin('usuarios')} style={{ backgroundColor: subTabAdmin === 'usuarios' ? '#0F2B20' : 'transparent', color: subTabAdmin === 'usuarios' ? '#00FF88' : '#8AA398', border: subTabAdmin === 'usuarios' ? '1px solid #00FF88' : 'none', borderRadius: '15px', padding: '0.3rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>👥 USUARIOS ({cuentasRegistradas.length})</button>
                     )}
@@ -747,7 +772,7 @@ export default function App() {
                   </div>
                 )}
 
-                {/* 👥 PESTAÑA USUARIOS (EXCLUSIVO ADMIN: ESTADO DE VERIFICACIÓN, BAN, EXPULSAR) */}
+                {/* 👥 PESTAÑA USUARIOS */}
                 {subTabAdmin === 'usuarios' && esAdminAbsoluto && (
                   <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.8rem' }}>
@@ -1094,7 +1119,7 @@ export default function App() {
         </div>
       )}
 
-      {/* 👤 MODAL PERFIL CON SISTEMA DE AUTENTICACIÓN Y VERIFICACIÓN OTP */}
+      {/* 👤 MODAL PERFIL CON VERIFICACIÓN OTP */}
       {modalPerfil && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999, padding: '1rem' }}>
           <div style={{ backgroundColor: '#09130F', borderRadius: '16px', border: '1px solid #1B3D2F', width: '100%', maxWidth: '520px', padding: '1.2rem', maxHeight: '90vh', overflowY: 'auto' }}>
@@ -1116,7 +1141,7 @@ export default function App() {
               </div>
             )}
 
-            {/* VISTA 1: PERFIL DE USUARIO ACTIVO */}
+            {/* VISTA 1: PERFIL */}
             {vistaPerfil === 'perfil' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
                 <div style={{ backgroundColor: '#060D0A', border: '1px solid #1B3D2F', borderRadius: '12px', padding: '0.8rem', textAlign: 'center' }}>
@@ -1168,7 +1193,7 @@ export default function App() {
               </div>
             )}
 
-            {/* VISTA 2: INICIAR SESIÓN */}
+            {/* VISTA 2: LOGIN */}
             {vistaPerfil === 'login' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
                 <div>
@@ -1220,7 +1245,7 @@ export default function App() {
               </div>
             )}
 
-            {/* VISTA 3: REGISTRO DE CUENTA Y GENERACIÓN DE CÓDIGO DE VERIFICACIÓN */}
+            {/* VISTA 3: REGISTRO */}
             {vistaPerfil === 'registro' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
                 <div>
@@ -1269,7 +1294,6 @@ export default function App() {
                       return;
                     }
 
-                    // Genera código de 6 dígitos
                     const codigoGenerado = Math.floor(100000 + Math.random() * 900000).toString();
                     const newId = Date.now();
                     const fechaActual = new Date().toISOString().replace('T', ' ').substring(0, 19);
@@ -1300,7 +1324,7 @@ export default function App() {
               </div>
             )}
 
-            {/* VISTA 4: INGRESAR CÓDIGO DE VERIFICACIÓN (OTP) */}
+            {/* VISTA 4: VERIFICAR OTP */}
             {vistaPerfil === 'verificar' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem', textAlign: 'center' }}>
                 <div style={{ backgroundColor: '#0A1E16', border: '1px solid #00FF88', padding: '0.8rem', borderRadius: '10px', color: '#00FF88', fontSize: '0.8rem' }}>
@@ -1332,7 +1356,6 @@ export default function App() {
                         setSolicitudesExpertos([...solicitudesExpertos, { id: Date.now(), userId: cuentaVerificadaFinal.id, nombre: formReg.nombre, email: formReg.email, tel: formReg.telefono, atencedentes: 'Solicitó rango de Experto Herpetólogo al registrarse.', fecha: 'Hoy' }]);
                       }
 
-                      // Inicia sesión de inmediato
                       setUsuario({
                         isLoggedIn: true,
                         id: cuentaVerificadaFinal.id,
@@ -1357,7 +1380,7 @@ export default function App() {
               </div>
             )}
 
-            {/* VISTA 5: RECUPERACIÓN DE CONTRASEÑA */}
+            {/* VISTA 5: RECUPERACIÓN */}
             {vistaPerfil === 'recuperar' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
                 <p style={{ fontSize: '0.8rem', color: '#8AA398', margin: 0 }}>Selecciona el método de recuperación para recibir las instrucciones:</p>
