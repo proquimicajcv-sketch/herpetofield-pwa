@@ -5,9 +5,49 @@ import 'leaflet/dist/leaflet.css';
 export default function App() {
   const [tab, setTab] = useState('mapa');
   const [modalRegistro, setModalRegistro] = useState(false);
-  const [cantoGrabado, setCantoGrabado] = useState(false);
 
-  // Lista de avistamientos de prueba
+  // Estados del Formulario de Registro (Pasos 1 al 7)
+  const [tipoFauna, setTipoFauna] = useState('Anfibio');
+  const [silueta, setSilueta] = useState('Rana Arborícola');
+  const [desconocido, setDesconocido] = useState(true);
+  const [nombreCientifico, setNombreCientifico] = useState('');
+  const [nombreComun, setNombreComun] = useState('');
+  const [lat, setLat] = useState('9.650576');
+  const [lng, setLng] = useState('-84.000226');
+  const [comunidad, setComunidad] = useState('');
+  const [cantoGrabado, setCantoGrabado] = useState(false);
+  const [estadoOrganismo, setEstadoOrganismo] = useState('Vivo / Activo');
+  const [etapa, setEtapa] = useState('Adulto');
+  const [temp, setTemp] = useState('19.5');
+  const [humedad, setHumedad] = useState('88.0');
+  const [microhabitat, setMicrohabitat] = useState('Vegetación / Finca Cafetalera');
+  const [notas, setNotas] = useState('');
+  const [fotoPreview, setFotoPreview] = useState('https://images.unsplash.com/photo-1590005354167-6da97870c757?auto=format&fit=crop&w=600&q=80');
+
+  // Obtener GPS real del dispositivo
+  const obtenerGPS = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setLat(pos.coords.latitude.toFixed(6));
+          setLng(pos.coords.longitude.toFixed(6));
+        },
+        (err) => alert('Error al obtener ubicación GPS: ' + err.message)
+      );
+    } else {
+      alert('La geolocalización no está soportada por este navegador.');
+    }
+  };
+
+  // Manejador de subida de foto
+  const handleFotoUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setFotoPreview(URL.createObjectURL(file));
+    }
+  };
+
+  // Registros de prueba
   const [registros, setRegistros] = useState([
     {
       id: 1,
@@ -21,11 +61,11 @@ export default function App() {
       reportante: 'Jorge Carvajal',
       tieneAudio: true,
       img: 'https://images.unsplash.com/photo-1590005354167-6da97870c757?auto=format&fit=crop&w=600&q=80',
-      coords: [9.6582, -84.0241]
+      coords: [9.650576, -84.000226]
     }
   ]);
 
-  // Fichas de la Guía de Especies
+  // Guía de Especies Comunes
   const especiesGuia = [
     {
       nombre: 'Agalychnis annae',
@@ -56,7 +96,7 @@ export default function App() {
   return (
     <div style={{ backgroundColor: '#070D0B', color: '#E0E6E3', minHeight: '100vh', fontFamily: 'system-ui, sans-serif', paddingBottom: '90px' }}>
       
-      {/* 🟢 TOP BAR / HEADER */}
+      {/* 🟢 ENCABEZADO PRINCIPAL */}
       <header style={{ backgroundColor: '#0B1512', padding: '0.8rem 1.2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #162B23' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
           <div style={{ backgroundColor: '#00E676', borderRadius: '50%', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>🐸</div>
@@ -72,10 +112,9 @@ export default function App() {
         </div>
       </header>
 
-      {/* 🗺️ VISTA 1: MAPA SATÉLITE / TOPOGRÁFICO */}
+      {/* 🗺️ VISTA 1: MAPA */}
       {tab === 'mapa' && (
         <div>
-          {/* Métricas rápidas */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem', padding: '0.8rem 1rem', backgroundColor: '#0A120E' }}>
             <div style={{ backgroundColor: '#101C17', padding: '0.5rem', borderRadius: '8px', textAlign: 'center', border: '1px solid #1A2E26' }}>
               <div style={{ color: '#00FF88', fontSize: '1.2rem', fontWeight: 'bold' }}>1</div>
@@ -95,19 +134,12 @@ export default function App() {
             </div>
           </div>
 
-          {/* Contenedor del Mapa */}
-          <div style={{ height: 'calc(100vh - 220px)', width: '100%', position: 'relative' }}>
-            <MapContainer center={[9.6582, -84.0241]} zoom={12} style={{ height: '100%', width: '100%' }}>
-              <TileLayer
-                attribution='&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a>'
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              />
+          <div style={{ height: 'calc(100vh - 220px)', width: '100%' }}>
+            <MapContainer center={[9.650576, -84.000226]} zoom={13} style={{ height: '100%', width: '100%' }}>
+              <TileLayer attribution='&copy; OpenStreetMap' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
               {registros.map((reg) => (
                 <Marker key={reg.id} position={reg.coords}>
-                  <Popup>
-                    <strong>{reg.nombreComun}</strong><br />
-                    {reg.ubicacion}
-                  </Popup>
+                  <Popup><strong>{reg.nombreComun}</strong><br />{reg.ubicacion}</Popup>
                 </Marker>
               ))}
             </MapContainer>
@@ -115,7 +147,7 @@ export default function App() {
         </div>
       )}
 
-      {/* 🖼️ VISTA 2: GALERÍA DE AVISTAMIENTOS */}
+      {/* 🖼️ VISTA 2: GALERÍA */}
       {tab === 'galeria' && (
         <div style={{ padding: '1rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
@@ -134,10 +166,6 @@ export default function App() {
                   <span style={{ fontSize: '0.75rem', color: '#00FF88', fontWeight: 'bold' }}>🐸 {reg.categoria} • ? POR IDENTIFICAR</span>
                   <h3 style={{ margin: '0.3rem 0', fontSize: '1rem' }}>{reg.nombreComun}</h3>
                   <p style={{ margin: '0.2rem 0', fontSize: '0.8rem', color: '#8AA398' }}>📍 {reg.ubicacion} 🌡️ {reg.temp}</p>
-                  <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.6rem' }}>
-                    <span style={{ backgroundColor: '#152B22', color: '#A0C2B4', padding: '0.2rem 0.5rem', borderRadius: '6px', fontSize: '0.7rem' }}>{reg.microhabitat}</span>
-                    {reg.tieneAudio && <span style={{ backgroundColor: '#2E153B', color: '#E0B0FF', padding: '0.2rem 0.5rem', borderRadius: '6px', fontSize: '0.7rem' }}>🎵 Audio Canto</span>}
-                  </div>
                 </div>
               </div>
             ))}
@@ -145,7 +173,7 @@ export default function App() {
         </div>
       )}
 
-      {/* 📖 VISTA 3: GUÍA DE ESPECIES */}
+      {/* 📖 VISTA 3: GUÍA */}
       {tab === 'guia' && (
         <div style={{ padding: '1rem' }}>
           <h2 style={{ margin: 0, fontSize: '1.2rem', color: '#00FF88' }}>📖 Guía de Especies Comunes de Los Santos</h2>
@@ -168,49 +196,239 @@ export default function App() {
         </div>
       )}
 
-      {/* 📌 MODAL DE REGISTRO EN CAMPO (VENTANA EMERGENTE) */}
+      {/* 📌 MODAL DE REGISTRO COMPLETO (PASOS 1 AL 7) */}
       {modalRegistro && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999, padding: '1rem' }}>
-          <div style={{ backgroundColor: '#0F1A16', borderRadius: '16px', border: '1px solid #1B3D2F', width: '100%', maxWidth: '500px', padding: '1.2rem', maxHeight: '90vh', overflowY: 'auto' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-              <h3 style={{ margin: 0, color: '#00FF88', fontSize: '1.1rem' }}>🐸 Registrar Avistamiento en Campo</h3>
-              <button onClick={() => setModalRegistro(false)} style={{ backgroundColor: 'transparent', border: 'none', color: '#FFF', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
+          <div style={{ backgroundColor: '#09130F', borderRadius: '16px', border: '1px solid #1B3D2F', width: '100%', maxWidth: '550px', padding: '1.2rem', maxHeight: '92vh', overflowY: 'auto' }}>
+            
+            {/* Header Modal */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid #122B20', paddingBottom: '0.5rem' }}>
+              <h3 style={{ margin: 0, color: '#FFF', fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                🐸 Registrar Avistamiento en Campo
+              </h3>
+              <button onClick={() => setModalRegistro(false)} style={{ backgroundColor: 'transparent', border: 'none', color: '#FFF', fontSize: '1.3rem', cursor: 'pointer' }}>✕</button>
             </div>
 
-            <div style={{ marginBottom: '1rem' }}>
-              <label style={{ display: 'block', fontSize: '0.8rem', color: '#00FF88', fontWeight: 'bold', marginBottom: '0.4rem' }}>6. GRABACIÓN DEL CANTO / VOCALIZACIÓN (OPCIONAL)</label>
+            {/* Protocolo de Seguridad */}
+            <div style={{ backgroundColor: '#1C1B0A', border: '1px solid #5C4D0A', color: '#EEDC82', padding: '0.8rem', borderRadius: '10px', fontSize: '0.75rem', marginBottom: '1.2rem', display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
+              <span>🛡️</span>
+              <div>
+                <strong>Protocolo de Seguridad:</strong> Mantén una distancia mínima de 1.5 a 2 metros con cualquier serpiente u organismo desconocido. No manipules fauna venenosa.
+              </div>
+            </div>
+
+            {/* PASO 1: TIPO DE FAUNA */}
+            <div style={{ marginBottom: '1.2rem' }}>
+              <label style={{ display: 'block', fontSize: '0.8rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.5rem' }}>1. TIPO DE FAUNA *</label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.8rem' }}>
+                <button 
+                  type="button"
+                  onClick={() => setTipoFauna('Anfibio')}
+                  style={{ backgroundColor: tipoFauna === 'Anfibio' ? '#0F2B20' : '#0A1410', border: tipoFauna === 'Anfibio' ? '2px solid #00FF88' : '1px solid #1B3D2F', borderRadius: '10px', padding: '0.8rem', color: '#FFF', display: 'flex', alignItems: 'center', gap: '0.8rem', cursor: 'pointer', textAlign: 'left' }}
+                >
+                  <span style={{ fontSize: '1.8rem' }}>🐸</span>
+                  <div>
+                    <div style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>Anfibio</div>
+                    <div style={{ fontSize: '0.65rem', color: '#7A9A8C' }}>Ranas, sapos, salamandras</div>
+                  </div>
+                </button>
+
+                <button 
+                  type="button"
+                  onClick={() => setTipoFauna('Reptil')}
+                  style={{ backgroundColor: tipoFauna === 'Reptil' ? '#0F2B20' : '#0A1410', border: tipoFauna === 'Reptil' ? '2px solid #00FF88' : '1px solid #1B3D2F', borderRadius: '10px', padding: '0.8rem', color: '#FFF', display: 'flex', alignItems: 'center', gap: '0.8rem', cursor: 'pointer', textAlign: 'left' }}
+                >
+                  <span style={{ fontSize: '1.8rem' }}>🦎</span>
+                  <div>
+                    <div style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>Reptil</div>
+                    <div style={{ fontSize: '0.65rem', color: '#7A9A8C' }}>Serpientes, lagartijas, tortugas</div>
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            {/* PASO 2: SELECTOR VISUAL POR SILUETA */}
+            <div style={{ marginBottom: '1.2rem' }}>
+              <label style={{ display: 'block', fontSize: '0.8rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.5rem' }}>2. SELECTOR VISUAL DE FORMA POR SILUETA *</label>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem' }}>
+                {[
+                  { id: 'Sapo Terrestre', icon: '🐸' },
+                  { id: 'Rana Arborícola', icon: '🍃' },
+                  { id: 'Serpiente', icon: '🐍' },
+                  { id: 'Lagartija', icon: '🦎' }
+                ].map((s) => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => setSilueta(s.id)}
+                    style={{ backgroundColor: silueta === s.id ? '#0F2B20' : '#0A1410', border: silueta === s.id ? '2px solid #00FF88' : '1px solid #1B3D2F', borderRadius: '10px', padding: '0.6rem 0.3rem', color: '#FFF', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.3rem', cursor: 'pointer' }}
+                  >
+                    <span style={{ fontSize: '1.5rem' }}>{s.icon}</span>
+                    <span style={{ fontSize: '0.65rem', fontWeight: 'bold', textAlign: 'center' }}>{s.id}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* PASO 3: TAXONOMÍA / ESPECIE */}
+            <div style={{ marginBottom: '1.2rem' }}>
+              <label style={{ display: 'block', fontSize: '0.8rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.5rem' }}>3. TAXONOMÍA / ESPECIE</label>
+              
+              <div onClick={() => setDesconocido(!desconocido)} style={{ backgroundColor: '#0D1E18', border: '1px solid #1B3D2F', padding: '0.7rem', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.6rem' }}>
+                <input type="checkbox" checked={desconocido} onChange={() => {}} style={{ accentColor: '#00FF88', width: '16px', height: '16px' }} />
+                <span style={{ color: '#00FF88', fontSize: '0.75rem', fontWeight: 'bold' }}>❓ No sé la especie (Marcar como "Desconocido" para que el experto la identifique)</span>
+              </div>
+
+              {!desconocido && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  <input 
+                    type="text" 
+                    placeholder="Nombre científico (opcional, ej. Agalychnis annae)" 
+                    value={nombreCientifico}
+                    onChange={(e) => setNombreCientifico(e.target.value)}
+                    style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.8rem' }}
+                  />
+                  <input 
+                    type="text" 
+                    placeholder="Nombre común (opcional, ej. Rana verde)" 
+                    value={nombreComun}
+                    onChange={(e) => setNombreComun(e.target.value)}
+                    style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.8rem' }}
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* PASO 4: COORDENADAS GPS */}
+            <div style={{ marginBottom: '1.2rem' }}>
+              <label style={{ display: 'block', fontSize: '0.8rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.5rem' }}>4. COORDENADAS GPS (LATITUD, LONGITUD) *</label>
+              <div style={{ backgroundColor: '#0D1E18', border: '1px border-dashed #1B3D2F', borderRadius: '8px', padding: '0.8rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                  <span style={{ fontSize: '0.75rem', color: '#00FF88' }}>✅ GPS Capturado: Lat {lat}, Lng {lng}</span>
+                  <button type="button" onClick={obtenerGPS} style={{ backgroundColor: '#00E676', color: '#000', border: 'none', padding: '0.3rem 0.8rem', borderRadius: '15px', fontWeight: 'bold', fontSize: '0.75rem', cursor: 'pointer' }}>GPS 🎯</button>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                  <input type="text" value={lat} readOnly style={{ padding: '0.5rem', backgroundColor: '#050A08', border: '1px solid #1B3D2F', color: '#FFF', borderRadius: '6px', fontSize: '0.8rem' }} />
+                  <input type="text" value={lng} readOnly style={{ padding: '0.5rem', backgroundColor: '#050A08', border: '1px solid #1B3D2F', color: '#FFF', borderRadius: '6px', fontSize: '0.8rem' }} />
+                </div>
+                <input 
+                  type="text" 
+                  placeholder="Comunidad (ej. San Marcos de Tarrazú)" 
+                  value={comunidad}
+                  onChange={(e) => setComunidad(e.target.value)}
+                  style={{ width: '100%', padding: '0.5rem', backgroundColor: '#050A08', border: '1px solid #1B3D2F', color: '#FFF', borderRadius: '6px', fontSize: '0.8rem' }}
+                />
+              </div>
+            </div>
+
+            {/* PASO 5: FOTOGRAFÍA */}
+            <div style={{ marginBottom: '1.2rem' }}>
+              <label style={{ display: 'block', fontSize: '0.8rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.5rem' }}>5. FOTOGRAFÍA DEL EJEMPLAR *</label>
+              <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', border: '2px dashed #1B3D2F', borderRadius: '10px', padding: '1rem', cursor: 'pointer', backgroundColor: '#0A1410' }}>
+                <span style={{ fontSize: '2rem' }}>📷</span>
+                <span style={{ fontSize: '0.8rem', color: '#00FF88', fontWeight: 'bold', marginTop: '0.3rem' }}>Tomar Foto con Cámara o Elegir Archivo</span>
+                <input type="file" accept="image/*" capture="environment" onChange={handleFotoUpload} style={{ display: 'none' }} />
+              </label>
+              {fotoPreview && (
+                <div style={{ marginTop: '0.6rem', borderRadius: '8px', overflow: 'hidden', height: '120px' }}>
+                  <img src={fotoPreview} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                </div>
+              )}
+            </div>
+
+            {/* PASO 6: CANTO / VOCALIZACIÓN */}
+            <div style={{ marginBottom: '1.2rem' }}>
+              <label style={{ display: 'block', fontSize: '0.8rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.5rem' }}>6. GRABACIÓN DEL CANTO / VOCALIZACIÓN (OPCIONAL)</label>
+              <div style={{ backgroundColor: '#0D1E18', border: '1px border-dashed #1B3D2F', borderRadius: '8px', padding: '0.8rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.75rem', color: cantoGrabado ? '#00FF88' : '#8AA398' }}>
+                  {cantoGrabado ? '✅ Canto grabado con éxito' : 'Sin nota de voz registrada'}
+                </span>
+                <button 
+                  type="button" 
+                  onClick={() => setCantoGrabado(!cantoGrabado)}
+                  style={{ backgroundColor: cantoGrabado ? '#1B4D3E' : '#E53935', color: '#FFF', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '20px', fontWeight: 'bold', fontSize: '0.75rem', cursor: 'pointer' }}
+                >
+                  🎙️ Grabar Canto (Nota de Voz)
+                </button>
+              </div>
+            </div>
+
+            {/* PASO 7: MICROHÁBITAT Y ESTADO */}
+            <div style={{ marginBottom: '1.2rem' }}>
+              <label style={{ display: 'block', fontSize: '0.8rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.5rem' }}>7. MICROHÁBITAT Y ESTADO</label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                <select value={estadoOrganismo} onChange={(e) => setEstadoOrganismo(e.target.value)} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.8rem' }}>
+                  <option value="Vivo / Activo">Vivo / Activo</option>
+                  <option value="Vivo / Inactivo">Vivo / Inactivo</option>
+                  <option value="Muerto / Atropellado">Muerto / Atropellado</option>
+                </select>
+
+                <select value={etapa} onChange={(e) => setEtapa(e.target.value)} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.8rem' }}>
+                  <option value="Adulto">Adulto</option>
+                  <option value="Juvenil">Juvenil</option>
+                  <option value="Renacuajo / Larva">Renacuajo / Larva</option>
+                </select>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                <input type="text" value={temp} onChange={(e) => setTemp(e.target.value)} placeholder="Temp °C" style={{ padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.8rem' }} />
+                <input type="text" value={humedad} onChange={(e) => setHumedad(e.target.value)} placeholder="Humedad %" style={{ padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.8rem' }} />
+              </div>
+
+              <select value={microhabitat} onChange={(e) => setMicrohabitat(e.target.value)} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.8rem' }}>
+                <option value="Vegetación / Finca Cafetalera">☕ Vegetación / Finca Cafetalera</option>
+                <option value="Hoja o Roca en Quebrada">🪨 Hoja o Roca en Quebrada</option>
+                <option value="Bosque de Roble">🌲 Bosque de Roble</option>
+                <option value="Charca Temporal">💧 Charca Temporal</option>
+              </select>
+            </div>
+
+            {/* NOTAS ADICIONALES */}
+            <div style={{ marginBottom: '1.2rem' }}>
+              <label style={{ display: 'block', fontSize: '0.8rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.5rem' }}>NOTAS ADICIONALES</label>
+              <textarea 
+                rows="3" 
+                placeholder="Detalles observados..." 
+                value={notas}
+                onChange={(e) => setNotas(e.target.value)}
+                style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.8rem', resize: 'vertical' }}
+              />
+            </div>
+
+            {/* ACCIONES */}
+            <div style={{ display: 'flex', gap: '0.8rem', marginTop: '1.5rem' }}>
+              <button onClick={() => setModalRegistro(false)} style={{ flex: 1, padding: '0.8rem', backgroundColor: '#14211C', color: '#A0C2B4', border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: 'bold' }}>Cancelar</button>
               <button 
-                type="button" 
-                onClick={() => setCantoGrabado(!cantoGrabado)}
-                style={{ width: '100%', padding: '0.6rem', backgroundColor: cantoGrabado ? '#1B4D3E' : '#D32F2F', color: '#FFF', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}
+                onClick={() => {
+                  const nuevo = {
+                    id: Date.now(),
+                    especie: desconocido ? 'Especie por identificar' : nombreCientifico,
+                    nombreComun: desconocido ? 'Desconocido (Por determinar por experto)' : nombreComun,
+                    categoria: tipoFauna.toUpperCase(),
+                    estado: 'EN REVISIÓN',
+                    ubicacion: comunidad || 'Zona de los Santos',
+                    temp: `${temp}°C`,
+                    microhabitat: microhabitat,
+                    reportante: 'Jorge Carvajal',
+                    tieneAudio: cantoGrabado,
+                    img: fotoPreview,
+                    coords: [parseFloat(lat), parseFloat(lng)]
+                  };
+                  setRegistros([nuevo, ...registros]);
+                  setModalRegistro(false);
+                  setTab('galeria');
+                }} 
+                style={{ flex: 2, padding: '0.8rem', backgroundColor: '#00E676', color: '#000', fontWeight: 'bold', border: 'none', borderRadius: '10px', cursor: 'pointer', fontSize: '0.9rem' }}
               >
-                {cantoGrabado ? '✅ Canto grabado con éxito' : '🎙️ Grabar Canto (Nota de Voz)'}
+                Enviar a Revisión de Expertos
               </button>
             </div>
 
-            <div style={{ marginBottom: '1rem' }}>
-              <label style={{ display: 'block', fontSize: '0.8rem', color: '#00FF88', fontWeight: 'bold', marginBottom: '0.4rem' }}>7. MICROHÁBITAT Y ESTADO</label>
-              <select style={{ width: '100%', padding: '0.6rem', backgroundColor: '#070D0B', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', marginBottom: '0.5rem' }}>
-                <option>Vivo / Activo</option>
-                <option>Vivo / Inactivo</option>
-                <option>Muerto</option>
-              </select>
-              <select style={{ width: '100%', padding: '0.6rem', backgroundColor: '#070D0B', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px' }}>
-                <option>🍃 Vegetación / Finca Cafetalera</option>
-                <option>🪨 Hoja o Roca en Quebrada</option>
-                <option>🌲 Bosque de Roble</option>
-              </select>
-            </div>
-
-            <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1.5rem' }}>
-              <button onClick={() => setModalRegistro(false)} style={{ flex: 1, padding: '0.7rem', backgroundColor: '#1A2922', color: '#AAA', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Cancelar</button>
-              <button onClick={() => { setModalRegistro(false); setTab('galeria'); }} style={{ flex: 1, padding: '0.7rem', backgroundColor: '#00C853', color: '#000', fontWeight: 'bold', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Enviar a Revisión de Expertos</button>
-            </div>
           </div>
         </div>
       )}
 
-      {/* 🧭 MENÚ DE NAVEGACIÓN INFERIOR (TABBAR) */}
+      {/* 🧭 BARRA DE NAVEGACIÓN INFERIOR */}
       <nav style={{ position: 'fixed', bottom: 0, left: 0, right: 0, backgroundColor: '#0A120E', display: 'flex', borderTop: '1px solid #162B23', height: '65px', alignItems: 'center', zIndex: 1000 }}>
         <button onClick={() => setTab('mapa')} style={{ flex: 1, backgroundColor: 'transparent', border: 'none', color: tab === 'mapa' ? '#00FF88' : '#6A8A7D', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', cursor: 'pointer' }}>
           <span style={{ fontSize: '1.2rem' }}>🗺️</span>
@@ -222,7 +440,6 @@ export default function App() {
           <span style={{ fontSize: '0.65rem' }}>Galería</span>
         </button>
 
-        {/* Botón flotante verde central (+) */}
         <button onClick={() => setModalRegistro(true)} style={{ backgroundColor: '#00E676', border: '4px solid #070D0B', color: '#000', width: '52px', height: '52px', borderRadius: '50%', fontSize: '1.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', marginTop: '-25px', boxShadow: '0 0 10px rgba(0,230,118,0.4)' }}>
           +
         </button>
@@ -232,7 +449,7 @@ export default function App() {
           <span style={{ fontSize: '0.65rem' }}>Guía</span>
         </button>
 
-        <button onClick={() => alert('Sección de Buzón de Consultas')} style={{ flex: 1, backgroundColor: 'transparent', border: 'none', color: '#6A8A7D', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', cursor: 'pointer' }}>
+        <button onClick={() => alert('Buzón de Consultas en desarrollo')} style={{ flex: 1, backgroundColor: 'transparent', border: 'none', color: '#6A8A7D', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', cursor: 'pointer' }}>
           <span style={{ fontSize: '1.2rem' }}>📊</span>
           <span style={{ fontSize: '0.65rem' }}>Buzón / Admin</span>
         </button>
