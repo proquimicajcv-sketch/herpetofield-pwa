@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 
 export default function App() {
   const [tab, setTab] = useState('registro');
+  const [cargandoGPS, setCargandoGPS] = useState(false);
   const [registros, setRegistros] = useState([
     {
       id: 1,
@@ -22,24 +23,52 @@ export default function App() {
     coordenadas: ''
   });
 
-  // Obtener ubicación GPS actual
+  // Obtener ubicación GPS con alta precisión
   const obtenerUbicacion = () => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const coords = `${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`;
-          setForm({ ...form, coordenadas: coords });
-        },
-        () => alert('No se pudo obtener la ubicación GPS.')
-      );
-    } else {
-      alert('La geolocalización no está soportada por tu navegador.');
+    if (!navigator.geolocation) {
+      alert('La geolocalización no está soportada por tu navegador o dispositivo.');
+      return;
     }
+
+    setCargandoGPS(true);
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const coords = `${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)}`;
+        setForm((prev) => ({ ...prev, coordenadas: coords }));
+        setCargandoGPS(false);
+      },
+      (error) => {
+        setCargandoGPS(false);
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            alert('Permiso de ubicación denegado. Por favor, permite el acceso a la ubicación en tu navegador.');
+            break;
+          case error.POSITION_UNAVAILABLE:
+            alert('La información de ubicación no está disponible. Revisa que el GPS esté encendido.');
+            break;
+          case error.TIMEOUT:
+            alert('La solicitud para obtener la ubicación expiró. Inténtalo de nuevo.');
+            break;
+          default:
+            alert('Ocurrió un error al obtener la ubicación.');
+            break;
+        }
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
+      }
+    );
   };
 
   const guardarRegistro = (e) => {
     e.preventDefault();
-    if (!form.especie && !form.nombreComun) return;
+    if (!form.especie && !form.nombreComun) {
+      alert('Por favor ingresa al menos el nombre común o científico.');
+      return;
+    }
 
     const nuevo = {
       id: Date.now(),
@@ -118,9 +147,18 @@ export default function App() {
                   <button 
                     type="button" 
                     onClick={obtenerUbicacion}
-                    style={{ padding: '0.6rem 0.8rem', backgroundColor: '#2d6a4f', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
+                    disabled={cargandoGPS}
+                    style={{ 
+                      padding: '0.6rem 0.8rem', 
+                      backgroundColor: cargandoGPS ? '#6c757d' : '#2d6a4f', 
+                      color: '#fff', 
+                      border: 'none', 
+                      borderRadius: '6px', 
+                      cursor: cargandoGPS ? 'not-allowed' : 'pointer',
+                      fontWeight: 'bold'
+                    }}
                   >
-                    📍 GPS
+                    {cargandoGPS ? '⌛ Buscando...' : '📍 GPS'}
                   </button>
                 </div>
               </div>
@@ -152,7 +190,7 @@ export default function App() {
         )}
       </main>
 
-      {/* Menú de Navegación Inferior (Estilo App Móvil) */}
+      {/* Menú de Navegación Inferior */}
       <nav style={{ position: 'fixed', bottom: 0, left: 0, right: 0, backgroundColor: '#fff', display: 'flex', borderTop: '1px solid #ddd', boxShadow: '0 -2px 5px rgba(0,0,0,0.05)' }}>
         <button 
           onClick={() => setTab('registro')} 
