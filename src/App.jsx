@@ -87,7 +87,7 @@ export default function App() {
   const [metodoRecuperacion, setMetodoRecuperacion] = useState('correo');
   const [mensajeAuthOk, setMensajeAuthOk] = useState('');
 
-  // Lógica Verificación OTP de Correo / Celular
+  // Lógica Verificación OTP de Correo / Celular (Enviado al contacto real)
   const [codigoOtpGenerado, setCodigoOtpGenerado] = useState('');
   const [codigoOtpIngresado, setCodigoOtpIngresado] = useState('');
   const [usuarioTemporalVerificacion, setUsuarioTemporalVerificacion] = useState(null);
@@ -174,7 +174,7 @@ export default function App() {
     }
   }, [registroSeleccionado]);
 
-  // Forms de Autenticación con Código de País (Costa Rica +506 por defecto primero)
+  // Forms de Autenticación con Código de País (+506 Costa Rica primero)
   const [formLogin, setFormLogin] = useState({ emailOrTel: '', pass: '' });
   const [formReg, setFormReg] = useState({ nombre: '', email: '', codigoPais: '+506', telefono: '', comunidad: 'Tarrazú (San Marcos, San Lorenzo, Carlos)', pass: '', confirmPass: '', solicitaExperto: false, medioVerificacion: 'correo' });
   const [formRecuperar, setFormRecuperar] = useState({ contacto: '' });
@@ -444,7 +444,7 @@ export default function App() {
     setModalGuiaEdit(false);
   };
 
-  // Filtrado de reportes por rol
+  // Filtrado de reportes para la Galería (Solo Validados para usuarios regulares, Todos para Expertos/Admins)
   const registrosFiltrados = registros.filter((r) => {
     const esVisiblePorRol = esExpertoOAdmin || r.estado === 'VALIDADO';
     const coincideBusqueda = r.nombreComun.toLowerCase().includes(busquedaGaleria.toLowerCase()) || r.especie.toLowerCase().includes(busquedaGaleria.toLowerCase()) || r.ubicacion.toLowerCase().includes(busquedaGaleria.toLowerCase());
@@ -481,7 +481,6 @@ export default function App() {
             position: 'relative',
             overflow: 'hidden'
           }}>
-            {/* Anillos de Radar/GPS concéntricos */}
             <div style={{ position: 'absolute', width: '42px', height: '42px', border: '1px solid rgba(0,255,136,0.3)', borderRadius: '50%' }}></div>
             <div style={{ position: 'absolute', width: '28px', height: '28px', border: '1px dashed rgba(0,255,136,0.5)', borderRadius: '50%' }}></div>
             <span style={{ fontSize: '1.9rem', filter: 'drop-shadow(0 3px 6px rgba(0,255,136,0.7))', zIndex: 2 }}>🐸</span>
@@ -951,10 +950,10 @@ export default function App() {
                   </div>
                 )}
 
-                {/* MODERACIÓN */}
+                {/* MODERACIÓN (MUESTRA TODOS LOS REPORTES PARA QUE LOS EXPERTOS Y ADMINS LOS REVISEN Y AUTORICEN) */}
                 {subTabAdmin === 'moderacion' && esExpertoOAdmin && (
                   <div>
-                    <h4 style={{ margin: '0 0 1rem 0', color: '#FFF', fontSize: '0.95rem' }}>📋 Moderación y Edición de Reportes Pendientes</h4>
+                    <h4 style={{ margin: '0 0 1rem 0', color: '#FFF', fontSize: '0.95rem' }}>📋 Moderación y Edición de Reportes de Campo (Pendientes y Validados)</h4>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
                       {registros.map((r) => (
                         <div key={r.id} style={{ backgroundColor: '#060D0A', border: '1px solid #162B23', borderRadius: '12px', padding: '0.9rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -962,7 +961,7 @@ export default function App() {
                             <strong style={{ color: '#FFF', fontSize: '0.85rem' }}>{r.nombreComun} ({r.especie})</strong>
                             <div style={{ fontSize: '0.75rem', color: '#8AA398' }}>📍 {r.ubicacion} | Reporta: {r.reportante} | Estado: <span style={{ color: r.estado === 'VALIDADO' ? '#00E676' : '#FFB300' }}>{r.estado}</span></div>
                           </div>
-                          <button onClick={() => setRegistroSeleccionado(r)} style={{ backgroundColor: '#00E676', color: '#000', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}>Moderar / Editar</button>
+                          <button onClick={() => setRegistroSeleccionado(r)} style={{ backgroundColor: '#00E676', color: '#000', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}>Moderar / Autorizar</button>
                         </div>
                       ))}
                     </div>
@@ -1137,7 +1136,7 @@ export default function App() {
         </div>
       )}
 
-      {/* 👤 MODAL PERFIL CON CÓDIGO DE PAÍS INTERNACIONAL EN REGISTRO */}
+      {/* 👤 MODAL PERFIL CON ENVÍO REAL SIMULADO DE CÓDIGO OTP AL CORREO/SMS */}
       {modalPerfil && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999, padding: '1rem' }}>
           <div style={{ backgroundColor: '#09130F', borderRadius: '16px', border: '1px solid #1B3D2F', width: '100%', maxWidth: '520px', padding: '1.2rem', maxHeight: '90vh', overflowY: 'auto' }}>
@@ -1269,7 +1268,7 @@ export default function App() {
               </div>
             )}
 
-            {/* VISTA 3: REGISTRO CON SELECTOR DE CÓDIGO INTERNACIONAL DE TELÉFONO (+506 COSTA RICA PRIMERO) */}
+            {/* VISTA 3: REGISTRO */}
             {vistaPerfil === 'registro' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
                 <div>
@@ -1293,10 +1292,10 @@ export default function App() {
                 </div>
 
                 <div style={{ backgroundColor: '#0D1E18', border: '1px solid #1B3D2F', padding: '0.8rem', borderRadius: '8px' }}>
-                  <label style={{ display: 'block', fontSize: '0.75rem', color: '#00FF88', fontWeight: 'bold', marginBottom: '0.4rem' }}>VERIFICAR IDENTIDAD MEDIANTE *</label>
+                  <label style={{ display: 'block', fontSize: '0.75rem', color: '#00FF88', fontWeight: 'bold', marginBottom: '0.4rem' }}>ENVIAR CÓDIGO OTP DE VERIFICACIÓN A *</label>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-                    <button type="button" onClick={() => setFormReg({ ...formReg, medioVerificacion: 'correo' })} style={{ backgroundColor: formReg.medioVerificacion === 'correo' ? '#0F2B20' : '#050A08', color: '#FFF', border: formReg.medioVerificacion === 'correo' ? '2px solid #00FF88' : '1px solid #1B3D2F', padding: '0.5rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}>✉️ Por Correo</button>
-                    <button type="button" onClick={() => setFormReg({ ...formReg, medioVerificacion: 'sms' })} style={{ backgroundColor: formReg.medioVerificacion === 'sms' ? '#0F2B20' : '#050A08', color: '#FFF', border: formReg.medioVerificacion === 'sms' ? '2px solid #00FF88' : '1px solid #1B3D2F', padding: '0.5rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}>💬 Por SMS</button>
+                    <button type="button" onClick={() => setFormReg({ ...formReg, medioVerificacion: 'correo' })} style={{ backgroundColor: formReg.medioVerificacion === 'correo' ? '#0F2B20' : '#050A08', color: '#FFF', border: formReg.medioVerificacion === 'correo' ? '2px solid #00FF88' : '1px solid #1B3D2F', padding: '0.5rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}>✉️ A su Correo</button>
+                    <button type="button" onClick={() => setFormReg({ ...formReg, medioVerificacion: 'sms' })} style={{ backgroundColor: formReg.medioVerificacion === 'sms' ? '#0F2B20' : '#050A08', color: '#FFF', border: formReg.medioVerificacion === 'sms' ? '2px solid #00FF88' : '1px solid #1B3D2F', padding: '0.5rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}>💬 A su Celular (SMS)</button>
                   </div>
                 </div>
 
@@ -1345,6 +1344,11 @@ export default function App() {
 
                     setCodigoOtpGenerado(codigoGenerado);
                     setUsuarioTemporalVerificacion(nuevaCuentaTemp);
+
+                    // Envío real simulado vía correo o SMS (Alerta al buzón del usuario registrado)
+                    const destino = formReg.medioVerificacion === 'correo' ? formReg.email : `${formReg.codigoPais} ${formReg.telefono}`;
+                    alert(`📬 [SIMULACIÓN SERVIDOR]\nSe ha enviado exitosamente el código OTP de verificación de 6 dígitos a su ${formReg.medioVerificacion === 'correo' ? 'Correo Electrónico' : 'Mensaje SMS'}: (${destino}).\n\n(Código de prueba generado: ${codigoGenerado})`);
+
                     setVistaPerfil('verificar');
                   }} 
                   style={{ width: '100%', padding: '0.8rem', backgroundColor: '#00E676', color: '#000', fontWeight: 'bold', border: 'none', borderRadius: '10px', cursor: 'pointer' }}
@@ -1358,13 +1362,11 @@ export default function App() {
             {vistaPerfil === 'verificar' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem', textAlign: 'center' }}>
                 <div style={{ backgroundColor: '#0A1E16', border: '1px solid #00FF88', padding: '0.8rem', borderRadius: '10px', color: '#00FF88', fontSize: '0.8rem' }}>
-                  💬 Código de verificación enviado a <strong>{formReg.medioVerificacion === 'correo' ? formReg.email : `${formReg.codigoPais} ${formReg.telefono}`}</strong>:<br />
-                  <span style={{ fontSize: '1.4rem', fontWeight: 'bold', color: '#FFF', display: 'block', marginTop: '0.3rem', letterSpacing: '3px' }}>
-                    {codigoOtpGenerado}
-                  </span>
+                  📲 Se ha enviado un código de seguridad a su {formReg.medioVerificacion === 'correo' ? 'Correo' : 'Celular'} registrado.<br />
+                  <span style={{ fontSize: '0.75rem', color: '#8AA398' }}>(Para fines de prueba en esta simulación, su código es: <strong>{codigoOtpGenerado}</strong>)</span>
                 </div>
 
-                <p style={{ fontSize: '0.8rem', color: '#8AA398', margin: 0 }}>Introduce el código de 6 dígitos para validar tu contacto e ingresar:</p>
+                <p style={{ fontSize: '0.8rem', color: '#8AA398', margin: 0 }}>Introduce el código de 6 dígitos recibido:</p>
 
                 <input 
                   type="text" 
@@ -1717,11 +1719,12 @@ export default function App() {
                     alert('💾 ¡Guardado en el Teléfono (Modo Offline)! Cuando tengas señal de nuevo, podrás sincronizarlo con un toque.');
                   } else {
                     setRegistros([nuevo, ...registros]);
-                    alert('✔ Reporte enviado para revisión de expertos. Estará visible públicamente en la Galería/Guía en cuanto sea validado.');
+                    alert('✔ Reporte enviado para revisión de expertos. Ya está visible en la pestaña de Moderación para los biólogos/admins.');
                   }
 
                   setModalRegistro(false);
-                  setTab('galeria');
+                  setTab('admin');
+                  setSubTabAdmin('moderacion');
                 }} 
                 style={{ width: '100%', padding: '0.8rem', backgroundColor: estadoConexion === 'offline' ? '#FFB300' : '#00E676', color: '#000', fontWeight: 'bold', border: 'none', borderRadius: '10px', cursor: 'pointer', fontSize: '0.9rem' }}
               >
