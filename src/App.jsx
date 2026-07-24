@@ -90,7 +90,7 @@ export default function App() {
     }
   };
 
-  // USUARIO ACTUAL (Inicialmente configurado como MÁXIMO RANGO)
+  // USUARIO ACTUAL (Por defecto Máximo Rango)
   const [usuario, setUsuario] = useState({
     isLoggedIn: true,
     nombre: 'Jorge Carvajal',
@@ -101,12 +101,29 @@ export default function App() {
     pass: '123456'
   });
 
+  // Determinar si el usuario tiene permisos de edición taxonómica
+  const esExpertoOAdmin = usuario.rol.includes('Administrador') || usuario.rol.includes('Experto');
+
+  // Formulario temporal de edición en Ficha de Avistamiento
+  const [editCientifico, setEditCientifico] = useState('');
+  const [editComun, setEditComun] = useState('');
+  const [editNotasTaxo, setEditNotasTaxo] = useState('');
+
+  // Sincronizar campos de edición cuando se abre un registro
+  useEffect(() => {
+    if (registroSeleccionado) {
+      setEditCientifico(registroSeleccionado.especie !== 'Especie por identificar' ? registroSeleccionado.especie : '');
+      setEditComun(registroSeleccionado.nombreComun !== 'Desconocido (Por determinar por experto)' ? registroSeleccionado.nombreComun : '');
+      setEditNotasTaxo(registroSeleccionado.notasTaxo || '');
+    }
+  }, [registroSeleccionado]);
+
   // Forms
   const [formLogin, setFormLogin] = useState({ emailOrTel: '', pass: '' });
   const [formReg, setFormReg] = useState({ nombre: '', email: '', telefono: '', comunidad: 'Tarrazú (San Marcos, San Lorenzo, Carlos)', pass: '', confirmPass: '', solicitaExperto: false });
   const [formRecuperar, setFormRecuperar] = useState({ contacto: '' });
 
-  // Lista de Usuarios con Jerarquía de 4 Roles
+  // Lista de Usuarios
   const [listaUsuarios, setListaUsuarios] = useState([
     { id: 1, nombre: 'Jorge Carvajal', email: 'jorge.carvajal@docente.edu', tel: '+506 8888-9999', comunidad: 'San Marcos de Tarrazú', rol: 'Administrador Experto (Máximo Rango)', estadoConexion: 'online' },
     { id: 2, nombre: 'Dra. Sofía Herpetóloga', email: 'sofia.herpeto@ucr.ac.cr', tel: '+506 8765-4321', comunidad: 'Santa María de Dota', rol: 'Experto Herpetólogo', estadoConexion: 'online' },
@@ -224,8 +241,8 @@ export default function App() {
   };
 
   const exportarCSV = () => {
-    const headers = "ID,Nombre Comun,Especie,Categoria,Estado,Ubicacion,Reportante,Temperatura,Humedad\n";
-    const rows = registros.map(r => `${r.id},"${r.nombreComun}","${r.especie}",${r.categoria},${r.estado},"${r.ubicacion}","${r.reportante}",${r.temp},${r.humedad}`).join("\n");
+    const headers = "ID,Nombre Comun,Especie,Categoria,Estado,Ubicacion,Reportante,Temperatura,Humedad,EditadoPor\n";
+    const rows = registros.map(r => `${r.id},"${r.nombreComun}","${r.especie}",${r.categoria},${r.estado},"${r.ubicacion}","${r.reportante}",${r.temp},${r.humedad},"${r.editadoPor || 'N/A'}"`).join("\n");
     const blob = new Blob([headers + rows], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -252,7 +269,9 @@ export default function App() {
       estadoVida: 'Vivo / Activo (Adulto)',
       tieneAudio: true,
       img: 'https://images.unsplash.com/photo-1548802673-380ab8ebc7b7?auto=format&fit=crop&w=600&q=80',
-      coords: [9.650565, -84.000236]
+      coords: [9.650565, -84.000236],
+      editadoPor: 'Jorge Carvajal (Administrador Experto)',
+      fechaEdicion: '24/07/2026, 00:15'
     },
     {
       id: 2,
@@ -270,7 +289,27 @@ export default function App() {
       estadoVida: 'Vivo / Activo (Adulto)',
       tieneAudio: false,
       img: 'https://images.unsplash.com/photo-1531386151447-fd76ad50012f?auto=format&fit=crop&w=600&q=80',
-      coords: [9.6682, -84.0141]
+      coords: [9.6682, -84.0141],
+      editadoPor: 'Dra. Sofía Herpetóloga (Experto Herpetólogo)',
+      fechaEdicion: '24/07/2026, 00:30'
+    },
+    {
+      id: 3,
+      especie: 'Especie por identificar',
+      nombreComun: 'Desconocido (Por determinar por experto)',
+      categoria: 'REPTIL',
+      silueta: 'Salamandra',
+      estado: 'EN REVISIÓN EXPERTA',
+      ubicacion: 'Tarrazú',
+      reportante: 'Carlos Picado',
+      contacto: 'cpicado@comunidad.cr | +506 8555-1234',
+      temp: '18.0°C',
+      humedad: '85% H.R.',
+      microhabitat: 'Hojarasca húmeda',
+      estadoVida: 'Vivo / Activo (Adulto)',
+      tieneAudio: false,
+      img: 'https://images.unsplash.com/photo-1531386151447-fd76ad50012f?auto=format&fit=crop&w=600&q=80',
+      coords: [9.6420, -83.9780]
     }
   ]);
 
@@ -324,7 +363,6 @@ export default function App() {
             💬 Chat 1 a 1
           </button>
 
-          {/* Dinámico: Muestra "👤 USUARIO" al inicio o el nombre con rango si está autenticado */}
           <button onClick={() => { setVistaPerfil('perfil'); setModalPerfil(true); }} style={{ backgroundColor: '#00C853', color: '#000', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '20px', fontWeight: 'bold', fontSize: '0.75rem', cursor: 'pointer' }}>
             {usuario.isLoggedIn ? `🛡️ ${usuario.nombre}` : '👤 USUARIO'}
           </button>
@@ -535,7 +573,7 @@ export default function App() {
               </div>
             )}
 
-            {/* GESTIÓN DE USUARIOS CON RANGOS EXACTOS */}
+            {/* GESTIÓN DE USUARIOS */}
             {subTabAdmin === 'usuarios' && (
               <div>
                 <h4 style={{ margin: '0 0 1rem 0', color: '#FFF', fontSize: '0.95rem' }}>👥 Gestión de Usuarios, Jerarquía de Permisos y Cobertura</h4>
@@ -588,7 +626,7 @@ export default function App() {
               </div>
             )}
 
-            {/* SOLICITUDES DE ACREDITACIÓN A EXPERTO */}
+            {/* SOLICITUDES DE EXPERTOS */}
             {subTabAdmin === 'solicitudes' && (
               <div>
                 <h4 style={{ margin: '0 0 1rem 0', color: '#FFB300', fontSize: '0.95rem' }}>🎓 Solicitudes de Acreditación de Rango Experto (Biólogos)</h4>
@@ -647,34 +685,123 @@ export default function App() {
         </div>
       )}
 
-      {/* 🔍 MODAL FICHA Y MODERACIÓN */}
+      {/* 🔍 MODAL: FICHA DEL AVISTAMIENTO & MODERACIÓN / EDICIÓN EXPERTA COMPLETA */}
       {registroSeleccionado && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.88)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999, padding: '1rem' }}>
-          <div style={{ backgroundColor: '#09130F', borderRadius: '16px', border: '1px solid #1B3D2F', width: '100%', maxWidth: '850px', maxHeight: '90vh', overflowY: 'auto', padding: '1.2rem' }}>
+          <div style={{ backgroundColor: '#09130F', borderRadius: '16px', border: '1px solid #1B3D2F', width: '100%', maxWidth: '880px', maxHeight: '92vh', overflowY: 'auto', padding: '1.2rem' }}>
+            
+            {/* Header Modal */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid #122B20', paddingBottom: '0.5rem' }}>
-              <h3 style={{ margin: 0, color: '#FFF' }}>🔍 Ficha del Avistamiento & Moderación</h3>
+              <h3 style={{ margin: 0, color: '#FFF', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                🔍 Ficha del Avistamiento & Curaduría
+              </h3>
               <button onClick={() => setRegistroSeleccionado(null)} style={{ backgroundColor: 'transparent', border: 'none', color: '#FFF', fontSize: '1.3rem', cursor: 'pointer' }}>✕</button>
             </div>
+
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.2rem' }}>
+              
+              {/* COLUMNA IZQUIERDA: FOTO, CHAT Y DATOS REPORTADOS */}
               <div>
-                <img src={registroSeleccionado.img} alt="Fauna" style={{ width: '100%', height: '220px', objectFit: 'cover', borderRadius: '12px', marginBottom: '0.8rem' }} />
-                <button onClick={() => setModalChat(true)} style={{ width: '100%', padding: '0.7rem', backgroundColor: '#0A2E23', color: '#00FF88', border: '1px solid #00FF88', borderRadius: '20px', fontWeight: 'bold', cursor: 'pointer' }}>💬 Consultar Experto en Privado</button>
+                <div style={{ borderRadius: '12px', overflow: 'hidden', height: '220px', marginBottom: '0.8rem', border: '1px solid #1B3D2F' }}>
+                  <img src={registroSeleccionado.img} alt="Fauna" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                </div>
+
+                <div style={{ backgroundColor: '#0D1E18', border: '1px solid #1B3D2F', borderRadius: '10px', padding: '0.8rem', fontSize: '0.8rem', display: 'flex', flexDirection: 'column', gap: '0.4rem', marginBottom: '0.8rem' }}>
+                  <div>📍 <strong>Ubicación:</strong> {registroSeleccionado.ubicacion}</div>
+                  <div>🌡️ <strong>Temp / Humedad:</strong> {registroSeleccionado.temp} / {registroSeleccionado.humedad}</div>
+                  <div>🍃 <strong>Microhábitat:</strong> {registroSeleccionado.microhabitat}</div>
+                  <div>👤 <strong>Reportado por:</strong> {registroSeleccionado.reportante}</div>
+                </div>
+
+                <button onClick={() => setModalChat(true)} style={{ width: '100%', padding: '0.7rem', backgroundColor: '#0A2E23', color: '#00FF88', border: '1px solid #00FF88', borderRadius: '20px', fontWeight: 'bold', fontSize: '0.8rem', cursor: 'pointer' }}>
+                  💬 Consultar a un Experto en Privado (1 a 1)
+                </button>
               </div>
+
+              {/* COLUMNA DERECHA: EDICIÓN Y SELLO DE EDICIÓN */}
               <div>
-                <span style={{ fontSize: '0.75rem', color: '#00FF88', fontWeight: 'bold' }}>🐸 {registroSeleccionado.categoria} • {registroSeleccionado.estado}</span>
-                <h2 style={{ margin: '0.2rem 0', color: '#FFF' }}>{registroSeleccionado.nombreComun}</h2>
-                <p style={{ color: '#8AA398', fontSize: '0.85rem' }}>📍 {registroSeleccionado.ubicacion}</p>
-                <button onClick={() => {
-                  setRegistros(registros.map(r => r.id === registroSeleccionado.id ? { ...r, estado: 'VALIDADO' } : r));
-                  setRegistroSeleccionado(null);
-                }} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#00E676', color: '#000', fontWeight: 'bold', border: 'none', borderRadius: '8px', cursor: 'pointer', marginTop: '1rem' }}>✔ Aprobar y Publicar</button>
+                <span style={{ fontSize: '0.75rem', color: '#00FF88', fontWeight: 'bold' }}>
+                  🐸 {registroSeleccionado.categoria} • <span style={{ color: registroSeleccionado.estado === 'VALIDADO' ? '#00E676' : '#FFB300' }}>{registroSeleccionado.estado}</span>
+                </span>
+                
+                <h2 style={{ margin: '0.2rem 0', color: '#FFF', fontSize: '1.2rem' }}>{registroSeleccionado.nombreComun}</h2>
+                <h4 style={{ margin: '0 0 0.8rem 0', color: '#00C853', fontStyle: 'italic', fontSize: '0.9rem', fontWeight: 'normal' }}>{registroSeleccionado.especie}</h4>
+
+                {/* MUESTRA QUIÉN EDITÓ / VALIDO LA FICHA SI YA FUE CURADA */}
+                {registroSeleccionado.editadoPor && (
+                  <div style={{ backgroundColor: '#0A1E16', border: '1px solid #00FF88', color: '#00FF88', padding: '0.6rem', borderRadius: '8px', fontSize: '0.75rem', marginBottom: '1rem' }}>
+                    ✍️ <strong>EDITADO Y VALIDADO POR:</strong><br />
+                    {registroSeleccionado.editadoPor}<br />
+                    <span style={{ color: '#8AA398', fontSize: '0.7rem' }}>📅 {registroSeleccionado.fechaEdicion}</span>
+                  </div>
+                )}
+
+                {/* FORMULARIO DE EDICIÓN TAXONÓMICA (SOLO VISIBLE PARA EXPERTOS O ADMIN) */}
+                {esExpertoOAdmin ? (
+                  <div style={{ backgroundColor: '#1A1807', border: '1px solid #5C4D0A', borderRadius: '12px', padding: '0.9rem' }}>
+                    <h4 style={{ margin: '0 0 0.6rem 0', color: '#FFB300', fontSize: '0.85rem' }}>✏️ PANEL DE DIAGNÓSTICO Y EDICIÓN EXPERTA</h4>
+                    
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.7rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.2rem' }}>NOMBRE CIENTÍFICO CONFIRMADO:</label>
+                        <input type="text" placeholder="Ej. Agalychnis annae" value={editCientifico} onChange={(e) => setEditCientifico(e.target.value)} style={{ width: '100%', padding: '0.5rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '6px', fontSize: '0.8rem' }} />
+                      </div>
+
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.7rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.2rem' }}>NOMBRE COMÚN CONFIRMADO:</label>
+                        <input type="text" placeholder="Ej. Rana verde de palmera" value={editComun} onChange={(e) => setEditComun(e.target.value)} style={{ width: '100%', padding: '0.5rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '6px', fontSize: '0.8rem' }} />
+                      </div>
+
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.7rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.2rem' }}>NOTAS DE DIAGNÓSTICO TAXONÓMICO:</label>
+                        <textarea rows="2" placeholder="Detalla los caracteres o patrones de color..." value={editNotasTaxo} onChange={(e) => setEditNotasTaxo(e.target.value)} style={{ width: '100%', padding: '0.5rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '6px', fontSize: '0.8rem' }} />
+                      </div>
+
+                      <button 
+                        onClick={() => {
+                          const fechaHoy = new Date().toLocaleString();
+                          const nombreEditor = `${usuario.nombre} (${usuario.rol.split(' ')[0]})`;
+
+                          const registrosActualizados = registros.map(r => {
+                            if (r.id === registroSeleccionado.id) {
+                              return {
+                                ...r,
+                                especie: editCientifico || r.especie,
+                                nombreComun: editComun || r.nombreComun,
+                                notasTaxo: editNotasTaxo,
+                                estado: 'VALIDADO',
+                                editadoPor: nombreEditor,
+                                fechaEdicion: fechaHoy
+                              };
+                            }
+                            return r;
+                          });
+
+                          setRegistros(registrosActualizados);
+                          alert(`¡Ficha curada y validada con éxito por ${nombreEditor}!`);
+                          setRegistroSeleccionado(null);
+                        }} 
+                        style={{ width: '100%', padding: '0.7rem', backgroundColor: '#00E676', color: '#000', fontWeight: 'bold', border: 'none', borderRadius: '8px', cursor: 'pointer', marginTop: '0.4rem', fontSize: '0.85rem' }}
+                      >
+                        ✔ Aprobar, Guardar Cambios y Publicar
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ backgroundColor: '#060D0A', border: '1px solid #162B23', padding: '0.8rem', borderRadius: '10px', fontSize: '0.75rem', color: '#8AA398' }}>
+                    ℹ️ Esta ficha se encuentra en proceso de revisión por los expertos de la zona.
+                  </div>
+                )}
+
               </div>
+
             </div>
+
           </div>
         </div>
       )}
 
-      {/* 👤 MODAL PERFIL CON SELECCIÓN DE JERARQUÍA Y SOLICITUD DE RANGO EXPERTO */}
+      {/* 👤 MODAL PERFIL */}
       {modalPerfil && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999, padding: '1rem' }}>
           <div style={{ backgroundColor: '#09130F', borderRadius: '16px', border: '1px solid #1B3D2F', width: '100%', maxWidth: '520px', padding: '1.2rem', maxHeight: '90vh', overflowY: 'auto' }}>
@@ -729,9 +856,9 @@ export default function App() {
                   <input type="text" value={usuario.telefono} onChange={(e) => setUsuario({ ...usuario, telefono: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }} />
                 </div>
 
-                {/* Selector de Rango/Rol en Perfil */}
+                {/* Selector de Rango/Rol */}
                 <div style={{ backgroundColor: '#1A1807', border: '1px solid #5C4D0A', padding: '0.8rem', borderRadius: '10px' }}>
-                  <label style={{ display: 'block', fontSize: '0.75rem', color: '#FFB300', fontWeight: 'bold', marginBottom: '0.4rem' }}>⚙️ CONMUTAR ROL / JERARQUÍA (PARA PRUEBAS)</label>
+                  <label style={{ display: 'block', fontSize: '0.75rem', color: '#FFB300', fontWeight: 'bold', marginBottom: '0.4rem' }}>⚙️ CONMUTAR ROL / JERARQUÍA (PRUEBAS)</label>
                   <select value={usuario.rol} onChange={(e) => setUsuario({ ...usuario, rol: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#0A1410', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }}>
                     <option value="Administrador Experto (Máximo Rango)">🛡️ Administrador Experto (Máximo Rango)</option>
                     <option value="Administrador">⚔️ Administrador</option>
@@ -744,7 +871,7 @@ export default function App() {
               </div>
             )}
 
-            {/* REGISTRO NUEVO DE USUARIOS CON CHECKBOX DE BIÓLOGO/EXPERTO */}
+            {/* REGISTRO */}
             {vistaPerfil === 'registro' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
                 <div>
@@ -793,7 +920,7 @@ export default function App() {
                       email: formReg.email,
                       telefono: formReg.telefono,
                       comunidad: formReg.comunidad,
-                      rol: 'Usuario Regular', // Queda como usuario regular hasta que el admin lo apruebe como experto
+                      rol: 'Usuario Regular',
                       pass: formReg.pass
                     });
                     setMensajeAuthOk(formReg.solicitaExperto ? '¡Cuenta registrada! Tu solicitud de Experto quedó en revisión.' : '¡Cuenta registrada exitosamente!');
@@ -823,7 +950,7 @@ export default function App() {
         </div>
       )}
 
-      {/* 📲 MODAL PWA: INSTALACIÓN REAL EN DISPOSITIVOS */}
+      {/* 📲 MODAL PWA INSTALACIÓN */}
       {modalInstalar && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999, padding: '1rem' }}>
           <div style={{ backgroundColor: '#09130F', borderRadius: '16px', border: '1px solid #1B3D2F', width: '100%', maxWidth: '520px', padding: '1.2rem' }}>
