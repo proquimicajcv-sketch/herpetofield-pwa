@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -61,8 +61,7 @@ export default function App() {
   const [mapLayer, setMapLayer] = useState('callejero');
   const [filtroEspecie, setFiltroEspecie] = useState('todas');
 
-  // Estado de Cobertura / Disponibilidad del Usuario
-  // Opciones: 'online' (🟢 En línea), 'busy' (🟠 Ocupado), 'offline' (🔴 Fuera de cobertura)
+  // Estado de Cobertura / Disponibilidad
   const [estadoConexion, setEstadoConexion] = useState('online');
 
   // Datos del Usuario
@@ -74,7 +73,7 @@ export default function App() {
     rol: 'Administrador Experto (Control Total)'
   });
 
-  // Lista de Usuarios en el Admin con estado dinámico
+  // Lista de Usuarios
   const [listaUsuarios, setListaUsuarios] = useState([
     { id: 1, nombre: 'Jorge Carvajal', email: 'jorge.carvajal@docente.edu', tel: '+506 8888-9999', comunidad: 'San Marcos de Tarrazú', rol: 'Admin Experto', estadoConexion: 'online' },
     { id: 2, nombre: 'Dra. Sofía Herpetóloga', email: 'sofia.herpeto@ucr.ac.cr', tel: '+506 8765-4321', comunidad: 'Santa María de Dota', rol: 'Experto', estadoConexion: 'online' },
@@ -87,27 +86,75 @@ export default function App() {
   ]);
   const [nuevoMensaje, setNuevoMensaje] = useState('');
 
-  // Formulario Registro Avistamiento (7 Pasos)
+  // Formulario Registro Avistamiento (7 Pasos Completos)
   const [tipoFauna, setTipoFauna] = useState('Anfibio');
   const [silueta, setSilueta] = useState('Rana Arborícola');
   const [desconocido, setDesconocido] = useState(true);
   const [nombreCientifico, setNombreCientifico] = useState('');
   const [nombreComun, setNombreComun] = useState('');
-  const [lat, setLat] = useState('9.650565');
-  const [lng, setLng] = useState('-84.000236');
+  const [lat, setLat] = useState('9.650746');
+  const [lng, setLng] = useState('-84.000193');
   const [comunidad, setComunidad] = useState('');
-  const [cantoGrabado, setCantoGrabado] = useState(false);
   const [estadoOrganismo, setEstadoOrganismo] = useState('Vivo / Activo');
   const [etapa, setEtapa] = useState('Adulto');
-  const [temp, setTemp] = useState('19.5');
-  const [humedad, setHumedad] = useState('88.0');
+  const [temp, setTemp] = useState('19,5');
+  const [humedad, setHumedad] = useState('88,0');
   const [microhabitat, setMicrohabitat] = useState('Vegetación / Finca Cafetalera');
   const [notas, setNotas] = useState('');
-  
-  // CORRECCIÓN: Foto inicial limpia de fauna silvestre (sin manzanas)
   const [fotoPreview, setFotoPreview] = useState('https://images.unsplash.com/photo-1590005354167-6da97870c757?auto=format&fit=crop&w=600&q=80');
 
-  // Funciones auxiliares
+  // Lógica de Grabación de Audio Real (15-30s)
+  const [grabandoAudio, setGrabandoAudio] = useState(false);
+  const [tiempoGrabacion, setTiempoGrabacion] = useState(0);
+  const [audioURL, setAudioURL] = useState(null);
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
+  const timerIntervalRef = useRef(null);
+
+  const iniciarGrabacion = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorderRef.current = new MediaRecorder(stream);
+      audioChunksRef.current = [];
+
+      mediaRecorderRef.current.ondataavailable = (event) => {
+        if (event.data.size > 0) audioChunksRef.current.push(event.data);
+      };
+
+      mediaRecorderRef.current.onstop = () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/mp3' });
+        const url = URL.createObjectURL(audioBlob);
+        setAudioURL(url);
+      };
+
+      mediaRecorderRef.current.start();
+      setGrabandoAudio(true);
+      setTiempoGrabacion(0);
+
+      timerIntervalRef.current = setInterval(() => {
+        setTiempoGrabacion((prev) => {
+          if (prev >= 30) {
+            detenerGrabacion();
+            return 30;
+          }
+          return prev + 1;
+        });
+      }, 1000);
+    } catch (err) {
+      alert('Permiso de micrófono no otorgado o no disponible en este dispositivo.');
+    }
+  };
+
+  const detenerGrabacion = () => {
+    if (mediaRecorderRef.current && grabandoAudio) {
+      mediaRecorderRef.current.stop();
+      mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+      setGrabandoAudio(false);
+      clearInterval(timerIntervalRef.current);
+    }
+  };
+
+  // Geolocalización
   const obtenerGPS = () => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -139,7 +186,7 @@ export default function App() {
     return { icon: '🔴', label: 'Fuera de cobertura', color: '#FF5252' };
   };
 
-  // Registros de muestra
+  // Registros
   const [registros, setRegistros] = useState([
     {
       id: 1,
@@ -153,8 +200,8 @@ export default function App() {
       contacto: 'jorge.carvajal@docente.edu | +506 8888-9999',
       temp: '21.0°C',
       humedad: '80% H.R.',
-      microhabitat: 'Cafetal / Jardín',
-      estadoVida: 'Vivo (adulto)',
+      microhabitat: 'Vegetación / Finca Cafetalera',
+      estadoVida: 'Vivo / Activo (Adulto)',
       tieneAudio: true,
       img: 'https://images.unsplash.com/photo-1548802673-380ab8ebc7b7?auto=format&fit=crop&w=600&q=80',
       coords: [9.650565, -84.000236]
@@ -171,29 +218,11 @@ export default function App() {
       contacto: 'sofia.herpeto@ucr.ac.cr | +506 8765-4321',
       temp: '17.5°C',
       humedad: '90% H.R.',
-      microhabitat: 'Bosque de Roble',
-      estadoVida: 'Vivo (adulto)',
+      microhabitat: 'Hojarasca de bosque de roble',
+      estadoVida: 'Vivo / Activo (Adulto)',
       tieneAudio: false,
       img: 'https://images.unsplash.com/photo-1531386151447-fd76ad50012f?auto=format&fit=crop&w=600&q=80',
       coords: [9.6682, -84.0141]
-    },
-    {
-      id: 3,
-      especie: 'Especie por identificar',
-      nombreComun: 'Desconocido (Por determinar por experto)',
-      categoria: 'ANFIBIO',
-      silueta: 'Sapo Terrestre',
-      estado: 'EN REVISIÓN EXPERTA',
-      ubicacion: 'Santa María de Dota',
-      reportante: 'Carlos Picado',
-      contacto: 'cpicado@comunidad.cr | +506 8555-1234',
-      temp: '19.5°C',
-      humedad: '88% H.R.',
-      microhabitat: 'Vegetación de Cafetal',
-      estadoVida: 'Vivo (adulto)',
-      tieneAudio: true,
-      img: 'https://images.unsplash.com/photo-1590005354167-6da97870c757?auto=format&fit=crop&w=600&q=80',
-      coords: [9.6420, -83.9780]
     }
   ]);
 
@@ -225,7 +254,7 @@ export default function App() {
   return (
     <div style={{ backgroundColor: '#070D0B', color: '#E0E6E3', minHeight: '100vh', fontFamily: 'system-ui, sans-serif', paddingBottom: '90px' }}>
       
-      {/* 🟢 BARRA SUPERIOR DE LA APP */}
+      {/* 🟢 BARRA SUPERIOR */}
       <header style={{ backgroundColor: '#0B1512', padding: '0.8rem 1.2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #162B23', flexWrap: 'wrap', gap: '0.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
           <div style={{ backgroundColor: '#0A1E16', border: '1px solid #00FF88', borderRadius: '12px', padding: '3px 8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -238,7 +267,6 @@ export default function App() {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
-          {/* Badge del Estado de Conexión Configurable */}
           <span style={{ backgroundColor: '#0D261C', color: getBadgetConexion(estadoConexion).color, padding: '0.3rem 0.7rem', borderRadius: '20px', fontSize: '0.75rem', border: '1px solid #164D36', fontWeight: 'bold' }}>
             {getBadgetConexion(estadoConexion).icon} {getBadgetConexion(estadoConexion).label}
           </span>
@@ -255,7 +283,7 @@ export default function App() {
         </div>
       </header>
 
-      {/* 🗺️ PESTAÑA: MAPA INTERACTIVO */}
+      {/* 🗺️ MAPA INTERACTIVO */}
       {tab === 'mapa' && (
         <div style={{ position: 'relative' }}>
           <div style={{ position: 'absolute', top: '15px', left: '15px', zIndex: 1000, display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -305,7 +333,6 @@ export default function App() {
             </MapContainer>
           </div>
 
-          {/* Tarjetas de Métricas Rápidas en Mapa */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem', padding: '0.8rem 1rem', backgroundColor: '#0A120E', position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 1000 }}>
             <div style={{ backgroundColor: '#101C17', padding: '0.5rem', borderRadius: '8px', textAlign: 'center', border: '1px solid #1A2E26' }}>
               <div style={{ color: '#00FF88', fontSize: '1.2rem', fontWeight: 'bold' }}>{registros.filter(r => r.estado === 'VALIDADO').length}</div>
@@ -327,7 +354,7 @@ export default function App() {
         </div>
       )}
 
-      {/* 🖼️ PESTAÑA: GALERÍA */}
+      {/* 🖼️ GALERÍA */}
       {tab === 'galeria' && (
         <div style={{ padding: '1rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
@@ -355,7 +382,7 @@ export default function App() {
         </div>
       )}
 
-      {/* 📖 PESTAÑA: GUÍA */}
+      {/* 📖 GUÍA */}
       {tab === 'guia' && (
         <div style={{ padding: '1rem' }}>
           <h2 style={{ margin: 0, fontSize: '1.2rem', color: '#00FF88' }}>📖 Guía de Especies Comunes de Los Santos</h2>
@@ -374,160 +401,25 @@ export default function App() {
         </div>
       )}
 
-      {/* 📊 PESTAÑA: PANEL ADMIN COMPLETO */}
+      {/* 📊 PANEL ADMIN */}
       {tab === 'admin' && (
         <div style={{ padding: '1.2rem' }}>
-          <h2 style={{ fontSize: '1.2rem', color: '#FFF', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            🛡️ Panel de Administración & Mensajería Directa
-          </h2>
+          <h2 style={{ fontSize: '1.2rem', color: '#FFF', marginBottom: '1rem' }}>🛡️ Panel de Administración & Mensajería Directa</h2>
           <div style={{ backgroundColor: '#09130F', borderRadius: '16px', border: '1px solid #1B3D2F', padding: '1.2rem' }}>
-            
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #162B23', paddingBottom: '0.8rem', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-              <h3 style={{ margin: 0, color: '#00FF88', fontSize: '1.05rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                📫 Buzón de Consultas Directas & Gestión
-              </h3>
-              
-              <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', backgroundColor: '#050A08', padding: '0.3rem', borderRadius: '20px', border: '1px solid #122B20' }}>
-                <button onClick={() => setSubTabAdmin('consultas')} style={{ backgroundColor: subTabAdmin === 'consultas' ? '#0F2B20' : 'transparent', color: subTabAdmin === 'consultas' ? '#00FF88' : '#8AA398', border: subTabAdmin === 'consultas' ? '1px solid #00FF88' : 'none', borderRadius: '15px', padding: '0.3rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>💬 Consultas 1 a 1</button>
-                <button onClick={() => setSubTabAdmin('metricas')} style={{ backgroundColor: subTabAdmin === 'metricas' ? '#0F2B20' : 'transparent', color: subTabAdmin === 'metricas' ? '#00FF88' : '#8AA398', border: subTabAdmin === 'metricas' ? '1px solid #00FF88' : 'none', borderRadius: '15px', padding: '0.3rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>📊 Métricas</button>
-                <button onClick={() => setSubTabAdmin('usuarios')} style={{ backgroundColor: subTabAdmin === 'usuarios' ? '#0F2B20' : 'transparent', color: subTabAdmin === 'usuarios' ? '#00FF88' : '#8AA398', border: subTabAdmin === 'usuarios' ? '1px solid #00FF88' : 'none', borderRadius: '15px', padding: '0.3rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>👥 Usuarios</button>
-                <button onClick={() => setSubTabAdmin('solicitudes')} style={{ backgroundColor: subTabAdmin === 'solicitudes' ? '#0F2B20' : 'transparent', color: subTabAdmin === 'solicitudes' ? '#00FF88' : '#8AA398', border: subTabAdmin === 'solicitudes' ? '1px solid #00FF88' : 'none', borderRadius: '15px', padding: '0.3rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>🎓 Solicitudes</button>
-                <button onClick={() => setSubTabAdmin('moderacion')} style={{ backgroundColor: subTabAdmin === 'moderacion' ? '#0F2B20' : 'transparent', color: subTabAdmin === 'moderacion' ? '#00FF88' : '#8AA398', border: subTabAdmin === 'moderacion' ? '1px solid #00FF88' : 'none', borderRadius: '15px', padding: '0.3rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>📋 Moderación</button>
-              </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #162B23', paddingBottom: '0.8rem', marginBottom: '1rem' }}>
+              <h3 style={{ margin: 0, color: '#00FF88', fontSize: '1.05rem' }}>📫 Buzón de Consultas & Moderación</h3>
             </div>
-
-            {/* SUB-PESTAÑA: CONSULTAS */}
-            {subTabAdmin === 'consultas' && (
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                  <span style={{ fontSize: '0.85rem', color: '#FFF', fontWeight: 'bold' }}>💬 Mensajes y Consultas Directas (1 a 1)</span>
-                  <button onClick={() => setModalChat(true)} style={{ backgroundColor: '#00E676', color: '#000', border: 'none', padding: '0.4rem 0.9rem', borderRadius: '15px', fontWeight: 'bold', fontSize: '0.8rem', cursor: 'pointer' }}>+ Nueva Consulta</button>
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
-                  <div style={{ backgroundColor: '#060D0A', border: '1px solid #162B23', borderRadius: '12px', padding: '0.9rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div>
-                      <strong style={{ color: '#FFF', fontSize: '0.9rem' }}>Jorge Carvajal</strong>
-                      <p style={{ margin: '0.3rem 0', color: '#8AA398', fontSize: '0.8rem' }}>"Consulta directa iniciada."</p>
-                    </div>
-                    <button onClick={() => setModalChat(true)} style={{ backgroundColor: 'transparent', border: 'none', color: '#00FF88', fontWeight: 'bold', cursor: 'pointer' }}>Abrir →</button>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+              {registros.map((r) => (
+                <div key={r.id} style={{ backgroundColor: '#060D0A', border: '1px solid #162B23', borderRadius: '12px', padding: '0.9rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <strong style={{ color: '#FFF' }}>{r.nombreComun} ({r.especie})</strong>
+                    <div style={{ fontSize: '0.75rem', color: '#8AA398' }}>📍 {r.ubicacion} | Estado: {r.estado}</div>
                   </div>
+                  <button onClick={() => setRegistroSeleccionado(r)} style={{ backgroundColor: '#00E676', color: '#000', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}>Moderar</button>
                 </div>
-              </div>
-            )}
-
-            {/* SUB-PESTAÑA: MÉTRICAS COMPLETAS */}
-            {subTabAdmin === 'metricas' && (
-              <div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.8rem', marginBottom: '1.5rem' }}>
-                  <div style={{ backgroundColor: '#060D0A', border: '1px solid #162B23', padding: '1.2rem', borderRadius: '12px', textAlign: 'center' }}>
-                    <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#FFF' }}>3</div>
-                    <div style={{ fontSize: '0.75rem', color: '#8AA398', marginTop: '0.2rem' }}>Total de Reportes</div>
-                  </div>
-                  <div style={{ backgroundColor: '#060D0A', border: '1px solid #00FF88', padding: '1.2rem', borderRadius: '12px', textAlign: 'center' }}>
-                    <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#00FF88' }}>1</div>
-                    <div style={{ fontSize: '0.75rem', color: '#8AA398', marginTop: '0.2rem' }}>Reportes Aprobados (33%)</div>
-                  </div>
-                  <div style={{ backgroundColor: '#060D0A', border: '1px solid #FFB300', padding: '1.2rem', borderRadius: '12px', textAlign: 'center' }}>
-                    <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#FFB300' }}>3</div>
-                    <div style={{ fontSize: '0.75rem', color: '#8AA398', marginTop: '0.2rem' }}>Usuarios Registrados</div>
-                  </div>
-                  <div style={{ backgroundColor: '#060D0A', border: '1px solid #FF5252', padding: '1.2rem', borderRadius: '12px', textAlign: 'center' }}>
-                    <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#FF5252' }}>0</div>
-                    <div style={{ fontSize: '0.75rem', color: '#8AA398', marginTop: '0.2rem' }}>Cuentas Suspendidas</div>
-                  </div>
-                </div>
-
-                <div style={{ backgroundColor: '#060D0A', border: '1px solid #162B23', borderRadius: '12px', padding: '1rem' }}>
-                  <h4 style={{ margin: '0 0 0.8rem 0', color: '#00FF88', fontSize: '0.9rem' }}>🏆 Top Especies Más Avistadas en Los Santos</h4>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.7rem 1rem', backgroundColor: '#0B1A14', borderRadius: '8px', border: '1px solid #122B20' }}>
-                    <span style={{ fontSize: '0.85rem', color: '#FFF' }}><strong>#1</strong> <em>Agalychnis annae</em></span>
-                    <span style={{ backgroundColor: '#0D261C', color: '#00FF88', padding: '0.2rem 0.6rem', borderRadius: '10px', fontSize: '0.75rem', fontWeight: 'bold' }}>1 registros</span>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* SUB-PESTAÑA: GESTIÓN DE USUARIOS Y COBERTURA */}
-            {subTabAdmin === 'usuarios' && (
-              <div>
-                <h4 style={{ margin: '0 0 1rem 0', color: '#FFF', fontSize: '0.95rem' }}>👥 Gestión de Usuarios, Permisos y Estado de Cobertura</h4>
-                <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', textAlign: 'left' }}>
-                    <thead>
-                      <tr style={{ borderBottom: '1px solid #162B23', color: '#00FF88' }}>
-                        <th style={{ padding: '0.6rem' }}>ESTADO</th>
-                        <th style={{ padding: '0.6rem' }}>USUARIO</th>
-                        <th style={{ padding: '0.6rem' }}>CONTACTO</th>
-                        <th style={{ padding: '0.6rem' }}>COMUNIDAD</th>
-                        <th style={{ padding: '0.6rem' }}>ROL ACTUAL</th>
-                        <th style={{ padding: '0.6rem' }}>ACCIÓN</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {listaUsuarios.map((u) => {
-                        const badg = getBadgetConexion(u.id === 1 ? estadoConexion : u.estadoConexion);
-                        return (
-                          <tr key={u.id} style={{ borderBottom: '1px solid #0D1A15' }}>
-                            <td style={{ padding: '0.6rem' }}>
-                              <span style={{ color: badg.color, fontWeight: 'bold', fontSize: '0.8rem' }} title={badg.label}>
-                                {badg.icon}
-                              </span>
-                            </td>
-                            <td style={{ padding: '0.6rem', fontWeight: 'bold', color: '#FFF' }}>{u.nombre}</td>
-                            <td style={{ padding: '0.6rem', color: '#8AA398' }}>{u.email}<br /><span style={{ fontSize: '0.7rem' }}>{u.tel}</span></td>
-                            <td style={{ padding: '0.6rem', color: '#A0C2B4' }}>{u.comunidad}</td>
-                            <td style={{ padding: '0.6rem' }}>
-                              <select 
-                                value={u.rol} 
-                                onChange={(e) => {
-                                  setListaUsuarios(listaUsuarios.map(item => item.id === u.id ? { ...item, rol: e.target.value } : item));
-                                }} 
-                                style={{ backgroundColor: '#050A08', color: '#00FF88', border: '1px solid #1B3D2F', borderRadius: '12px', padding: '0.3rem 0.5rem', fontSize: '0.75rem' }}
-                              >
-                                <option value="Admin Experto">🛡️ Admin Experto</option>
-                                <option value="Experto">🎓 Experto</option>
-                                <option value="Observador">👤 Observador</option>
-                              </select>
-                            </td>
-                            <td style={{ padding: '0.6rem' }}>
-                              <button onClick={() => alert(`Usuario ${u.nombre} suspendido.`)} style={{ backgroundColor: '#D32F2F', color: '#FFF', border: 'none', borderRadius: '12px', padding: '0.3rem 0.6rem', fontSize: '0.7rem', fontWeight: 'bold', cursor: 'pointer' }}>🚫 Ban</button>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-
-            {/* SUB-PESTAÑA: SOLICITUDES */}
-            {subTabAdmin === 'solicitudes' && (
-              <div>
-                <h4 style={{ margin: '0 0 1rem 0', color: '#FFB300', fontSize: '0.95rem' }}>🎓 Solicitudes de Rol Experto</h4>
-                <p style={{ color: '#8AA398', fontSize: '0.85rem' }}>No hay solicitudes de acreditación pendientes en este momento.</p>
-              </div>
-            )}
-
-            {/* SUB-PESTAÑA: MODERACIÓN */}
-            {subTabAdmin === 'moderacion' && (
-              <div>
-                <h4 style={{ margin: '0 0 1rem 0', color: '#FFF', fontSize: '0.95rem' }}>📋 Moderación de Reportes</h4>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
-                  {registros.map((r) => (
-                    <div key={r.id} style={{ backgroundColor: '#060D0A', border: '1px solid #162B23', borderRadius: '12px', padding: '0.9rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div>
-                        <strong style={{ color: '#FFF', fontSize: '0.85rem' }}>{r.nombreComun} ({r.especie})</strong>
-                        <div style={{ fontSize: '0.75rem', color: '#8AA398' }}>📍 {r.ubicacion} | Estado: {r.estado}</div>
-                      </div>
-                      <button onClick={() => setRegistroSeleccionado(r)} style={{ backgroundColor: '#00E676', color: '#000', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}>Moderar</button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
+              ))}
+            </div>
           </div>
         </div>
       )}
@@ -559,44 +451,12 @@ export default function App() {
         </div>
       )}
 
-      {/* 👤 MODAL PERFIL CON PERSONALIZACIÓN DE ESTADO Y COBERTURA */}
+      {/* 👤 MODAL PERFIL */}
       {modalPerfil && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999, padding: '1rem' }}>
           <div style={{ backgroundColor: '#09130F', borderRadius: '16px', border: '1px solid #1B3D2F', width: '100%', maxWidth: '500px', padding: '1.2rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-              <h3 style={{ color: '#FFF', margin: 0 }}>👤 Perfil de Usuario & Disponibilidad</h3>
-              <button onClick={() => setModalPerfil(false)} style={{ backgroundColor: 'transparent', border: 'none', color: '#FFF', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '0.75rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.3rem' }}>NOMBRE COMPLETO *</label>
-                <input type="text" value={usuario.nombre} onChange={(e) => setUsuario({ ...usuario, nombre: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px' }} />
-              </div>
-
-              {/* Selector de Estado de Conexión en Campo */}
-              <div style={{ backgroundColor: '#0A1E16', border: '1px solid #00FF88', padding: '0.8rem', borderRadius: '10px' }}>
-                <label style={{ display: 'block', fontSize: '0.75rem', color: '#00FF88', fontWeight: 'bold', marginBottom: '0.4rem' }}>
-                  📡 ESTADO DE COBERTURA Y DISPONIBILIDAD
-                </label>
-                <select 
-                  value={estadoConexion} 
-                  onChange={(e) => setEstadoConexion(e.target.value)} 
-                  style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }}
-                >
-                  <option value="online">🟢 En línea (Disponible para consultas)</option>
-                  <option value="busy">🟠 Ocupado (En trabajo de campo)</option>
-                  <option value="offline">🔴 Fuera de cobertura (Sin señal en montaña)</option>
-                </select>
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '0.75rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.3rem' }}>CORREO ELECTRÓNICO *</label>
-                <input type="email" value={usuario.email} onChange={(e) => setUsuario({ ...usuario, email: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px' }} />
-              </div>
-            </div>
-
-            <button onClick={() => setModalPerfil(false)} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#00E676', color: '#000', fontWeight: 'bold', border: 'none', borderRadius: '10px', marginTop: '1.2rem', cursor: 'pointer' }}>Guardar Cambios</button>
+            <h3 style={{ color: '#FFF', marginTop: 0 }}>👤 Perfil de Usuario</h3>
+            <button onClick={() => setModalPerfil(false)} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#00E676', color: '#000', fontWeight: 'bold', border: 'none', borderRadius: '10px', cursor: 'pointer' }}>Guardar Cambios</button>
           </div>
         </div>
       )}
@@ -609,78 +469,203 @@ export default function App() {
               <h3 style={{ margin: 0, color: '#FFF', fontSize: '1.05rem' }}>💭 Chat Privado</h3>
               <button onClick={() => setModalChat(false)} style={{ backgroundColor: 'transparent', border: 'none', color: '#FFF', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
             </div>
-            
-            <div style={{ flex: 1, backgroundColor: '#050A08', border: '1px solid #122B20', borderRadius: '12px', padding: '1rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+            <div style={{ flex: 1, backgroundColor: '#050A08', border: '1px solid #122B20', borderRadius: '12px', padding: '1rem', overflowY: 'auto' }}>
               {chatMensajes.map((m) => (
-                <div key={m.id} style={{ backgroundColor: m.emisor === 'usuario' ? '#0F2B20' : '#101C17', padding: '0.6rem', borderRadius: '8px', color: '#FFF', fontSize: '0.85rem' }}>{m.texto}</div>
+                <div key={m.id} style={{ marginBottom: '0.5rem', color: '#FFF', fontSize: '0.85rem' }}>{m.texto}</div>
               ))}
             </div>
-
-            <div style={{ backgroundColor: '#060D0A', border: '1px solid #162B23', borderRadius: '12px', padding: '0.6rem', margin: '0.6rem 0' }}>
-              <div style={{ fontSize: '0.65rem', color: '#FFB300', fontWeight: 'bold', marginBottom: '0.4rem', textAlign: 'center' }}>🚨 BARRA DE ALERTAS DE SEGURIDAD (EXCLUSIVO EXPERTOS)</div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.4rem' }}>
-                <button onClick={() => enviarMensajeChat('🚨 ATENCIÓN: Organismo VENENOSO (PELIGRO).')} style={{ backgroundColor: '#D32F2F', color: '#FFF', border: 'none', padding: '0.4rem', borderRadius: '6px', fontSize: '0.6rem', fontWeight: 'bold', cursor: 'pointer' }}>🔴 VENENOSA</button>
-                <button onClick={() => enviarMensajeChat('⚠️ PRECAUCIÓN: NO TOCAR / ACERCARSE.')} style={{ backgroundColor: '#E65100', color: '#FFF', border: 'none', padding: '0.4rem', borderRadius: '6px', fontSize: '0.6rem', fontWeight: 'bold', cursor: 'pointer' }}>🟠 NO TOCAR</button>
-                <button onClick={() => enviarMensajeChat('🆘 SOLICITAR AYUDA / RESCATE.')} style={{ backgroundColor: '#F57F17', color: '#FFF', border: 'none', padding: '0.4rem', borderRadius: '6px', fontSize: '0.6rem', fontWeight: 'bold', cursor: 'pointer' }}>🟡 AYUDA</button>
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.8rem' }}>
               <input type="text" placeholder="Escribe..." value={nuevoMensaje} onChange={(e) => setNuevoMensaje(e.target.value)} style={{ flex: 1, padding: '0.7rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '20px' }} />
-              <button onClick={() => enviarMensajeChat(nuevoMensaje)} style={{ backgroundColor: '#00E676', color: '#000', border: 'none', padding: '0.7rem 1.2rem', borderRadius: '20px', fontWeight: 'bold' }}>Enviar</button>
+              <button onClick={() => enviarMensajeChat(nuevoMensaje)} style={{ backgroundColor: '#00E676', color: '#000', border: 'none', padding: '0.7rem 1rem', borderRadius: '20px', fontWeight: 'bold' }}>Enviar</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* 📌 MODAL REGISTRAR AVISTAMIENTO (+) LIMPIO SIN MANZANAS */}
+      {/* 📌 MODAL COMPLETO: REGISTRAR AVISTAMIENTO EN CAMPO (7 PASOS EXACTOS) */}
       {modalRegistro && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999, padding: '1rem' }}>
-          <div style={{ backgroundColor: '#09130F', borderRadius: '16px', border: '1px solid #1B3D2F', width: '100%', maxWidth: '550px', padding: '1.2rem', maxHeight: '92vh', overflowY: 'auto' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-              <h3 style={{ margin: 0, color: '#FFF' }}>🐸 Registrar Avistamiento en Campo</h3>
+          <div style={{ backgroundColor: '#09130F', borderRadius: '16px', border: '1px solid #1B3D2F', width: '100%', maxWidth: '580px', padding: '1.2rem', maxHeight: '92vh', overflowY: 'auto' }}>
+            
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid #122B20', paddingBottom: '0.5rem' }}>
+              <h3 style={{ margin: 0, color: '#FFF', fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>🐸 Registrar Avistamiento en Campo</h3>
               <button onClick={() => setModalRegistro(false)} style={{ backgroundColor: 'transparent', border: 'none', color: '#FFF', fontSize: '1.3rem', cursor: 'pointer' }}>✕</button>
             </div>
 
-            <div style={{ marginBottom: '1rem' }}>
-              <label style={{ display: 'block', fontSize: '0.8rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.5rem' }}>5. FOTOGRAFÍA DEL EJEMPLAR *</label>
-              <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', border: '2px dashed #1B3D2F', borderRadius: '10px', padding: '1.2rem', cursor: 'pointer', backgroundColor: '#0A1410' }}>
-                <span style={{ fontSize: '2rem' }}>📷</span>
-                <span style={{ fontSize: '0.8rem', color: '#00FF88', fontWeight: 'bold' }}>Tomar Foto con Cámara o Elegir Archivo</span>
-                <input type="file" accept="image/*" capture="environment" onChange={handleFotoUpload} style={{ display: 'none' }} />
-              </label>
-              
-              {/* VISTA PREVIA LIMPIA DE FAUNA SILVESTRE */}
-              {fotoPreview && (
-                <div style={{ marginTop: '0.8rem', borderRadius: '10px', overflow: 'hidden', height: '160px', border: '1px solid #1B3D2F' }}>
-                  <img src={fotoPreview} alt="Vista previa del ejemplar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            {/* PROTOCOLO DE SEGURIDAD */}
+            <div style={{ backgroundColor: '#1C1B0A', border: '1px solid #5C4D0A', color: '#EEDC82', padding: '0.8rem', borderRadius: '10px', fontSize: '0.75rem', marginBottom: '1.2rem', display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
+              <span>🛡️</span>
+              <div><strong>Protocolo de Seguridad:</strong> Mantén una distancia mínima de 1.5 a 2 metros con cualquier serpiente u organismo desconocido. No manipules fauna venenosa.</div>
+            </div>
+
+            {/* PASO 1: TIPO DE FAUNA */}
+            <div style={{ marginBottom: '1.2rem' }}>
+              <label style={{ display: 'block', fontSize: '0.8rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.5rem' }}>1. TIPO DE FAUNA *</label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.8rem' }}>
+                <button type="button" onClick={() => setTipoFauna('Anfibio')} style={{ backgroundColor: tipoFauna === 'Anfibio' ? '#0F2B20' : '#0A1410', border: tipoFauna === 'Anfibio' ? '2px solid #00FF88' : '1px solid #1B3D2F', borderRadius: '10px', padding: '0.8rem', color: '#FFF', display: 'flex', alignItems: 'center', gap: '0.8rem', cursor: 'pointer' }}>
+                  <span style={{ fontSize: '1.8rem' }}>🐸</span>
+                  <div style={{ textAlign: 'left' }}><div style={{ fontWeight: 'bold' }}>Anfibio</div><div style={{ fontSize: '0.65rem', color: '#7A9A8C' }}>Ranas, sapos, salamandras</div></div>
+                </button>
+                <button type="button" onClick={() => setTipoFauna('Reptil')} style={{ backgroundColor: tipoFauna === 'Reptil' ? '#0F2B20' : '#0A1410', border: tipoFauna === 'Reptil' ? '2px solid #00FF88' : '1px solid #1B3D2F', borderRadius: '10px', padding: '0.8rem', color: '#FFF', display: 'flex', alignItems: 'center', gap: '0.8rem', cursor: 'pointer' }}>
+                  <span style={{ fontSize: '1.8rem' }}>🦎</span>
+                  <div style={{ textAlign: 'left' }}><div style={{ fontWeight: 'bold' }}>Reptil</div><div style={{ fontSize: '0.65rem', color: '#7A9A8C' }}>Serpientes, lagartijas, tortugas</div></div>
+                </button>
+              </div>
+            </div>
+
+            {/* PASO 2: SELECTOR VISUAL DE FORMA POR SILUETA */}
+            <div style={{ marginBottom: '1.2rem' }}>
+              <label style={{ display: 'block', fontSize: '0.8rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.5rem' }}>2. SELECTOR VISUAL DE FORMA POR SILUETA *</label>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem' }}>
+                {[{ id: 'Sapo Terrestre', icon: '🐸' }, { id: 'Rana Arborícola', icon: '🍃' }, { id: 'Serpiente', icon: '🐍' }, { id: 'Lagartija', icon: '🦎' }].map((s) => (
+                  <button key={s.id} type="button" onClick={() => setSilueta(s.id)} style={{ backgroundColor: silueta === s.id ? '#0F2B20' : '#0A1410', border: silueta === s.id ? '2px solid #00FF88' : '1px solid #1B3D2F', borderRadius: '10px', padding: '0.6rem 0.3rem', color: '#FFF', display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer' }}>
+                    <span style={{ fontSize: '1.5rem' }}>{s.icon}</span>
+                    <span style={{ fontSize: '0.65rem', fontWeight: 'bold' }}>{s.id}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* PASO 3: TAXONOMÍA / ESPECIE */}
+            <div style={{ marginBottom: '1.2rem' }}>
+              <label style={{ display: 'block', fontSize: '0.8rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.5rem' }}>3. TAXONOMÍA / ESPECIE</label>
+              <div onClick={() => setDesconocido(!desconocido)} style={{ backgroundColor: '#0D1E18', border: '1px solid #1B3D2F', padding: '0.7rem', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.6rem' }}>
+                <input type="checkbox" checked={desconocido} onChange={() => {}} style={{ accentColor: '#00FF88' }} />
+                <span style={{ color: '#00FF88', fontSize: '0.75rem', fontWeight: 'bold' }}>❓ No sé la especie (Marcar como "Desconocido" para que el experto la identifique)</span>
+              </div>
+              {!desconocido && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  <input type="text" placeholder="Nombre científico (opcional, ej. Agalychnis annae)" value={nombreCientifico} onChange={(e) => setNombreCientifico(e.target.value)} style={{ padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.8rem' }} />
+                  <input type="text" placeholder="Nombre común (opcional, ej. Rana verde)" value={nombreComun} onChange={(e) => setNombreComun(e.target.value)} style={{ padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.8rem' }} />
                 </div>
               )}
             </div>
 
-            <button onClick={() => {
-              const nuevo = {
-                id: Date.now(),
-                especie: desconocido ? 'Especie por identificar' : nombreCientifico,
-                nombreComun: desconocido ? 'Desconocido (Por determinar)' : nombreComun,
-                categoria: tipoFauna.toUpperCase(),
-                silueta: silueta,
-                estado: 'EN REVISIÓN EXPERTA',
-                ubicacion: comunidad || 'Zona de los Santos',
-                reportante: usuario.nombre,
-                contacto: usuario.email,
-                temp: `${temp}°C`,
-                humedad: `${humedad}% H.R.`,
-                microhabitat: microhabitat,
-                estadoVida: estadoOrganismo,
-                tieneAudio: cantoGrabado,
-                img: fotoPreview,
-                coords: [parseFloat(lat), parseFloat(lng)]
-              };
-              setRegistros([nuevo, ...registros]);
-              setModalRegistro(false);
-              setTab('galeria');
-            }} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#00E676', color: '#000', fontWeight: 'bold', border: 'none', borderRadius: '10px', cursor: 'pointer', marginTop: '1rem' }}>Enviar a Revisión de Expertos</button>
+            {/* PASO 4: COORDENADAS GPS */}
+            <div style={{ marginBottom: '1.2rem' }}>
+              <label style={{ display: 'block', fontSize: '0.8rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.5rem' }}>4. COORDENADAS GPS (LATITUD, LONGITUD) *</label>
+              <div style={{ backgroundColor: '#0D1E18', border: '1px border-dashed #1B3D2F', borderRadius: '8px', padding: '0.8rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                  <span style={{ fontSize: '0.75rem', color: '#00FF88' }}>✅ GPS Capturado: Lat {lat}, Lng {lng}</span>
+                  <button type="button" onClick={obtenerGPS} style={{ backgroundColor: '#00E676', color: '#000', border: 'none', padding: '0.3rem 0.8rem', borderRadius: '15px', fontWeight: 'bold', fontSize: '0.75rem', cursor: 'pointer' }}>GPS 🎯</button>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                  <input type="text" value={lat} readOnly style={{ padding: '0.5rem', backgroundColor: '#050A08', border: '1px solid #1B3D2F', color: '#FFF', borderRadius: '6px', fontSize: '0.8rem' }} />
+                  <input type="text" value={lng} readOnly style={{ padding: '0.5rem', backgroundColor: '#050A08', border: '1px solid #1B3D2F', color: '#FFF', borderRadius: '6px', fontSize: '0.8rem' }} />
+                </div>
+                <input type="text" placeholder="Comunidad (ej. San Marcos de Tarrazú)" value={comunidad} onChange={(e) => setComunidad(e.target.value)} style={{ width: '100%', padding: '0.5rem', backgroundColor: '#050A08', border: '1px solid #1B3D2F', color: '#FFF', borderRadius: '6px', fontSize: '0.8rem' }} />
+              </div>
+            </div>
+
+            {/* PASO 5: FOTOGRAFÍA DEL EJEMPLAR */}
+            <div style={{ marginBottom: '1.2rem' }}>
+              <label style={{ display: 'block', fontSize: '0.8rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.5rem' }}>5. FOTOGRAFÍA DEL EJEMPLAR *</label>
+              <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', border: '2px dashed #1B3D2F', borderRadius: '10px', padding: '1rem', cursor: 'pointer', backgroundColor: '#0A1410' }}>
+                <span style={{ fontSize: '2rem' }}>📷</span>
+                <span style={{ fontSize: '0.8rem', color: '#00FF88', fontWeight: 'bold' }}>Tomar Foto con Cámara o Elegir Archivo</span>
+                <input type="file" accept="image/*" capture="environment" onChange={handleFotoUpload} style={{ display: 'none' }} />
+              </label>
+              {fotoPreview && (
+                <div style={{ marginTop: '0.6rem', borderRadius: '8px', overflow: 'hidden', height: '140px', border: '1px solid #1B3D2F' }}>
+                  <img src={fotoPreview} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                </div>
+              )}
+            </div>
+
+            {/* PASO 6: GRABACIÓN DEL CANTO DE ANFIBIOS REAL (15-30s) */}
+            <div style={{ marginBottom: '1.2rem' }}>
+              <label style={{ display: 'block', fontSize: '0.8rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.5rem' }}>6. GRABACIÓN DEL CANTO / VOCALIZACIÓN (OPCIONAL)</label>
+              <div style={{ backgroundColor: '#0D1E18', border: '1px border-dashed #1B3D2F', borderRadius: '10px', padding: '0.8rem' }}>
+                
+                {!grabandoAudio ? (
+                  <button type="button" onClick={iniciarGrabacion} style={{ width: '100%', padding: '0.7rem', backgroundColor: '#E53935', color: '#FFF', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+                    🎙️ Grabar Canto (Nota de Voz 15-30s)
+                  </button>
+                ) : (
+                  <button type="button" onClick={detenerGrabacion} style={{ width: '100%', padding: '0.7rem', backgroundColor: '#FFB300', color: '#000', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+                    ⏹️ Detener Grabación ({tiempoGrabacion}s / 30s)
+                  </button>
+                )}
+
+                {audioURL && (
+                  <div style={{ marginTop: '0.8rem' }}>
+                    <span style={{ fontSize: '0.75rem', color: '#00FF88', fontWeight: 'bold', display: 'block', marginBottom: '0.3rem' }}>✅ Canto grabado con éxito:</span>
+                    <audio controls src={audioURL} style={{ width: '100%', height: '35px' }} />
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* PASO 7: MICROHÁBITAT Y ESTADO COMPLETO */}
+            <div style={{ marginBottom: '1.2rem' }}>
+              <label style={{ display: 'block', fontSize: '0.8rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.5rem' }}>7. MICROHÁBITAT Y ESTADO</label>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                <select value={estadoOrganismo} onChange={(e) => setEstadoOrganismo(e.target.value)} style={{ padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.8rem' }}>
+                  <option value="Vivo / Activo">Vivo / Activo</option>
+                  <option value="Muerto / Atropellado">Muerto / Atropellado</option>
+                </select>
+
+                <select value={etapa} onChange={(e) => setEtapa(e.target.value)} style={{ padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.8rem' }}>
+                  <option value="Adulto">Adulto</option>
+                  <option value="Juvenil">Juvenil</option>
+                  <option value="Renacuajo / Larva">Renacuajo / Larva</option>
+                </select>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                <input type="text" value={temp} onChange={(e) => setTemp(e.target.value)} placeholder="Temperatura °C" style={{ padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.8rem' }} />
+                <input type="text" value={humedad} onChange={(e) => setHumedad(e.target.value)} placeholder="Humedad %" style={{ padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.8rem' }} />
+              </div>
+
+              <select value={microhabitat} onChange={(e) => setMicrohabitat(e.target.value)} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.8rem' }}>
+                <option value="Vegetación / Finca Cafetalera">☕ Vegetación / Finca Cafetalera</option>
+                <option value="Hojarasca de bosque de roble">🍃 Hojarasca de bosque de roble</option>
+                <option value="Quebrada / Río / Estanque">🌊 Quebrada / Río / Estanque</option>
+                <option value="Tronco en descomposición / Arbusto">🪵 Tronco en descomposición / Arbusto</option>
+                <option value="Entorno antrópico / Infraestructura">🏠 Entorno antrópico / Infraestructura</option>
+              </select>
+            </div>
+
+            {/* NOTAS ADICIONALES */}
+            <div style={{ marginBottom: '1.2rem' }}>
+              <label style={{ display: 'block', fontSize: '0.8rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.5rem' }}>NOTAS ADICIONALES</label>
+              <textarea rows="3" placeholder="Detalles observados..." value={notas} onChange={(e) => setNotas(e.target.value)} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.8rem' }} />
+            </div>
+
+            {/* BOTONES CANCELAR Y ENVIAR */}
+            <div style={{ display: 'flex', gap: '0.8rem', marginTop: '1.5rem' }}>
+              <button onClick={() => setModalRegistro(false)} style={{ flex: 1, padding: '0.8rem', backgroundColor: '#14211C', color: '#A0C2B4', border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: 'bold' }}>Cancelar</button>
+              <button 
+                onClick={() => {
+                  const nuevo = {
+                    id: Date.now(),
+                    especie: desconocido ? 'Especie por identificar' : nombreCientifico,
+                    nombreComun: desconocido ? 'Desconocido (Por determinar por experto)' : nombreComun,
+                    categoria: tipoFauna.toUpperCase(),
+                    silueta: silueta,
+                    estado: 'EN REVISIÓN EXPERTA',
+                    ubicacion: comunidad || 'Zona de los Santos',
+                    reportante: usuario.nombre,
+                    contacto: usuario.email,
+                    temp: `${temp}°C`,
+                    humedad: `${humedad}% H.R.`,
+                    microhabitat: microhabitat,
+                    estadoVida: `${estadoOrganismo} (${etapa})`,
+                    tieneAudio: !!audioURL,
+                    img: fotoPreview,
+                    coords: [parseFloat(lat), parseFloat(lng)]
+                  };
+                  setRegistros([nuevo, ...registros]);
+                  setModalRegistro(false);
+                  setTab('galeria');
+                }} 
+                style={{ flex: 2, padding: '0.8rem', backgroundColor: '#00E676', color: '#000', fontWeight: 'bold', border: 'none', borderRadius: '10px', cursor: 'pointer', fontSize: '0.9rem' }}
+              >
+                Enviar a Revisión de Expertos
+              </button>
+            </div>
+
           </div>
         </div>
       )}
