@@ -66,8 +66,7 @@ function EventoMapaPin({ setLat, setLng, setPosPin, setTemp, setAltitud }) {
       setLng(lngFija);
       setPosPin([e.latlng.lat, e.latlng.lng]);
 
-      // Autoregistro automático simulado según la latitud/altitud de Los Santos
-      const altEstimada = Math.round(1400 + Math.abs(e.latlng.lat - 9.65) * 15000);
+      const altEstimada = Math.round(1500 + Math.abs(e.latlng.lat - 9.65) * 12000);
       const tempEstimada = (24 - (altEstimada / 300)).toFixed(1).replace('.', ',');
       setTemp(tempEstimada);
       setAltitud(altEstimada.toString());
@@ -89,18 +88,18 @@ export default function App() {
   const [modalGuiaEdit, setModalGuiaEdit] = useState(false);
   const [registroSeleccionado, setRegistroSeleccionado] = useState(null);
 
-  // Vistas de Autenticación ('perfil', 'login', 'registro', 'verificar', 'recuperar')
+  // Vistas de Autenticación
   const [vistaPerfil, setVistaPerfil] = useState('login');
   const [metodoRecuperacion, setMetodoRecuperacion] = useState('correo');
   const [mensajeAuthOk, setMensajeAuthOk] = useState('');
 
-  // Lógica Verificación OTP de Correo / Celular
+  // Lógica Verificación OTP
   const [codigoOtpGenerado, setCodigoOtpGenerado] = useState('');
   const [codigoOtpIngresado, setCodigoOtpIngresado] = useState('');
   const [usuarioTemporalVerificacion, setUsuarioTemporalVerificacion] = useState(null);
 
   // Filtros
-  const [mapLayer, setMapLayer] = useState('callejero');
+  const [mapLayer, setMapLayer] = useState('satelite-hibrido');
   const [filtroEspecie, setFiltroEspecie] = useState('todas');
   const [busquedaGaleria, setBusquedaGaleria] = useState('');
   const [filtroEstadoUsuario, setFiltroEstadoUsuario] = useState('todos');
@@ -128,6 +127,43 @@ export default function App() {
     localStorage.setItem('herpid_usuario_sesion', JSON.stringify(usuario));
   }, [usuario]);
 
+  // REGISTROS PERSISTENTES EN LOCALSTORAGE
+  const [registros, setRegistros] = useState(() => {
+    const guardados = localStorage.getItem('herpid_registros_avistamientos');
+    if (guardados) return JSON.parse(guardados);
+    return [
+      {
+        id: 1,
+        especie: 'Agalychnis annae',
+        nombreComun: 'Rana Verde de Palmera',
+        categoria: 'ANFIBIO',
+        silueta: 'Rana Arborícola',
+        estado: 'VALIDADO',
+        ubicacion: 'San Marcos de Tarrazú',
+        reportante: 'Jorge Carvajal',
+        contacto: 'jorge.carvajal@docente.edu | 🔒 [Celular Privado]',
+        temp: '21.0 °C',
+        altitud: '1450 msnm',
+        horaRegistro: '24/07/2026, 08:30:15 hrs',
+        microhabitat: 'Vegetación / Finca Cafetalera',
+        estadoVida: 'Vivo / Activo (Adulto)',
+        tieneAudio: true,
+        fotos: [
+          'https://images.unsplash.com/photo-1548802673-380ab8ebc7b7?auto=format&fit=crop&w=600&q=80',
+          'https://images.unsplash.com/photo-1590005354167-6da97870c757?auto=format&fit=crop&w=600&q=80'
+        ],
+        img: 'https://images.unsplash.com/photo-1548802673-380ab8ebc7b7?auto=format&fit=crop&w=600&q=80',
+        coords: [9.650565, -84.000236],
+        editadoPor: 'Jorge Carvajal (Administrador Experto)',
+        fechaEdicion: '24/07/2026, 00:15'
+      }
+    ];
+  });
+
+  useEffect(() => {
+    localStorage.setItem('herpid_registros_avistamientos', JSON.stringify(registros));
+  }, [registros]);
+
   // REGISTROS PENDIENTES DE SINCRONIZACIÓN OFFLINE
   const [pendientesOffline, setPendientesOffline] = useState(() => {
     const guardados = localStorage.getItem('herpid_pendientes_offline');
@@ -138,7 +174,6 @@ export default function App() {
     localStorage.setItem('herpid_pendientes_offline', JSON.stringify(pendientesOffline));
   }, [pendientesOffline]);
 
-  // Evento PWA para instalación nativa
   const [deferredPrompt, setDeferredPrompt] = useState(null);
 
   useEffect(() => {
@@ -157,36 +192,33 @@ export default function App() {
     }
   };
 
-  // Base de Cuentas Registradas
   const [cuentasRegistradas, setCuentasRegistradas] = useState([
     { id: 1, nombre: 'Jorge Carvajal', email: 'jorge.carvajal@docente.edu', codigoPais: '+506', tel: '8888-9999', comunidad: 'Tarrazú (San Marcos, San Lorenzo, Carlos)', rol: 'Administrador Experto (Máximo Rango)', pass: 'admin123', estadoConexion: 'online', fechaIngreso: '2026-03-01 08:30:00', mostrarTelefono: false, estatusCuenta: 'activo', cuentaVerificada: true },
     { id: 2, nombre: 'Dra. Sofía Herpetóloga', email: 'sofia.herpeto@ucr.ac.cr', codigoPais: '+506', tel: '8765-4321', comunidad: 'Dota (Santa María, Copey, Jardín)', rol: 'Experto Herpetólogo', pass: 'sofia123', estadoConexion: 'online', fechaIngreso: '2026-04-12 14:15:00', mostrarTelefono: false, estatusCuenta: 'activo', cuentaVerificada: true },
     { id: 3, nombre: 'Carlos Picado', email: 'cpicado@comunidad.cr', codigoPais: '+506', tel: '8555-1234', comunidad: 'León Cortés (San Pablo, San Rafael)', rol: 'Usuario Regular', pass: 'carlos123', estadoConexion: 'offline', fechaIngreso: '2026-05-20 11:45:00', mostrarTelefono: true, estatusCuenta: 'activo', cuentaVerificada: true }
   ]);
 
-  // ROLES Y NIVELES DE PERMISOS
   const esExpertoOAdmin = usuario.isLoggedIn && (usuario.rol.includes('Administrador') || usuario.rol.includes('Experto'));
   const esAdminAbsoluto = usuario.isLoggedIn && usuario.rol.includes('Administrador');
 
-  // Formulario temporal de edición en Ficha
   const [editCientifico, setEditCientifico] = useState('');
   const [editComun, setEditComun] = useState('');
   const [editNotasTaxo, setEditNotasTaxo] = useState('');
+  const [editFotoPrincipal, setEditFotoPrincipal] = useState('');
 
   useEffect(() => {
     if (registroSeleccionado) {
       setEditCientifico(registroSeleccionado.especie !== 'Especie por identificar' ? registroSeleccionado.especie : '');
       setEditComun(registroSeleccionado.nombreComun !== 'Desconocido (Por determinar por experto)' ? registroSeleccionado.nombreComun : '');
       setEditNotasTaxo(registroSeleccionado.notasTaxo || '');
+      setEditFotoPrincipal(registroSeleccionado.img || (registroSeleccionado.fotos && registroSeleccionado.fotos[0]) || '');
     }
   }, [registroSeleccionado]);
 
-  // Forms de Autenticación con Código de País (+506 Costa Rica primero)
   const [formLogin, setFormLogin] = useState({ emailOrTel: '', pass: '' });
   const [formReg, setFormReg] = useState({ nombre: '', email: '', codigoPais: '+506', telefono: '', comunidad: 'Tarrazú (San Marcos, San Lorenzo, Carlos)', pass: '', confirmPass: '', solicitaExperto: false, medioVerificacion: 'correo' });
   const [formRecuperar, setFormRecuperar] = useState({ contacto: '' });
 
-  // Lista de Códigos de Área Internacionales
   const codigosPaises = [
     { code: '+506', label: '🇨🇷 Costa Rica (+506)' },
     { code: '+1', label: '🇺🇸/🇨🇦 Estados Unidos / Canadá (+1)' },
@@ -200,18 +232,16 @@ export default function App() {
     { code: '+49', label: '🇩🇪 Alemania (+49)' }
   ];
 
-  // Solicitudes pendientes de biólogos
-  const [solicitudesExpertos, setSolicudesExpertos] = useState([
+  const [solicitudesExpertos, setSolicitudesExpertos] = useState([
     { id: 101, userId: 3, nombre: 'MSc. Juan Abarca', email: 'jabarca@herpeto.org', tel: '+506 8333-4444', atencedentes: 'Biólogo especialista en Isthmohyla nacientes.', fecha: '24/07/2026' }
   ]);
 
-  // Chat
   const [chatMensajes, setChatMensajes] = useState([
     { id: 1, texto: '👋 Has iniciado una consulta privada directa. Escribe tu mensaje abajo.', emisor: 'sistema' }
   ]);
   const [nuevoMensaje, setNuevoMensaje] = useState('');
 
-  // Formulario 7 Pasos (Con siluetas separadas correctamente para Anfibios y Reptiles)
+  // Formulario de Registro
   const [tipoFauna, setTipoFauna] = useState('Anfibio');
   const [silueta, setSilueta] = useState('Rana Arborícola');
   const [desconocido, setDesconocido] = useState(true);
@@ -225,11 +255,26 @@ export default function App() {
   const [etapa, setEtapa] = useState('Adulto');
   const [temp, setTemp] = useState('19,5');
   const [altitud, setAltitud] = useState('1650');
+  const [horaAproximada, setHoraAproximada] = useState('14:30');
   const [microhabitat, setMicrohabitat] = useState('Vegetación / Finca Cafetalera');
   const [notas, setNotas] = useState('');
-  const [fotoPreview, setFotoPreview] = useState('https://images.unsplash.com/photo-1590005354167-6da97870c757?auto=format&fit=crop&w=600&q=80');
+  
+  const [fotosRegistro, setFotosRegistro] = useState([
+    'https://images.unsplash.com/photo-1590005354167-6da97870c757?auto=format&fit=crop&w=600&q=80'
+  ]);
 
-  // Grabador
+  const handleFotosUpload = (e) => {
+    const files = Array.from(e.target.files);
+    if (files.length > 0) {
+      const nuevasUrls = files.slice(0, 3 - fotosRegistro.length).map(file => URL.createObjectURL(file));
+      setFotosRegistro([...fotosRegistro, ...nuevasUrls].slice(0, 3));
+    }
+  };
+
+  const eliminarFotoRegistro = (index) => {
+    setFotosRegistro(fotosRegistro.filter((_, i) => i !== index));
+  };
+
   const [grabandoAudio, setGrabandoAudio] = useState(false);
   const [tiempoGrabacion, setTiempoGrabacion] = useState(0);
   const [audioURL, setAudioURL] = useState(null);
@@ -290,7 +335,6 @@ export default function App() {
           setLng(l2);
           setPosPin([pos.coords.latitude, pos.coords.longitude]);
 
-          // Autoregistro automático simulado según altitud de Costa Rica
           const altEstimada = Math.round(1500 + Math.abs(pos.coords.latitude - 9.65) * 12000);
           const tempEstimada = (24 - (altEstimada / 300)).toFixed(1).replace('.', ',');
           setTemp(tempEstimada);
@@ -301,11 +345,6 @@ export default function App() {
     } else {
       alert('Geolocalización no soportada.');
     }
-  };
-
-  const handleFotoUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) setFotoPreview(URL.createObjectURL(file));
   };
 
   const enviarMensajeChat = (texto) => {
@@ -321,8 +360,8 @@ export default function App() {
   };
 
   const exportarCSV = () => {
-    const headers = "ID,Nombre Comun,Especie,Categoria,Estado,Ubicacion,Reportante,Temperatura,Altitud,EditadoPor\n";
-    const rows = registros.map(r => `${r.id},"${r.nombreComun}","${r.especie}",${r.categoria},${r.estado},"${r.ubicacion}","${r.reportante}",${r.temp},${r.altitud},"${r.editadoPor || 'N/A'}"`).join("\n");
+    const headers = "ID,Nombre Comun,Especie,Categoria,Estado,Ubicacion,Reportante,Temperatura,Altitud,HoraRegistro,EditadoPor\n";
+    const rows = registros.map(r => `${r.id},"${r.nombreComun}","${r.especie}",${r.categoria},${r.estado},"${r.ubicacion}","${r.reportante}",${r.temp},${r.altitud},"${r.horaRegistro}","${r.editadoPor || 'N/A'}"`).join("\n");
     const blob = new Blob([headers + rows], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -342,51 +381,6 @@ export default function App() {
     setModalSincronizar(false);
   };
 
-  // Registros
-  const [registros, setRegistros] = useState([
-    {
-      id: 1,
-      especie: 'Agalychnis annae',
-      nombreComun: 'Rana Verde de Palmera',
-      categoria: 'ANFIBIO',
-      silueta: 'Rana Arborícola',
-      estado: 'VALIDADO',
-      ubicacion: 'San Marcos de Tarrazú',
-      reportante: 'Jorge Carvajal',
-      contacto: 'jorge.carvajal@docente.edu | 🔒 [Celular Privado]',
-      temp: '21.0 °C',
-      altitud: '1450 msnm',
-      microhabitat: 'Vegetación / Finca Cafetalera',
-      estadoVida: 'Vivo / Activo (Adulto)',
-      tieneAudio: true,
-      img: 'https://images.unsplash.com/photo-1548802673-380ab8ebc7b7?auto=format&fit=crop&w=600&q=80',
-      coords: [9.650565, -84.000236],
-      editadoPor: 'Jorge Carvajal (Administrador Experto)',
-      fechaEdicion: '24/07/2026, 00:15'
-    },
-    {
-      id: 2,
-      especie: 'Cerrophidion godmani',
-      nombreComun: 'Toboba de Montaña',
-      categoria: 'REPTIL',
-      silueta: 'Serpiente',
-      estado: 'VALIDADO',
-      ubicacion: 'San Pablo de León Cortés',
-      reportante: 'Dra. Sofía Herpetóloga',
-      contacto: 'sofia.herpeto@ucr.ac.cr | 🔒 [Celular Privado]',
-      temp: '17.5 °C',
-      altitud: '1900 msnm',
-      microhabitat: 'Hojarasca de bosque de roble',
-      estadoVida: 'Vivo / Activo (Adulto)',
-      tieneAudio: false,
-      img: 'https://images.unsplash.com/photo-1531386151447-fd76ad50012f?auto=format&fit=crop&w=600&q=80',
-      coords: [9.6682, -84.0141],
-      editadoPor: 'Dra. Sofía Herpetóloga (Experto Herpetólogo)',
-      fechaEdicion: '24/07/2026, 00:30'
-    }
-  ]);
-
-  // GUÍA DE ESPECIES EDITABLE
   const [especiesGuia, setEspeciesGuia] = useState([
     {
       id: 1,
@@ -455,7 +449,7 @@ export default function App() {
   return (
     <div style={{ backgroundColor: '#070D0B', color: '#E0E6E3', minHeight: '100vh', fontFamily: 'system-ui, sans-serif', paddingBottom: '90px' }}>
       
-      {/* 🟢 BARRA SUPERIOR CON LOGOTIPO */}
+      {/* 🟢 BARRA SUPERIOR */}
       <header style={{ backgroundColor: '#0B1512', padding: '0.9rem 1.4rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1.5px solid #162B23', flexWrap: 'wrap', gap: '0.8rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           
@@ -539,9 +533,14 @@ export default function App() {
               </button>
             </div>
 
-            <button onClick={() => setMapLayer(mapLayer === 'callejero' ? 'satelite' : 'callejero')} style={{ backgroundColor: 'rgba(11, 21, 18, 0.9)', backdropFilter: 'blur(8px)', color: '#FFF', border: '1px solid #00FF88', borderRadius: '20px', padding: '6px 14px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}>
-              🗺️ {mapLayer === 'callejero' ? 'Callejero Topográfico' : '🌐 Satélite (Earth)'}
-            </button>
+            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+              <button onClick={() => setMapLayer('callejero')} style={{ backgroundColor: mapLayer === 'callejero' ? '#0F2B20' : 'rgba(11, 21, 18, 0.9)', color: mapLayer === 'callejero' ? '#00FF88' : '#FFF', border: '1px solid #00FF88', borderRadius: '20px', padding: '6px 12px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}>
+                🗺️ Callejero
+              </button>
+              <button onClick={() => setMapLayer('satelite-hibrido')} style={{ backgroundColor: mapLayer === 'satelite-hibrido' ? '#0F2B20' : 'rgba(11, 21, 18, 0.9)', color: mapLayer === 'satelite-hibrido' ? '#00FF88' : '#FFF', border: '1px solid #00FF88', borderRadius: '20px', padding: '6px 12px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}>
+                🛰️ Satélite con Nombres (Híbrido)
+              </button>
+            </div>
           </div>
 
           <div style={{ position: 'absolute', top: '15px', right: '15px', zIndex: 1000, backgroundColor: 'rgba(11, 21, 18, 0.9)', backdropFilter: 'blur(8px)', border: '1px solid #162B23', borderRadius: '20px', padding: '6px 12px', fontSize: '0.75rem', color: '#00FF88', fontWeight: 'bold' }}>
@@ -553,7 +552,10 @@ export default function App() {
               {mapLayer === 'callejero' ? (
                 <TileLayer attribution='&copy; OpenStreetMap' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
               ) : (
-                <TileLayer attribution='&copy; Esri WorldImagery' url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}" />
+                <>
+                  <TileLayer attribution='&copy; Esri WorldImagery' url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}" />
+                  <TileLayer attribution='&copy; CARTO' url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png" subdomains="abcd" maxZoom={20} />
+                </>
               )}
 
               {registrosFiltrados.map((reg) => (
@@ -567,6 +569,7 @@ export default function App() {
                     <strong style={{ color: '#00C853' }}>{reg.nombreComun}</strong><br />
                     <em>{reg.especie}</em><br />
                     📍 {reg.ubicacion}<br />
+                    🕒 {reg.horaRegistro}<br />
                     👤 Reporta: {reg.reportante}
                   </Popup>
                 </Marker>
@@ -629,7 +632,7 @@ export default function App() {
             {registrosFiltrados.map((reg) => (
               <div key={reg.id} onClick={() => setRegistroSeleccionado(reg)} style={{ backgroundColor: '#0F1A16', borderRadius: '12px', overflow: 'hidden', border: '1px solid #1B2E27', cursor: 'pointer' }}>
                 <div style={{ position: 'relative', height: '180px' }}>
-                  <img src={reg.img} alt={reg.especie} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <img src={reg.img || (reg.fotos && reg.fotos[0])} alt={reg.especie} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   <span style={{ position: 'absolute', top: '10px', right: '10px', backgroundColor: reg.estado === 'VALIDADO' ? '#00E676' : '#FFB300', color: '#000', padding: '0.2rem 0.6rem', borderRadius: '12px', fontSize: '0.7rem', fontWeight: 'bold' }}>
                     {reg.estado}
                   </span>
@@ -637,7 +640,7 @@ export default function App() {
                 <div style={{ padding: '0.9rem' }}>
                   <span style={{ fontSize: '0.75rem', color: '#00FF88', fontWeight: 'bold' }}>🐸 {reg.categoria} • {reg.silueta}</span>
                   <h3 style={{ margin: '0.3rem 0', fontSize: '1rem', color: '#FFF' }}>{reg.nombreComun}</h3>
-                  <p style={{ margin: '0.2rem 0', fontSize: '0.8rem', color: '#8AA398' }}>📍 {reg.ubicacion} • 👤 {reg.reportante}</p>
+                  <p style={{ margin: '0.2rem 0', fontSize: '0.8rem', color: '#8AA398' }}>📍 {reg.ubicacion} • 🕒 {reg.horaRegistro}</p>
                 </div>
               </div>
             ))}
@@ -950,7 +953,7 @@ export default function App() {
                         <div key={r.id} style={{ backgroundColor: '#060D0A', border: '1px solid #162B23', borderRadius: '12px', padding: '0.9rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <div>
                             <strong style={{ color: '#FFF', fontSize: '0.85rem' }}>{r.nombreComun} ({r.especie})</strong>
-                            <div style={{ fontSize: '0.75rem', color: '#8AA398' }}>📍 {r.ubicacion} | Reporta: {r.reportante} | Estado: <span style={{ color: r.estado === 'VALIDADO' ? '#00E676' : '#FFB300' }}>{r.estado}</span></div>
+                            <div style={{ fontSize: '0.75rem', color: '#8AA398' }}>📍 {r.ubicacion} | 🕒 {r.horaRegistro} | Reporta: {r.reportante}</div>
                           </div>
                           <button onClick={() => setRegistroSeleccionado(r)} style={{ backgroundColor: '#00E676', color: '#000', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}>Moderar / Autorizar</button>
                         </div>
@@ -980,12 +983,38 @@ export default function App() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.2rem' }}>
               
               <div>
-                <div style={{ borderRadius: '12px', overflow: 'hidden', height: '220px', marginBottom: '0.8rem', border: '1px solid #1B3D2F' }}>
-                  <img src={registroSeleccionado.img} alt="Fauna" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <div style={{ borderRadius: '12px', overflow: 'hidden', height: '200px', marginBottom: '0.6rem', border: '1px solid #1B3D2F' }}>
+                  <img src={editFotoPrincipal || registroSeleccionado.img || (registroSeleccionado.fotos && registroSeleccionado.fotos[0])} alt="Fauna" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 </div>
+
+                {registroSeleccionado.fotos && registroSeleccionado.fotos.length > 0 && (
+                  <div style={{ marginBottom: '0.8rem' }}>
+                    <span style={{ fontSize: '0.7rem', color: '#00FF88', fontWeight: 'bold', display: 'block', marginBottom: '0.3rem' }}>📷 Fotografías aportadas ({registroSeleccionado.fotos.length}/3) — Selecciona la principal:</span>
+                    <div style={{ display: 'flex', gap: '0.4rem' }}>
+                      {registroSeleccionado.fotos.map((fUrl, idx) => (
+                        <div 
+                          key={idx} 
+                          onClick={() => setEditFotoPrincipal(fUrl)}
+                          style={{ 
+                            width: '60px', 
+                            height: '60px', 
+                            borderRadius: '8px', 
+                            overflow: 'hidden', 
+                            border: editFotoPrincipal === fUrl ? '2px solid #00E676' : '1px solid #1B3D2F', 
+                            cursor: 'pointer',
+                            opacity: editFotoPrincipal === fUrl ? 1 : 0.6 
+                          }}
+                        >
+                          <img src={fUrl} alt={`Evidencia ${idx+1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 <div style={{ backgroundColor: '#0D1E18', border: '1px solid #1B3D2F', borderRadius: '10px', padding: '0.8rem', fontSize: '0.8rem', display: 'flex', flexDirection: 'column', gap: '0.4rem', marginBottom: '0.8rem' }}>
                   <div>📍 <strong>Ubicación:</strong> {registroSeleccionado.ubicacion}</div>
+                  <div>🕒 <strong>Hora del Registro:</strong> {registroSeleccionado.horaRegistro}</div>
                   <div>🌡️ <strong>Temperatura:</strong> {registroSeleccionado.temp}</div>
                   <div>⛰️ <strong>Altitud:</strong> {registroSeleccionado.altitud}</div>
                   <div>🍃 <strong>Microhábitat:</strong> {registroSeleccionado.microhabitat}</div>
@@ -1046,6 +1075,7 @@ export default function App() {
                                 especie: editCientifico || r.especie,
                                 nombreComun: editComun || r.nombreComun,
                                 notasTaxo: editNotasTaxo,
+                                img: editFotoPrincipal || r.img,
                                 estado: 'VALIDADO',
                                 editadoPor: nombreEditor,
                                 fechaEdicion: fechaHoy
@@ -1055,7 +1085,7 @@ export default function App() {
                           });
 
                           setRegistros(registrosActualizados);
-                          alert(`¡Ficha curada, validada y publicada con éxito por ${nombreEditor}! Ahora es pública en la Guía/Galería.`);
+                          alert(`¡Ficha curada, validada y publicada con éxito por ${nombreEditor}!`);
                           setRegistroSeleccionado(null);
                         }} 
                         style={{ width: '100%', padding: '0.7rem', backgroundColor: '#00E676', color: '#000', fontWeight: 'bold', border: 'none', borderRadius: '8px', cursor: 'pointer', marginTop: '0.4rem', fontSize: '0.85rem' }}
@@ -1078,7 +1108,7 @@ export default function App() {
         </div>
       )}
 
-      {/* ✏️ MODAL EDITAR / CREAR ESPECIE EN LA GUÍA (EXCLUSIVO ADMIN) */}
+      {/* ✏️ MODAL EDITAR / CREAR ESPECIE EN LA GUÍA */}
       {modalGuiaEdit && esAdminAbsoluto && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999, padding: '1rem' }}>
           <div style={{ backgroundColor: '#09130F', borderRadius: '16px', border: '1px solid #1B3D2F', width: '100%', maxWidth: '520px', padding: '1.2rem', maxHeight: '90vh', overflowY: 'auto' }}>
@@ -1128,7 +1158,7 @@ export default function App() {
         </div>
       )}
 
-      {/* 👤 MODAL PERFIL CON VERIFICACIÓN OTP */}
+      {/* 👤 MODAL PERFIL */}
       {modalPerfil && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999, padding: '1rem' }}>
           <div style={{ backgroundColor: '#09130F', borderRadius: '16px', border: '1px solid #1B3D2F', width: '100%', maxWidth: '520px', padding: '1.2rem', maxHeight: '90vh', overflowY: 'auto' }}>
@@ -1150,7 +1180,6 @@ export default function App() {
               </div>
             )}
 
-            {/* VISTA 1: PERFIL */}
             {vistaPerfil === 'perfil' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
                 <div style={{ backgroundColor: '#060D0A', border: '1px solid #1B3D2F', borderRadius: '12px', padding: '0.8rem', textAlign: 'center' }}>
@@ -1207,7 +1236,6 @@ export default function App() {
               </div>
             )}
 
-            {/* VISTA 2: LOGIN */}
             {vistaPerfil === 'login' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
                 <div>
@@ -1260,7 +1288,6 @@ export default function App() {
               </div>
             )}
 
-            {/* VISTA 3: REGISTRO */}
             {vistaPerfil === 'registro' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
                 <div>
@@ -1349,7 +1376,6 @@ export default function App() {
               </div>
             )}
 
-            {/* VISTA 4: VERIFICAR OTP */}
             {vistaPerfil === 'verificar' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem', textAlign: 'center' }}>
                 <div style={{ backgroundColor: '#0A1E16', border: '1px solid #00FF88', padding: '0.8rem', borderRadius: '10px', color: '#00FF88', fontSize: '0.8rem' }}>
@@ -1404,7 +1430,6 @@ export default function App() {
               </div>
             )}
 
-            {/* VISTA 5: RECUPERACIÓN */}
             {vistaPerfil === 'recuperar' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
                 <p style={{ fontSize: '0.8rem', color: '#8AA398', margin: 0 }}>Selecciona el método de recuperación para recibir las instrucciones:</p>
@@ -1435,7 +1460,7 @@ export default function App() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '200px', overflowY: 'auto', margin: '1rem 0' }}>
               {pendientesOffline.map((item, idx) => (
                 <div key={idx} style={{ backgroundColor: '#060D0A', border: '1px solid #162B23', padding: '0.6rem', borderRadius: '8px', fontSize: '0.75rem', color: '#FFF' }}>
-                  🐸 <strong>{item.nombreComun}</strong> - 📍 Lat {item.coords[0]}, Lng {item.coords[1]}
+                  🐸 <strong>{item.nombreComun}</strong> - 📍 Lat {item.coords[0]}, Lng {item.coords[1]} ({item.horaRegistro})
                 </div>
               ))}
             </div>
@@ -1512,7 +1537,7 @@ export default function App() {
         </div>
       )}
 
-      {/* 📌 MODAL REGISTRAR AVISTAMIENTO (+) CON SILUETAS CORREGIDAS Y AUTOREGISTRO TEMPERATURA/ALTITUD */}
+      {/* 📌 MODAL REGISTRAR AVISTAMIENTO (+) CON HORA EXACTA O APROXIMADA */}
       {modalRegistro && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999, padding: '1rem' }}>
           <div style={{ backgroundColor: '#09130F', borderRadius: '16px', border: '1px solid #1B3D2F', width: '100%', maxWidth: '580px', padding: '1.2rem', maxHeight: '92vh', overflowY: 'auto' }}>
@@ -1542,7 +1567,7 @@ export default function App() {
               </div>
             </div>
 
-            {/* PASO 2: SILUETAS FILTRADAS CORRECTAMENTE (SALAMANDRAS EN ANFIBIOS) */}
+            {/* PASO 2 */}
             <div style={{ marginBottom: '1.2rem' }}>
               <label style={{ display: 'block', fontSize: '0.8rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.5rem' }}>2. SELECTOR VISUAL DE FORMA POR SILUETA *</label>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem' }}>
@@ -1593,7 +1618,7 @@ export default function App() {
                   <button type="button" onClick={obtenerGPS} style={{ backgroundColor: '#00E676', color: '#000', border: 'none', padding: '0.3rem 0.8rem', borderRadius: '15px', fontWeight: 'bold', fontSize: '0.75rem', cursor: 'pointer' }}>Mi GPS Actual 🎯</button>
                 </div>
 
-                <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.7rem', color: '#FFB300' }}>👉 Toca cualquier punto en el mapa para colocar el 📍 <strong>Alfiler Rojo</strong> (autoregistra altitud y temperatura):</p>
+                <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.7rem', color: '#FFB300' }}>👉 Toca cualquier punto en el mapa para colocar el 📍 <strong>Alfiler Rojo</strong>:</p>
 
                 <div style={{ height: '180px', borderRadius: '8px', overflow: 'hidden', marginBottom: '0.6rem', border: '1px solid #1B3D2F' }}>
                   <MapContainer center={posPin} zoom={14} style={{ height: '100%', width: '100%' }}>
@@ -1624,19 +1649,26 @@ export default function App() {
               </div>
             </div>
 
-            {/* PASO 5 */}
+            {/* PASO 5: FOTOGRAFÍAS */}
             <div style={{ marginBottom: '1.2rem' }}>
-              <label style={{ display: 'block', fontSize: '0.8rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.5rem' }}>5. FOTOGRAFÍA DEL EJEMPLAR *</label>
-              <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', border: '2px dashed #1B3D2F', borderRadius: '10px', padding: '1rem', cursor: 'pointer', backgroundColor: '#0A1410' }}>
-                <span style={{ fontSize: '2rem' }}>📷</span>
-                <span style={{ fontSize: '0.8rem', color: '#00FF88', fontWeight: 'bold' }}>Tomar Foto con Cámara o Elegir Archivo</span>
-                <input type="file" accept="image/*" capture="environment" onChange={handleFotoUpload} style={{ display: 'none' }} />
-              </label>
-              {fotoPreview && (
-                <div style={{ marginTop: '0.6rem', borderRadius: '8px', overflow: 'hidden', height: '140px', border: '1px solid #1B3D2F' }}>
-                  <img src={fotoPreview} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                </div>
+              <label style={{ display: 'block', fontSize: '0.8rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.5rem' }}>5. FOTOGRAFÍAS DEL INDIVIDUO (HASTA 3 FOTOS) *</label>
+              
+              {fotosRegistro.length < 3 && (
+                <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', border: '2px dashed #1B3D2F', borderRadius: '10px', padding: '1rem', cursor: 'pointer', backgroundColor: '#0A1410', marginBottom: '0.6rem' }}>
+                  <span style={{ fontSize: '2rem' }}>📷</span>
+                  <span style={{ fontSize: '0.8rem', color: '#00FF88', fontWeight: 'bold' }}>Agregar Foto ({fotosRegistro.length}/3)</span>
+                  <input type="file" accept="image/*" multiple onChange={handleFotosUpload} style={{ display: 'none' }} />
+                </label>
               )}
+
+              <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
+                {fotosRegistro.map((urlFoto, idx) => (
+                  <div key={idx} style={{ position: 'relative', width: '90px', height: '90px', borderRadius: '8px', overflow: 'hidden', border: '1px solid #00FF88' }}>
+                    <img src={urlFoto} alt={`Previa ${idx+1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <button type="button" onClick={() => eliminarFotoRegistro(idx)} style={{ position: 'absolute', top: '2px', right: '2px', backgroundColor: 'rgba(211,47,47,0.9)', color: '#FFF', border: 'none', borderRadius: '50%', width: '22px', height: '22px', fontSize: '0.7rem', fontWeight: 'bold', cursor: 'pointer' }}>✕</button>
+                  </div>
+                ))}
+              </div>
             </div>
 
             {/* PASO 6 */}
@@ -1662,9 +1694,9 @@ export default function App() {
               </div>
             </div>
 
-            {/* PASO 7: MICROHÁBITAT, ESTADO, ETAPA (CON PUESTA/HUEVOS), TEMPERATURA Y ALTITUD AUTOMÁTICAS */}
+            {/* PASO 7: HORA EXACTA O HORA APROXIMADA (SI ESTÁ OFFLINE) */}
             <div style={{ marginBottom: '1.2rem' }}>
-              <label style={{ display: 'block', fontSize: '0.8rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.5rem' }}>7. MICROHÁBITAT Y ESTADO BIOLÓGICO</label>
+              <label style={{ display: 'block', fontSize: '0.8rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.5rem' }}>7. MICROHÁBITAT, TEMPERATURA Y HORA DEL AVISTAMIENTO</label>
               
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '0.5rem' }}>
                 <div>
@@ -1696,6 +1728,19 @@ export default function App() {
                 </div>
               </div>
 
+              <div style={{ marginBottom: '0.5rem' }}>
+                <label style={{ display: 'block', fontSize: '0.7rem', color: '#FFB300', fontWeight: 'bold', marginBottom: '0.2rem' }}>
+                  🕒 {estadoConexion === 'offline' ? 'HORA APROXIMADA DEL AVISTAMIENTO (Modo Sin Conexión):' : 'HORA EXACTA DE SUBIDA:'}
+                </label>
+                <input 
+                  type="text" 
+                  value={horaAproximada} 
+                  onChange={(e) => setHoraAproximada(e.target.value)} 
+                  placeholder="Ej. 15:30 hrs o Mañana" 
+                  style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #FFB300', borderRadius: '8px', fontSize: '0.8rem' }} 
+                />
+              </div>
+
               <div>
                 <label style={{ display: 'block', fontSize: '0.65rem', color: '#8AA398', marginBottom: '0.2rem' }}>MICROHÁBITAT:</label>
                 <select value={microhabitat} onChange={(e) => setMicrohabitat(e.target.value)} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.8rem' }}>
@@ -1721,6 +1766,9 @@ export default function App() {
                     ? `${usuario.email} | 🔒 [Celular Privado]` 
                     : (usuario.isLoggedIn ? `${usuario.email} | ${usuario.codigoPais || '+506'} ${usuario.telefono}` : 'Sin contacto');
 
+                  const fechaHoraSubida = new Date().toLocaleString();
+                  const horaFinalReporte = estadoConexion === 'offline' ? `Aprox. ${horaAproximada} (${fechaHoraSubida})` : `${fechaHoraSubida} (Exacta)`;
+
                   const nuevo = {
                     id: Date.now(),
                     especie: desconocido ? 'Especie por identificar' : nombreCientifico,
@@ -1733,19 +1781,21 @@ export default function App() {
                     contacto: textoContacto,
                     temp: `${temp} °C`,
                     altitud: `${altitud} msnm`,
+                    horaRegistro: horaFinalReporte,
                     microhabitat: microhabitat,
                     estadoVida: `${estadoOrganismo} (${etapa})`,
                     tieneAudio: !!audioURL,
-                    img: fotoPreview,
+                    fotos: fotosRegistro,
+                    img: fotosRegistro[0],
                     coords: [parseFloat(lat), parseFloat(lng)]
                   };
 
                   if (estadoConexion === 'offline') {
                     setPendientesOffline([...pendientesOffline, nuevo]);
-                    alert('💾 ¡Guardado en el Teléfono (Modo Offline)! Cuando tengas señal de nuevo, podrás sincronizarlo con un toque.');
+                    alert(`💾 ¡Guardado en el Teléfono (Modo Offline) con hora aproximada: ${horaAproximada}!`);
                   } else {
                     setRegistros([nuevo, ...registros]);
-                    alert('✔ Reporte enviado para revisión de expertos. Ya está visible en la pestaña de Moderación.');
+                    alert(`✔ Reporte enviado con hora exacta (${fechaHoraSubida}) para revisión de expertos.`);
                   }
 
                   setModalRegistro(false);
