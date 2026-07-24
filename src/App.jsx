@@ -119,7 +119,7 @@ export default function App() {
   const [filtroEstadoUsuario, setFiltroEstadoUsuario] = useState('todos');
   const [estadoConexion, setEstadoConexion] = useState('online');
 
-  // === PERSISTENCIA LOCAL (A prueba de fallos y refrescos) ===
+  // === PERSISTENCIA LOCAL ===
   const [usuario, setUsuario] = useState(() => {
     try {
       const sesionGuardada = localStorage.getItem('herpid_usuario_sesion');
@@ -197,7 +197,9 @@ export default function App() {
   const codigosPaises = [
     { code: '+506', label: '🇨🇷 Costa Rica (+506)' },
     { code: '+1', label: '🇺🇸/🇨🇦 Estados Unidos / Canadá (+1)' },
-    { code: '+52', label: '🇲🇽 México (+52)' }
+    { code: '+52', label: '🇲🇽 México (+52)' },
+    { code: '+507', label: '🇵🇦 Panamá (+507)' },
+    { code: '+57', label: '🇨🇴 Colombia (+57)' }
   ];
 
   // === ROLES PRIVILEGIADOS ===
@@ -259,9 +261,8 @@ export default function App() {
     setChatMensajes(prev => [...prev, nuevoMsj]);
     setNuevoMensaje('');
     
-    // Simulador de notificaciones cruzadas
+    // Alertas cruzadas
     if (!esExpertoOAdmin) {
-      // Un usuario regular pide ayuda: Disparamos alerta para Admins
       lanzarAlerta(`💬 NUEVO MENSAJE de un usuario buscando identificación rápida.`, 'alerta');
       setTimeout(() => {
         setChatMensajes(prev => [...prev, { id: Date.now() + 1, texto: 'Mensaje automático: Tu consulta ha sido recibida. Un experto se conectará pronto.', emisor: 'sistema' }]);
@@ -269,7 +270,7 @@ export default function App() {
     }
   };
 
-  // Formulario 7 Pasos Avistamiento
+  // === ESTADOS DEL FORMULARIO 7 PASOS ===
   const [tipoFauna, setTipoFauna] = useState('Anfibio');
   const [silueta, setSilueta] = useState('Rana Arborícola');
   const [desconocido, setDesconocido] = useState(true);
@@ -288,6 +289,14 @@ export default function App() {
   const [notas, setNotas] = useState('');
   const [fotosRegistro, setFotosRegistro] = useState([]); 
   
+  // Audio Variables
+  const [grabandoAudio, setGrabandoAudio] = useState(false);
+  const [tiempoGrabacion, setTiempoGrabacion] = useState(0);
+  const [audioURL, setAudioURL] = useState(null);
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
+  const timerIntervalRef = useRef(null);
+
   // Instalación PWA
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   useEffect(() => {
@@ -299,9 +308,9 @@ export default function App() {
     else { setModalInstalar(true); }
   };
 
-  // FUNCIONES DE UTILIDAD
+  // === FUNCIONES DE UTILIDAD (Formulario, GPS, Cámara, Audio) ===
   const abrirModalRegistro = () => {
-    setTipoFauna('Anfibio'); setSilueta('Rana Arborícola'); setDesconocido(true); setNombreCientifico(''); setNombreComun(''); setComunidad(''); setEstadoOrganismo('Vivo / Activo'); setEtapa('Adulto'); setMicrohabitat('Vegetación / Finca Cafetalera'); setNotas(''); setFotosRegistro([]); setHoraAproximada(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' hrs');
+    setTipoFauna('Anfibio'); setSilueta('Rana Arborícola'); setDesconocido(true); setNombreCientifico(''); setNombreComun(''); setComunidad(''); setEstadoOrganismo('Vivo / Activo'); setEtapa('Adulto'); setMicrohabitat('Vegetación / Finca Cafetalera'); setNotas(''); setFotosRegistro([]); setAudioURL(null); setHoraAproximada(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' hrs');
     setModalRegistro(true);
   };
 
@@ -329,6 +338,34 @@ export default function App() {
 
   const eliminarFotoRegistro = (index) => setFotosRegistro(fotosRegistro.filter((_, i) => i !== index));
 
+  const iniciarGrabacion = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorderRef.current = new MediaRecorder(stream);
+      audioChunksRef.current = [];
+      mediaRecorderRef.current.ondataavailable = (event) => { if (event.data.size > 0) audioChunksRef.current.push(event.data); };
+      mediaRecorderRef.current.onstop = () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/mp3' });
+        setAudioURL(URL.createObjectURL(audioBlob));
+      };
+      mediaRecorderRef.current.start();
+      setGrabandoAudio(true);
+      setTiempoGrabacion(0);
+      timerIntervalRef.current = setInterval(() => {
+        setTiempoGrabacion((prev) => { if (prev >= 30) { detenerGrabacion(); return 30; } return prev + 1; });
+      }, 1000);
+    } catch (err) { alert('Permiso de micrófono no disponible.'); }
+  };
+
+  const detenerGrabacion = () => {
+    if (mediaRecorderRef.current && grabandoAudio) {
+      mediaRecorderRef.current.stop();
+      mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+      setGrabandoAudio(false);
+      clearInterval(timerIntervalRef.current);
+    }
+  };
+
   const obtenerGPS = () => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -340,6 +377,8 @@ export default function App() {
           setTemp(tempEstimada); setAltitud(altEstimada.toString());
         }, (err) => alert('Error GPS: ' + err.message)
       );
+    } else {
+      alert('Geolocalización no soportada en este dispositivo.');
     }
   };
 
@@ -361,7 +400,7 @@ export default function App() {
     setRegistros([...pendientesOffline, ...registros]); setPendientesOffline([]); alert('¡Sincronización exitosa!'); setModalSincronizar(false);
   };
 
-  // === MOTOR DE LA GUÍA DINÁMICA (Agrupación de Validados) ===
+  // === MOTOR DE LA GUÍA DINÁMICA ===
   const generarGuiaDinamica = () => {
     const validados = registros.filter(r => r.estado === 'VALIDADO');
     const agrupados = validados.reduce((acc, curr) => {
@@ -381,10 +420,7 @@ export default function App() {
 
   // === MOTOR DEL MAPA Y GALERÍA CON PROTECCIÓN DE PRIVACIDAD ===
   const registrosFiltradosMapa = registros.filter((r) => {
-    // Si NO eres admin, el mapa de ubicaciones exactas no muestra NINGÚN pin para evitar tráfico.
     if (!esExpertoOAdmin) return false;
-    
-    // Si eres Admin, puedes ver todos (o filtrar)
     const coincideBusqueda = r.nombreComun.toLowerCase().includes(busquedaGaleria.toLowerCase()) || r.especie.toLowerCase().includes(busquedaGaleria.toLowerCase());
     if (filtroEspecie === 'anfibios') return r.categoria === 'ANFIBIO' && coincideBusqueda;
     if (filtroEspecie === 'reptiles') return r.categoria === 'REPTIL' && coincideBusqueda;
@@ -519,7 +555,6 @@ export default function App() {
                 </>
               )}
 
-              {/* LOS PINES SOLO SE RENDERIZAN SI ERES ADMIN */}
               {registrosFiltradosMapa.map((reg) => (
                 <Marker key={reg.id} position={reg.coords} icon={crearIconoPersonalizado(reg.silueta, reg.estado)} eventHandlers={{ click: () => setRegistroSeleccionado(reg) }}>
                   <Popup>
@@ -573,7 +608,6 @@ export default function App() {
                 <div style={{ padding: '0.9rem' }}>
                   <span style={{ fontSize: '0.75rem', color: '#00FF88', fontWeight: 'bold' }}>🐸 {reg.categoria} • {reg.silueta}</span>
                   <h3 style={{ margin: '0.3rem 0', fontSize: '1rem', color: '#FFF' }}>{reg.nombreComun}</h3>
-                  {/* AQUÍ SE OCULTA INFORMACIÓN DETALLADA A USUARIOS REGULARES */}
                   <p style={{ margin: '0.2rem 0', fontSize: '0.8rem', color: '#8AA398' }}>📍 {esExpertoOAdmin ? reg.ubicacion : reg.ubicacion.split(',')[0]} • 🕒 {reg.horaRegistro.split(',')[0]}</p>
                 </div>
               </div>
@@ -606,7 +640,6 @@ export default function App() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
               {especiesGuiaDinamica.map((sp, idx) => (
                 <div key={idx} onClick={() => {
-                  // Al hacer clic, buscaremos el registro original para abrir la ficha de moderación
                   const originalRecord = registros.find(r => r.id === sp.id);
                   if (originalRecord) setRegistroSeleccionado(originalRecord);
                 }} style={{ backgroundColor: '#0F1A16', borderRadius: '12px', overflow: 'hidden', border: '1px solid #1B2E27', display: 'flex', flexDirection: 'column', cursor: 'pointer' }}>
@@ -664,7 +697,6 @@ export default function App() {
                   <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', backgroundColor: '#050A08', padding: '0.3rem', borderRadius: '20px', border: '1px solid #122B20' }}>
                     <button onClick={() => setSubTabAdmin('consultas')} style={{ backgroundColor: subTabAdmin === 'consultas' ? '#0F2B20' : 'transparent', color: subTabAdmin === 'consultas' ? '#00FF88' : '#8AA398', border: subTabAdmin === 'consultas' ? '1px solid #00FF88' : 'none', borderRadius: '15px', padding: '0.3rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>💬 Consultas 1 a 1</button>
                     {esExpertoOAdmin && <button onClick={() => setSubTabAdmin('metricas')} style={{ backgroundColor: subTabAdmin === 'metricas' ? '#0F2B20' : 'transparent', color: subTabAdmin === 'metricas' ? '#00FF88' : '#8AA398', border: subTabAdmin === 'metricas' ? '1px solid #00FF88' : 'none', borderRadius: '15px', padding: '0.3rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>📊 Métricas</button>}
-                    {/* BOTON DE USUARIOS ESTRICTAMENTE GUARDADO POR esAdminAbsoluto */}
                     {esAdminAbsoluto && <button onClick={() => setSubTabAdmin('usuarios')} style={{ backgroundColor: subTabAdmin === 'usuarios' ? '#0F2B20' : 'transparent', color: subTabAdmin === 'usuarios' ? '#00FF88' : '#8AA398', border: subTabAdmin === 'usuarios' ? '1px solid #00FF88' : 'none', borderRadius: '15px', padding: '0.3rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>👥 Usuarios (Mantenimiento)</button>}
                     {esExpertoOAdmin && <button onClick={() => setSubTabAdmin('solicitudes')} style={{ backgroundColor: subTabAdmin === 'solicitudes' ? '#0F2B20' : 'transparent', color: subTabAdmin === 'solicitudes' ? '#00FF88' : '#8AA398', border: subTabAdmin === 'solicitudes' ? '1px solid #00FF88' : 'none', borderRadius: '15px', padding: '0.3rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>🎓 Solicitudes Expertos</button>}
                     {esExpertoOAdmin && <button onClick={() => setSubTabAdmin('moderacion')} style={{ backgroundColor: subTabAdmin === 'moderacion' ? '#0F2B20' : 'transparent', color: subTabAdmin === 'moderacion' ? '#00FF88' : '#8AA398', border: subTabAdmin === 'moderacion' ? '1px solid #00FF88' : 'none', borderRadius: '15px', padding: '0.3rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>📋 Moderación</button>}
@@ -1055,6 +1087,16 @@ export default function App() {
                   <input type="email" value={usuario.email} onChange={(e) => setUsuario({ ...usuario, email: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }} />
                 </div>
 
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.3rem' }}>CÓDIGO DE PAÍS Y CELULAR *</label>
+                  <div style={{ display: 'grid', gridTemplateColumns: '130px 1fr', gap: '0.5rem' }}>
+                    <select value={usuario.codigoPais || '+506'} onChange={(e) => setUsuario({ ...usuario, codigoPais: e.target.value })} style={{ padding: '0.6rem', backgroundColor: '#050A08', color: '#00FF88', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 'bold' }}>
+                      {codigosPaises.map(cp => <option key={cp.code} value={cp.code}>{cp.code} ({cp.label.split(' ')[0]})</option>)}
+                    </select>
+                    <input type="text" value={usuario.telefono} onChange={(e) => setUsuario({ ...usuario, telefono: e.target.value })} placeholder="8888-0000" style={{ padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }} />
+                  </div>
+                </div>
+
                 {esExpertoOAdmin && (
                   <div style={{ backgroundColor: '#0D1E18', border: '1px solid #1B3D2F', padding: '0.8rem', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }} onClick={() => setUsuario({ ...usuario, mostrarTelefono: !usuario.mostrarTelefono })}>
                     <div>
@@ -1065,10 +1107,22 @@ export default function App() {
                   </div>
                 )}
 
+                <div style={{ backgroundColor: '#0A1E16', border: '1px solid #00FF88', padding: '0.8rem', borderRadius: '10px' }}>
+                  <label style={{ display: 'block', fontSize: '0.75rem', color: '#00FF88', fontWeight: 'bold', marginBottom: '0.4rem' }}>
+                    📡 ESTADO DE COBERTURA Y DISPONIBILIDAD
+                  </label>
+                  <select value={estadoConexion} onChange={(e) => setEstadoConexion(e.target.value)} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }}>
+                    <option value="online">🟢 En línea (Disponible para consultas)</option>
+                    <option value="busy">🟠 Ocupado en campo (Sin respuesta inmediata)</option>
+                    <option value="offline">🔴 Fuera de cobertura (Modo Offline activo)</option>
+                  </select>
+                </div>
+
                 <button onClick={() => { setModalPerfil(false); alert('¡Perfil actualizado con éxito!'); }} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#00E676', color: '#000', fontWeight: 'bold', border: 'none', borderRadius: '10px', cursor: 'pointer' }}>Guardar Cambios en Perfil</button>
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.5rem' }}>
                   <button onClick={() => { setUsuario({ isLoggedIn: false, id: null, nombre: '', email: '', codigoPais: '+506', telefono: '', comunidad: '', rol: 'Usuario Regular', mostrarTelefono: false }); localStorage.removeItem('herpid_usuario_sesion'); setVistaPerfil('login'); }} style={{ backgroundColor: 'transparent', border: 'none', color: '#FF5252', fontSize: '0.75rem', cursor: 'pointer', textDecoration: 'underline' }}>🔴 Cerrar Sesión</button>
+                  <button onClick={() => setVistaPerfil('login')} style={{ backgroundColor: 'transparent', border: 'none', color: '#00FF88', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>Cambiar de Cuenta</button>
                 </div>
               </div>
             )}
@@ -1208,8 +1262,8 @@ export default function App() {
                         isLoggedIn: true, id: cuentaVerificadaFinal.id, nombre: cuentaVerificadaFinal.nombre, email: cuentaVerificadaFinal.email, codigoPais: cuentaVerificadaFinal.codigoPais, telefono: cuentaVerificadaFinal.tel, comunidad: cuentaVerificadaFinal.comunidad, rol: 'Usuario Regular', mostrarTelefono: true
                       });
                       
-                      // Simular alerta de red para Administradores 
-                      lanzarAlerta(`¡Un nuevo usuario (${cuentaVerificadaFinal.nombre}) se acaba de registrar en HerpID!`, 'info');
+                      // Alerta para Admins cuando alguien nuevo entra
+                      lanzarAlerta(`¡Un nuevo usuario (${cuentaVerificadaFinal.nombre}) se ha registrado en la plataforma!`, 'info');
 
                       setMensajeAuthOk('✅ ¡Identidad Verificada!');
                       setTimeout(() => { setMensajeAuthOk(''); setVistaPerfil('perfil'); setModalPerfil(false); }, 2000);
@@ -1270,7 +1324,7 @@ export default function App() {
         </div>
       )}
 
-      {/* 📌 MODAL REGISTRAR AVISTAMIENTO (+) */}
+      {/* 📌 MODAL REGISTRAR AVISTAMIENTO (+) COMPLETO DE 7 PASOS */}
       {modalRegistro && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999, padding: '1rem' }}>
           <div style={{ backgroundColor: '#09130F', borderRadius: '16px', border: '1px solid #1B3D2F', width: '100%', maxWidth: '580px', padding: '1.2rem', maxHeight: '92vh', overflowY: 'auto' }}>
@@ -1376,9 +1430,32 @@ export default function App() {
               </div>
             </div>
 
-            {/* PASO 7 (Omitido Paso 6 en vista corta por limpieza) */}
+            {/* PASO 6: AUDIO (RESTAURADO AL 100%) */}
             <div style={{ marginBottom: '1.2rem' }}>
-              <label style={{ display: 'block', fontSize: '0.8rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.5rem' }}>6. DATOS DE ECOLOGÍA</label>
+              <label style={{ display: 'block', fontSize: '0.8rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.5rem' }}>6. GRABACIÓN DEL CANTO / VOCALIZACIÓN (OPCIONAL)</label>
+              <div style={{ backgroundColor: '#0D1E18', border: '1px border-dashed #1B3D2F', borderRadius: '10px', padding: '0.8rem' }}>
+                {!grabandoAudio ? (
+                  <button type="button" onClick={iniciarGrabacion} style={{ width: '100%', padding: '0.7rem', backgroundColor: '#E53935', color: '#FFF', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+                    🎙️ Grabar Canto (Nota de Voz 15-30s)
+                  </button>
+                ) : (
+                  <button type="button" onClick={detenerGrabacion} style={{ width: '100%', padding: '0.7rem', backgroundColor: '#FFB300', color: '#000', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+                    ⏹️ Detener Grabación ({tiempoGrabacion}s / 30s)
+                  </button>
+                )}
+
+                {audioURL && (
+                  <div style={{ marginTop: '0.8rem' }}>
+                    <span style={{ fontSize: '0.75rem', color: '#00FF88', fontWeight: 'bold', display: 'block', marginBottom: '0.3rem' }}>✅ Canto grabado con éxito:</span>
+                    <audio controls src={audioURL} style={{ width: '100%', height: '35px' }} />
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* PASO 7 */}
+            <div style={{ marginBottom: '1.2rem' }}>
+              <label style={{ display: 'block', fontSize: '0.8rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.5rem' }}>7. DATOS DE ECOLOGÍA</label>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '0.5rem' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.7rem', color: '#00FF88', fontWeight: 'bold', marginBottom: '0.2rem' }}>🌡️ TEMPERATURA (°C):</label>
