@@ -82,10 +82,15 @@ export default function App() {
   const [modalGuiaEdit, setModalGuiaEdit] = useState(false);
   const [registroSeleccionado, setRegistroSeleccionado] = useState(null);
 
-  // Vistas de Autenticación ('perfil', 'login', 'registro', 'recuperar')
+  // Vistas de Autenticación ('perfil', 'login', 'registro', 'verificar', 'recuperar')
   const [vistaPerfil, setVistaPerfil] = useState('login');
   const [metodoRecuperacion, setMetodoRecuperacion] = useState('correo');
   const [mensajeAuthOk, setMensajeAuthOk] = useState('');
+
+  // Lógica Verificación OTP de Correo / Celular
+  const [codigoOtpGenerado, setCodigoOtpGenerado] = useState('');
+  const [codigoOtpIngresado, setCodigoOtpIngresado] = useState('');
+  const [usuarioTemporalVerificacion, setUsuarioTemporalVerificacion] = useState(null);
 
   // Filtros
   const [mapLayer, setMapLayer] = useState('callejero');
@@ -144,11 +149,11 @@ export default function App() {
     }
   };
 
-  // Base de Cuentas Registradas con Fecha de Ingreso y Opción de Visibilidad de Teléfono
+  // Base de Cuentas Registradas con estado de Verificación
   const [cuentasRegistradas, setCuentasRegistradas] = useState([
-    { id: 1, nombre: 'Jorge Carvajal', email: 'jorge.carvajal@docente.edu', tel: '+506 8888-9999', comunidad: 'Tarrazú (San Marcos, San Lorenzo, Carlos)', rol: 'Administrador Experto (Máximo Rango)', pass: 'admin123', estadoConexion: 'online', fechaIngreso: '2026-03-01 08:30:00', mostrarTelefono: false, estatusCuenta: 'activo' },
-    { id: 2, nombre: 'Dra. Sofía Herpetóloga', email: 'sofia.herpeto@ucr.ac.cr', tel: '+506 8765-4321', comunidad: 'Dota (Santa María, Copey, Jardín)', rol: 'Experto Herpetólogo', pass: 'sofia123', estadoConexion: 'online', fechaIngreso: '2026-04-12 14:15:00', mostrarTelefono: false, estatusCuenta: 'activo' },
-    { id: 3, nombre: 'Carlos Picado', email: 'cpicado@comunidad.cr', tel: '+506 8555-1234', comunidad: 'León Cortés (San Pablo, San Rafael)', rol: 'Usuario Regular', pass: 'carlos123', estadoConexion: 'offline', fechaIngreso: '2026-05-20 11:45:00', mostrarTelefono: true, estatusCuenta: 'activo' }
+    { id: 1, nombre: 'Jorge Carvajal', email: 'jorge.carvajal@docente.edu', tel: '+506 8888-9999', comunidad: 'Tarrazú (San Marcos, San Lorenzo, Carlos)', rol: 'Administrador Experto (Máximo Rango)', pass: 'admin123', estadoConexion: 'online', fechaIngreso: '2026-03-01 08:30:00', mostrarTelefono: false, estatusCuenta: 'activo', cuentaVerificada: true },
+    { id: 2, nombre: 'Dra. Sofía Herpetóloga', email: 'sofia.herpeto@ucr.ac.cr', tel: '+506 8765-4321', comunidad: 'Dota (Santa María, Copey, Jardín)', rol: 'Experto Herpetólogo', pass: 'sofia123', estadoConexion: 'online', fechaIngreso: '2026-04-12 14:15:00', mostrarTelefono: false, estatusCuenta: 'activo', cuentaVerificada: true },
+    { id: 3, nombre: 'Carlos Picado', email: 'cpicado@comunidad.cr', tel: '+506 8555-1234', comunidad: 'León Cortés (San Pablo, San Rafael)', rol: 'Usuario Regular', pass: 'carlos123', estadoConexion: 'offline', fechaIngreso: '2026-05-20 11:45:00', mostrarTelefono: true, estatusCuenta: 'activo', cuentaVerificada: true }
   ]);
 
   // ROLES Y NIVELES DE PERMISOS
@@ -170,7 +175,7 @@ export default function App() {
 
   // Forms de Autenticación
   const [formLogin, setFormLogin] = useState({ emailOrTel: '', pass: '' });
-  const [formReg, setFormReg] = useState({ nombre: '', email: '', telefono: '', comunidad: 'Tarrazú (San Marcos, San Lorenzo, Carlos)', pass: '', confirmPass: '', solicitaExperto: false });
+  const [formReg, setFormReg] = useState({ nombre: '', email: '', telefono: '', comunidad: 'Tarrazú (San Marcos, San Lorenzo, Carlos)', pass: '', confirmPass: '', solicitaExperto: false, medioVerificacion: 'correo' });
   const [formRecuperar, setFormRecuperar] = useState({ contacto: '' });
 
   // Solicitudes pendientes de biólogos
@@ -435,7 +440,7 @@ export default function App() {
     return coincideBusqueda;
   });
 
-  // Ordenamiento cronológico de usuarios por fecha y hora de ingreso (más reciente primero)
+  // Ordenamiento cronológico de usuarios
   const usuariosOrdenadosYFiltrados = cuentasRegistradas
     .filter(u => filtroEstadoUsuario === 'todos' || u.estadoConexion === filtroEstadoUsuario)
     .sort((a, b) => new Date(b.fechaIngreso) - new Date(a.fechaIngreso));
@@ -675,7 +680,7 @@ export default function App() {
                       <button onClick={() => setSubTabAdmin('metricas')} style={{ backgroundColor: subTabAdmin === 'metricas' ? '#0F2B20' : 'transparent', color: subTabAdmin === 'metricas' ? '#00FF88' : '#8AA398', border: subTabAdmin === 'metricas' ? '1px solid #00FF88' : 'none', borderRadius: '15px', padding: '0.3rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>📊 Métricas</button>
                     )}
 
-                    {/* NUEVA PESTAÑA USUARIOS: EXCLUSIVA PARA ADMINS CON ORDEN CRONOLÓGICO Y FILTRO */}
+                    {/* PESTAÑA USUARIOS EXCLUSIVA PARA ADMIN */}
                     {esAdminAbsoluto && (
                       <button onClick={() => setSubTabAdmin('usuarios')} style={{ backgroundColor: subTabAdmin === 'usuarios' ? '#0F2B20' : 'transparent', color: subTabAdmin === 'usuarios' ? '#00FF88' : '#8AA398', border: subTabAdmin === 'usuarios' ? '1px solid #00FF88' : 'none', borderRadius: '15px', padding: '0.3rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>👥 USUARIOS ({cuentasRegistradas.length})</button>
                     )}
@@ -742,11 +747,11 @@ export default function App() {
                   </div>
                 )}
 
-                {/* 👥 PESTAÑA USUARIOS (EXCLUSIVO ADMIN: ORDEN CRONOLÓGICO, DESPLEGABLE DE ESTADO Y CONTROLES BAN/EXPULSAR) */}
+                {/* 👥 PESTAÑA USUARIOS (EXCLUSIVO ADMIN: ESTADO DE VERIFICACIÓN, BAN, EXPULSAR) */}
                 {subTabAdmin === 'usuarios' && esAdminAbsoluto && (
                   <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.8rem' }}>
-                      <h4 style={{ margin: 0, color: '#FFF', fontSize: '0.95rem' }}>👥 Gestión de Usuarios Aceptados y Control de Acceso</h4>
+                      <h4 style={{ margin: 0, color: '#FFF', fontSize: '0.95rem' }}>👥 Gestión de Usuarios Verificados y Control de Acceso</h4>
                       
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         <label style={{ fontSize: '0.75rem', color: '#00FF88', fontWeight: 'bold' }}>🔍 Filtrar por Estado:</label>
@@ -769,7 +774,7 @@ export default function App() {
                           <tr style={{ borderBottom: '1px solid #162B23', color: '#00FF88' }}>
                             <th style={{ padding: '0.6rem' }}>ESTADO</th>
                             <th style={{ padding: '0.6rem' }}>FECHA Y HORA INGRESO</th>
-                            <th style={{ padding: '0.6rem' }}>NOMBRE</th>
+                            <th style={{ padding: '0.6rem' }}>NOMBRE / VERIFICACIÓN</th>
                             <th style={{ padding: '0.6rem' }}>CONTACTO</th>
                             <th style={{ padding: '0.6rem' }}>COMUNIDAD</th>
                             <th style={{ padding: '0.6rem' }}>ROL ASIGNADO</th>
@@ -789,7 +794,12 @@ export default function App() {
                                 <td style={{ padding: '0.6rem', color: '#8AA398', fontSize: '0.75rem' }}>
                                   📅 {u.fechaIngreso || '2026-03-01 08:00'}
                                 </td>
-                                <td style={{ padding: '0.6rem', fontWeight: 'bold', color: '#FFF' }}>{u.nombre}</td>
+                                <td style={{ padding: '0.6rem', fontWeight: 'bold', color: '#FFF' }}>
+                                  {u.nombre}<br />
+                                  <span style={{ fontSize: '0.65rem', color: u.cuentaVerificada ? '#00FF88' : '#FFB300' }}>
+                                    {u.cuentaVerificada ? '✅ Contacto Verificado' : '⏳ Pendiente de Verificación'}
+                                  </span>
+                                </td>
                                 <td style={{ padding: '0.6rem', color: '#8AA398' }}>
                                   📧 {u.email}<br />
                                   <span style={{ fontSize: '0.7rem', color: esContactoOculto ? '#FFB300' : '#A0C2B4' }}>
@@ -871,7 +881,7 @@ export default function App() {
                                   const existe = cuentasRegistradas.some(u => u.id === s.userId);
                                   
                                   if (!existe) {
-                                    cuentasActualizadas.push({ id: s.userId || Date.now(), nombre: s.nombre, email: s.email, tel: s.tel, comunidad: 'Zona de los Santos', rol: 'Experto Herpetólogo', pass: '123456', estadoConexion: 'online', fechaIngreso: fechaHoraActual, mostrarTelefono: false, estatusCuenta: 'activo' });
+                                    cuentasActualizadas.push({ id: s.userId || Date.now(), nombre: s.nombre, email: s.email, tel: s.tel, comunidad: 'Zona de los Santos', rol: 'Experto Herpetólogo', pass: '123456', estadoConexion: 'online', fechaIngreso: fechaHoraActual, mostrarTelefono: false, estatusCuenta: 'activo', cuentaVerificada: true });
                                   }
 
                                   setCuentasRegistradas(cuentasActualizadas);
@@ -881,7 +891,7 @@ export default function App() {
                                   }
 
                                   setSolicitudesExpertos(solicitudesExpertos.filter(item => item.id !== s.id));
-                                  alert(`¡Acreditación Aprobada! ${s.nombre} ahora tiene el rango EXPERTO HERPETÓLOGO con celular privado por defecto.`);
+                                  alert(`¡Acreditación Aprobada! ${s.nombre} ahora tiene el rango EXPERTO HERPETÓLOGO.`);
                                 }} 
                                 style={{ backgroundColor: '#00E676', color: '#000', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}
                               >
@@ -1084,7 +1094,7 @@ export default function App() {
         </div>
       )}
 
-      {/* 👤 MODAL PERFIL (CON INTERRUPTOR DE VISIBILIDAD DE TELÉFONO PRIVADO) */}
+      {/* 👤 MODAL PERFIL CON SISTEMA DE AUTENTICACIÓN Y VERIFICACIÓN OTP */}
       {modalPerfil && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999, padding: '1rem' }}>
           <div style={{ backgroundColor: '#09130F', borderRadius: '16px', border: '1px solid #1B3D2F', width: '100%', maxWidth: '520px', padding: '1.2rem', maxHeight: '90vh', overflowY: 'auto' }}>
@@ -1094,7 +1104,8 @@ export default function App() {
                 {vistaPerfil === 'perfil' && '👤 Mi Perfil & Disponibilidad'}
                 {vistaPerfil === 'login' && '🔑 Iniciar Sesión en HerpID'}
                 {vistaPerfil === 'registro' && '📝 Crear Cuenta Nueva'}
-                {vistaPerfil === 'recuperar' && '📲 Recuperar Contraseña'}
+                {vistaPerfil === 'verificar' && '📲 Verificación de Seguridad'}
+                {vistaPerfil === 'recuperar' && '🔑 Recuperar Contraseña'}
               </h3>
               <button onClick={() => setModalPerfil(false)} style={{ backgroundColor: 'transparent', border: 'none', color: '#FFF', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
             </div>
@@ -1127,7 +1138,6 @@ export default function App() {
                   <input type="text" value={usuario.telefono} onChange={(e) => setUsuario({ ...usuario, telefono: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }} />
                 </div>
 
-                {/* OPCIÓN DE PRIVACIDAD DE CELULAR PARA EXPERTOS Y ADMIN */}
                 {esExpertoOAdmin && (
                   <div style={{ backgroundColor: '#0D1E18', border: '1px solid #1B3D2F', padding: '0.8rem', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }} onClick={() => setUsuario({ ...usuario, mostrarTelefono: !usuario.mostrarTelefono })}>
                     <div>
@@ -1210,7 +1220,7 @@ export default function App() {
               </div>
             )}
 
-            {/* VISTA 3: REGISTRO DE CUENTA NUEVA */}
+            {/* VISTA 3: REGISTRO DE CUENTA Y GENERACIÓN DE CÓDIGO DE VERIFICACIÓN */}
             {vistaPerfil === 'registro' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
                 <div>
@@ -1226,6 +1236,14 @@ export default function App() {
                 <div>
                   <label style={{ display: 'block', fontSize: '0.75rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.3rem' }}>NÚMERO DE CELULAR *</label>
                   <input type="text" placeholder="+506 8888-0000" value={formReg.telefono} onChange={(e) => setFormReg({ ...formReg, telefono: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }} />
+                </div>
+
+                <div style={{ backgroundColor: '#0D1E18', border: '1px solid #1B3D2F', padding: '0.8rem', borderRadius: '8px' }}>
+                  <label style={{ display: 'block', fontSize: '0.75rem', color: '#00FF88', fontWeight: 'bold', marginBottom: '0.4rem' }}>VERIFICAR IDENTIDAD MEDIANTE *</label>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                    <button type="button" onClick={() => setFormReg({ ...formReg, medioVerificacion: 'correo' })} style={{ backgroundColor: formReg.medioVerificacion === 'correo' ? '#0F2B20' : '#050A08', color: '#FFF', border: formReg.medioVerificacion === 'correo' ? '2px solid #00FF88' : '1px solid #1B3D2F', padding: '0.5rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}>✉️ Por Correo</button>
+                    <button type="button" onClick={() => setFormReg({ ...formReg, medioVerificacion: 'sms' })} style={{ backgroundColor: formReg.medioVerificacion === 'sms' ? '#0F2B20' : '#050A08', color: '#FFF', border: formReg.medioVerificacion === 'sms' ? '2px solid #00FF88' : '1px solid #1B3D2F', padding: '0.5rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}>💬 Por SMS</button>
+                  </div>
                 </div>
 
                 <div style={{ backgroundColor: '#0D1E18', border: '1px solid #1B3D2F', padding: '0.7rem', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.6rem' }} onClick={() => setFormReg({ ...formReg, solicitaExperto: !formReg.solicitaExperto })}>
@@ -1246,15 +1264,17 @@ export default function App() {
 
                 <button 
                   onClick={() => {
-                    if (!formReg.nombre || !formReg.email || !formReg.pass) {
+                    if (!formReg.nombre || !formReg.email || !formReg.telefono || !formReg.pass) {
                       alert('Por favor completa todos los campos requeridos.');
                       return;
                     }
 
+                    // Genera código de 6 dígitos
+                    const codigoGenerado = Math.floor(100000 + Math.random() * 900000).toString();
                     const newId = Date.now();
                     const fechaActual = new Date().toISOString().replace('T', ' ').substring(0, 19);
 
-                    const nuevaCuenta = {
+                    const nuevaCuentaTemp = {
                       id: newId,
                       nombre: formReg.nombre,
                       email: formReg.email,
@@ -1265,37 +1285,79 @@ export default function App() {
                       estadoConexion: 'online',
                       fechaIngreso: fechaActual,
                       mostrarTelefono: true,
-                      estatusCuenta: 'activo'
+                      estatusCuenta: 'activo',
+                      cuentaVerificada: false
                     };
 
-                    setCuentasRegistradas([...cuentasRegistradas, nuevaCuenta]);
-
-                    if (formReg.solicitaExperto) {
-                      setSolicitudesExpertos([...solicitudesExpertos, { id: Date.now(), userId: newId, nombre: formReg.nombre, email: formReg.email, tel: formReg.telefono, atencedentes: 'Solicitó rango de Experto Herpetólogo al registrarse.', fecha: 'Hoy' }]);
-                    }
-
-                    setUsuario({
-                      isLoggedIn: true,
-                      id: newId,
-                      nombre: formReg.nombre,
-                      email: formReg.email,
-                      telefono: formReg.telefono,
-                      comunidad: formReg.comunidad,
-                      rol: 'Usuario Regular',
-                      mostrarTelefono: true
-                    });
-
-                    setMensajeAuthOk(formReg.solicitaExperto ? '¡Cuenta creada! Has ingresado como Usuario Regular. Tu solicitud de Experto fue enviada a los ADMIN.' : '¡Cuenta registrada con éxito!');
-                    setTimeout(() => { setMensajeAuthOk(''); setVistaPerfil('perfil'); setModalPerfil(false); }, 2200);
+                    setCodigoOtpGenerado(codigoGenerado);
+                    setUsuarioTemporalVerificacion(nuevaCuentaTemp);
+                    setVistaPerfil('verificar');
                   }} 
                   style={{ width: '100%', padding: '0.8rem', backgroundColor: '#00E676', color: '#000', fontWeight: 'bold', border: 'none', borderRadius: '10px', cursor: 'pointer' }}
                 >
-                  Registrarme e Ingresar
+                  Enviar Código y Continuar →
                 </button>
               </div>
             )}
 
-            {/* VISTA 4: RECUPERACIÓN DE CONTRASEÑA */}
+            {/* VISTA 4: INGRESAR CÓDIGO DE VERIFICACIÓN (OTP) */}
+            {vistaPerfil === 'verificar' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem', textAlign: 'center' }}>
+                <div style={{ backgroundColor: '#0A1E16', border: '1px solid #00FF88', padding: '0.8rem', borderRadius: '10px', color: '#00FF88', fontSize: '0.8rem' }}>
+                  💬 Código de verificación enviado a <strong>{formReg.medioVerificacion === 'correo' ? formReg.email : formReg.telefono}</strong>:<br />
+                  <span style={{ fontSize: '1.4rem', fontWeight: 'bold', color: '#FFF', display: 'block', marginTop: '0.3rem', letterSpacing: '3px' }}>
+                    {codigoOtpGenerado}
+                  </span>
+                </div>
+
+                <p style={{ fontSize: '0.8rem', color: '#8AA398', margin: 0 }}>Introduce el código de 6 dígitos para validar tu contacto e ingresar:</p>
+
+                <input 
+                  type="text" 
+                  maxLength="6" 
+                  placeholder="000000" 
+                  value={codigoOtpIngresado} 
+                  onChange={(e) => setCodigoOtpIngresado(e.target.value)} 
+                  style={{ width: '100%', padding: '0.8rem', backgroundColor: '#050A08', color: '#00FF88', border: '2px solid #00FF88', borderRadius: '10px', fontSize: '1.5rem', textAlign: 'center', letterSpacing: '6px', fontWeight: 'bold' }} 
+                />
+
+                <button 
+                  onClick={() => {
+                    if (codigoOtpIngresado.trim() === codigoOtpGenerado) {
+                      const cuentaVerificadaFinal = { ...usuarioTemporalVerificacion, cuentaVerificada: true };
+                      
+                      setCuentasRegistradas([...cuentasRegistradas, cuentaVerificadaFinal]);
+
+                      if (formReg.solicitaExperto) {
+                        setSolicitudesExpertos([...solicitudesExpertos, { id: Date.now(), userId: cuentaVerificadaFinal.id, nombre: formReg.nombre, email: formReg.email, tel: formReg.telefono, atencedentes: 'Solicitó rango de Experto Herpetólogo al registrarse.', fecha: 'Hoy' }]);
+                      }
+
+                      // Inicia sesión de inmediato
+                      setUsuario({
+                        isLoggedIn: true,
+                        id: cuentaVerificadaFinal.id,
+                        nombre: cuentaVerificadaFinal.nombre,
+                        email: cuentaVerificadaFinal.email,
+                        telefono: cuentaVerificadaFinal.tel,
+                        comunidad: cuentaVerificadaFinal.comunidad,
+                        rol: 'Usuario Regular',
+                        mostrarTelefono: true
+                      });
+
+                      setMensajeAuthOk('✅ ¡Identidad Verificada con Éxito! Has ingresado como Usuario Regular.');
+                      setTimeout(() => { setMensajeAuthOk(''); setVistaPerfil('perfil'); setModalPerfil(false); }, 2000);
+                    } else {
+                      alert('El código ingresado es incorrecto. Intenta de nuevo.');
+                    }
+                  }} 
+                  style={{ width: '100%', padding: '0.8rem', backgroundColor: '#00E676', color: '#000', fontWeight: 'bold', border: 'none', borderRadius: '10px', cursor: 'pointer', fontSize: '0.9rem' }}
+                >
+                  ✔ Verificar y Activar Cuenta
+                </button>
+              </div>
+            )}
+
+            {/* VISTA 5: RECUPERACIÓN DE CONTRASEÑA */}
             {vistaPerfil === 'recuperar' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
                 <p style={{ fontSize: '0.8rem', color: '#8AA398', margin: 0 }}>Selecciona el método de recuperación para recibir las instrucciones:</p>
