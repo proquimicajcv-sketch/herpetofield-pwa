@@ -10,10 +10,14 @@ export default function App() {
   const [modalRegistro, setModalRegistro] = useState(false);
   const [modalPerfil, setModalPerfil] = useState(false);
   const [modalChat, setModalChat] = useState(false);
+  const [registroSeleccionado, setRegistroSeleccionado] = useState(null); // Modal Ficha Avistamiento
 
   // Filtros y Capas del Mapa
-  const [mapLayer, setMapLayer] = useState('callejero'); // 'callejero' o 'satelite'
-  const [filtroEspecie, setFiltroEspecie] = useState('todas'); // 'todas', 'anfibios', 'reptiles'
+  const [mapLayer, setMapLayer] = useState('callejero');
+  const [filtroEspecie, setFiltroEspecie] = useState('todas');
+
+  // URL del Logo Oficial HerpID Los Santos CR
+  const logoHerpID = "https://i.ibb.co/L9HdtwZ/Gemini-Generated-Image-7yksyd7yksyd7yks.png"; // Usamos la ilustración del logo
 
   // Perfil del Usuario
   const [usuario, setUsuario] = useState({
@@ -30,13 +34,13 @@ export default function App() {
     { id: 3, nombre: 'Carlos Picado', email: 'cpicado@comunidad.cr', tel: '+506 8555-1234', comunidad: 'San Pablo de León Cortés', rol: 'Observador' }
   ]);
 
-  // Mensajería Chat
+  // Chat
   const [chatMensajes, setChatMensajes] = useState([
     { id: 1, texto: '👋 Has iniciado una consulta privada directa. Escribe tu mensaje abajo.', emisor: 'sistema' }
   ]);
   const [nuevoMensaje, setNuevoMensaje] = useState('');
 
-  // Formulario Registro Avistamiento (Pasos 1 al 7 completos)
+  // Formulario Registro Avistamiento
   const [tipoFauna, setTipoFauna] = useState('Anfibio');
   const [silueta, setSilueta] = useState('Rana Arborícola');
   const [desconocido, setDesconocido] = useState(true);
@@ -54,6 +58,7 @@ export default function App() {
   const [notas, setNotas] = useState('');
   const [fotoPreview, setFotoPreview] = useState('https://images.unsplash.com/photo-1590005354167-6da97870c757?auto=format&fit=crop&w=600&q=80');
 
+  // GPS
   const obtenerGPS = () => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -86,11 +91,14 @@ export default function App() {
       especie: 'Especie por identificar',
       nombreComun: 'Desconocido (Por determinar por experto)',
       categoria: 'ANFIBIO',
-      estado: 'PENDING',
-      ubicacion: 'Zona de los Santos',
+      estado: 'EN REVISIÓN EXPERTA',
+      ubicacion: 'Zona de los Santos (9.650573, -84.000188)',
       reportante: 'Jorge Carvajal',
+      contacto: 'jorge.carvajal@docente.edu | +506 8888-9999',
       temp: '19.5°C',
+      humedad: '88% H.R.',
       microhabitat: 'Vegetación de Cafetal',
+      estadoVida: 'Vivo (adulto)',
       tieneAudio: true,
       img: 'https://images.unsplash.com/photo-1590005354167-6da97870c757?auto=format&fit=crop&w=600&q=80',
       coords: [9.650565, -84.000236]
@@ -100,11 +108,14 @@ export default function App() {
       especie: 'Agalychnis annae',
       nombreComun: 'Rana Verde de Palmera',
       categoria: 'ANFIBIO',
-      estado: 'VALIDATED',
+      estado: 'VALIDADO',
       ubicacion: 'San Marcos de Tarrazú',
       reportante: 'Jorge Carvajal',
+      contacto: 'jorge.carvajal@docente.edu | +506 8888-9999',
       temp: '21.0°C',
-      microhabitat: 'Jardín',
+      humedad: '80% H.R.',
+      microhabitat: 'Jardín / Cafetal',
+      estadoVida: 'Vivo (adulto)',
       tieneAudio: false,
       img: 'https://images.unsplash.com/photo-1548802673-380ab8ebc7b7?auto=format&fit=crop&w=600&q=80',
       coords: [9.6582, -84.0241]
@@ -130,7 +141,6 @@ export default function App() {
     }
   ];
 
-  // Filtrado de registros en mapa
   const registrosFiltrados = registros.filter((r) => {
     if (filtroEspecie === 'anfibios') return r.categoria === 'ANFIBIO';
     if (filtroEspecie === 'reptiles') return r.categoria === 'REPTIL';
@@ -140,10 +150,13 @@ export default function App() {
   return (
     <div style={{ backgroundColor: '#070D0B', color: '#E0E6E3', minHeight: '100vh', fontFamily: 'system-ui, sans-serif', paddingBottom: '90px' }}>
       
-      {/* 🟢 BARRA SUPERIOR */}
+      {/* 🟢 BARRA SUPERIOR CON LOGO OFICIAL DE LA RANA Y CAFÉ */}
       <header style={{ backgroundColor: '#0B1512', padding: '0.8rem 1.2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #162B23', flexWrap: 'wrap', gap: '0.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
-          <div style={{ backgroundColor: '#00E676', borderRadius: '50%', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>🐸</div>
+          {/* Logo oficial verde con granos de café */}
+          <div style={{ backgroundColor: '#0A1E16', border: '1px solid #00FF88', borderRadius: '12px', padding: '3px 8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ fontSize: '1.4rem' }}>🐸☕</span>
+          </div>
           <div>
             <h1 style={{ margin: 0, fontSize: '1.1rem', color: '#00FF88', fontWeight: 'bold' }}>HerpID Los Santos CR</h1>
             <p style={{ margin: 0, fontSize: '0.7rem', color: '#6A8A7D', letterSpacing: '0.5px' }}>IDENTIFICADOR DE HERPETOFAUNA</p>
@@ -165,13 +178,10 @@ export default function App() {
         </div>
       </header>
 
-      {/* 🗺️ MAPA INTERACTIVO CON MODOS SATÉLITE Y FILTROS */}
+      {/* 🗺️ MAPA INTERACTIVO */}
       {tab === 'mapa' && (
         <div style={{ position: 'relative' }}>
-          
-          {/* BARRA FLOTANTE SUPERIOR IZQUIERDA (FILTROS DE ESPECIES Y ESTILO DE MAPA) */}
           <div style={{ position: 'absolute', top: '15px', left: '15px', zIndex: 1000, display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {/* Filtros */}
             <div style={{ backgroundColor: 'rgba(11, 21, 18, 0.9)', backdropFilter: 'blur(8px)', border: '1px solid #162B23', borderRadius: '25px', padding: '4px', display: 'flex', gap: '4px' }}>
               <button onClick={() => setFiltroEspecie('todas')} style={{ backgroundColor: filtroEspecie === 'todas' ? '#0F2B20' : 'transparent', color: filtroEspecie === 'todas' ? '#00FF88' : '#8AA398', border: filtroEspecie === 'todas' ? '1px solid #00FF88' : 'none', padding: '6px 14px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}>
                 Todas las Especies
@@ -184,37 +194,21 @@ export default function App() {
               </button>
             </div>
 
-            {/* Selector de Modo Satélite / Calle (Estilo Google Earth) */}
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <button 
-                onClick={() => setMapLayer(mapLayer === 'callejero' ? 'satelite' : 'callejero')}
-                style={{ backgroundColor: 'rgba(11, 21, 18, 0.9)', backdropFilter: 'blur(8px)', color: '#FFF', border: '1px solid #00FF88', borderRadius: '20px', padding: '6px 14px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
-              >
-                🗺️ {mapLayer === 'callejero' ? 'Callejero Topográfico' : '🌐 Satélite (Earth)'}
-              </button>
-            </div>
+            <button onClick={() => setMapLayer(mapLayer === 'callejero' ? 'satelite' : 'callejero')} style={{ backgroundColor: 'rgba(11, 21, 18, 0.9)', backdropFilter: 'blur(8px)', color: '#FFF', border: '1px solid #00FF88', borderRadius: '20px', padding: '6px 14px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}>
+              🗺️ {mapLayer === 'callejero' ? 'Callejero Topográfico' : '🌐 Satélite (Earth)'}
+            </button>
           </div>
 
-          {/* BADGE FLOTANTE DE GPS ACTUAL */}
-          <div style={{ position: 'absolute', top: '15px', right: '15px', zIndex: 1000, backgroundColor: 'rgba(11, 21, 18, 0.9)', backdropFilter: 'blur(8px)', border: '1px solid #162B23', borderRadius: '20px', padding: '6px 12px', fontSize: '0.75rem', color: '#00FF88', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <div style={{ position: 'absolute', top: '15px', right: '15px', zIndex: 1000, backgroundColor: 'rgba(11, 21, 18, 0.9)', backdropFilter: 'blur(8px)', border: '1px solid #162B23', borderRadius: '20px', padding: '6px 12px', fontSize: '0.75rem', color: '#00FF88', fontWeight: 'bold' }}>
             🛰️ GPS: {lat}, {lng} ±182m
           </div>
 
-          {/* Map Container */}
           <div style={{ height: 'calc(100vh - 180px)', width: '100%' }}>
             <MapContainer center={[9.650565, -84.000236]} zoom={13} style={{ height: '100%', width: '100%' }}>
-              
-              {/* Alternancia entre Capa Callejera y Capa Satélite Google/Esri World Imagery */}
               {mapLayer === 'callejero' ? (
-                <TileLayer
-                  attribution='&copy; OpenStreetMap'
-                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                />
+                <TileLayer attribution='&copy; OpenStreetMap' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
               ) : (
-                <TileLayer
-                  attribution='&copy; Esri WorldImagery & Google Maps'
-                  url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-                />
+                <TileLayer attribution='&copy; Esri WorldImagery' url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}" />
               )}
 
               {registrosFiltrados.map((reg) => (
@@ -229,7 +223,6 @@ export default function App() {
             </MapContainer>
           </div>
 
-          {/* Tarjetas Inferiores del Mapa */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem', padding: '0.8rem 1rem', backgroundColor: '#0A120E', position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 1000 }}>
             <div style={{ backgroundColor: '#101C17', padding: '0.5rem', borderRadius: '8px', textAlign: 'center', border: '1px solid #1A2E26' }}>
               <div style={{ color: '#00FF88', fontSize: '1.2rem', fontWeight: 'bold' }}>1</div>
@@ -251,7 +244,7 @@ export default function App() {
         </div>
       )}
 
-      {/* 🖼️ GALERÍA */}
+      {/* 🖼️ GALERÍA TOTALMENTE ACCESIBLE E INTERACTIVA */}
       {tab === 'galeria' && (
         <div style={{ padding: '1rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
@@ -261,15 +254,22 @@ export default function App() {
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
             {registros.map((reg) => (
-              <div key={reg.id} style={{ backgroundColor: '#0F1A16', borderRadius: '12px', overflow: 'hidden', border: '1px solid #1B2E27' }}>
+              <div 
+                key={reg.id} 
+                onClick={() => setRegistroSeleccionado(reg)} // AL HACER CLIC ABRE LA FICHA COMPLETA DE MODERACIÓN
+                style={{ backgroundColor: '#0F1A16', borderRadius: '12px', overflow: 'hidden', border: '1px solid #1B2E27', cursor: 'pointer', transition: 'transform 0.2s' }}
+              >
                 <div style={{ position: 'relative', height: '180px' }}>
                   <img src={reg.img} alt={reg.especie} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  <span style={{ position: 'absolute', top: '10px', right: '10px', backgroundColor: reg.estado === 'VALIDATED' ? '#00E676' : '#FFB300', color: '#000', padding: '0.2rem 0.6rem', borderRadius: '12px', fontSize: '0.7rem', fontWeight: 'bold' }}>{reg.estado}</span>
+                  <span style={{ position: 'absolute', top: '10px', right: '10px', backgroundColor: reg.estado === 'VALIDADO' ? '#00E676' : '#FFB300', color: '#000', padding: '0.2rem 0.6rem', borderRadius: '12px', fontSize: '0.7rem', fontWeight: 'bold' }}>
+                    ⏳ {reg.estado}
+                  </span>
                 </div>
                 <div style={{ padding: '0.9rem' }}>
-                  <span style={{ fontSize: '0.75rem', color: '#00FF88', fontWeight: 'bold' }}>🐸 {reg.categoria} • {reg.especie}</span>
-                  <h3 style={{ margin: '0.3rem 0', fontSize: '1rem' }}>{reg.nombreComun}</h3>
-                  <p style={{ margin: '0.2rem 0', fontSize: '0.8rem', color: '#8AA398' }}>📍 {reg.ubicacion} 🌡️ {reg.temp}</p>
+                  <span style={{ fontSize: '0.75rem', color: '#00FF88', fontWeight: 'bold' }}>🐸 {reg.categoria} • ? POR IDENTIFICAR</span>
+                  <h3 style={{ margin: '0.3rem 0', fontSize: '1rem', color: '#FFF' }}>{reg.nombreComun}</h3>
+                  <p style={{ margin: '0.2rem 0', fontSize: '0.8rem', color: '#8AA398' }}>📍 {reg.ubicacion}</p>
+                  <p style={{ margin: '0.2rem 0', fontSize: '0.8rem', color: '#8AA398' }}>🌡️ {reg.temp} | 🍃 {reg.microhabitat}</p>
                 </div>
               </div>
             ))}
@@ -299,7 +299,7 @@ export default function App() {
         </div>
       )}
 
-      {/* 📊 PANEL DE ADMINISTRACIÓN COMPLETO */}
+      {/* 📊 PANEL DE ADMINISTRACIÓN */}
       {tab === 'admin' && (
         <div style={{ padding: '1.2rem' }}>
           <h2 style={{ fontSize: '1.2rem', color: '#FFF', display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
@@ -309,9 +309,7 @@ export default function App() {
           <div style={{ backgroundColor: '#09130F', borderRadius: '16px', border: '1px solid #1B3D2F', padding: '1.2rem' }}>
             
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #162B23', paddingBottom: '0.8rem', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-              <h3 style={{ margin: 0, color: '#00FF88', fontSize: '1.05rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                📫 Buzón de Consultas Directas & Gestión
-              </h3>
+              <h3 style={{ margin: 0, color: '#00FF88', fontSize: '1.05rem' }}>📫 Buzón de Consultas Directas & Gestión</h3>
               
               <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', backgroundColor: '#050A08', padding: '0.3rem', borderRadius: '20px', border: '1px solid #122B20' }}>
                 <button onClick={() => setSubTabAdmin('consultas')} style={{ backgroundColor: subTabAdmin === 'consultas' ? '#0F2B20' : 'transparent', color: subTabAdmin === 'consultas' ? '#00FF88' : '#8AA398', border: subTabAdmin === 'consultas' ? '1px solid #00FF88' : 'none', borderRadius: '15px', padding: '0.3rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>💬 Consultas 1 a 1</button>
@@ -322,7 +320,6 @@ export default function App() {
               </div>
             </div>
 
-            {/* 💬 SUB-PESTAÑA 1: CONSULTAS 1 A 1 */}
             {subTabAdmin === 'consultas' && (
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
@@ -333,132 +330,31 @@ export default function App() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
                   {[
                     { id: 1, usuario: 'Jorge Carvajal', msg: '"Consulta directa iniciada."', fecha: '23/7/2026, 11:48:42 p. m.' },
-                    { id: 2, usuario: 'Jorge Carvajal', msg: '"Consulta directa iniciada."', fecha: '23/7/2026, 11:15:32 p. m.' },
-                    { id: 3, usuario: 'Jorge Carvajal', msg: '"Chat de prueba"', fecha: '23/7/2026, 11:15:13 p. m.', badge: '1 NUEVOS' },
-                    { id: 4, usuario: 'Jorge Carvajal', msg: '"Chat de prueba"', fecha: '23/7/2026, 11:10:34 p. m.', badge: '4 NUEVOS' },
-                    { id: 5, usuario: 'Jorge Carvajal', msg: '"Consulta directa iniciada."', fecha: '23/7/2026, 9:08:16 p. m.' }
+                    { id: 2, usuario: 'Jorge Carvajal', msg: '"Consulta directa iniciada."', fecha: '23/7/2026, 11:15:32 p. m.' }
                   ].map((c) => (
                     <div key={c.id} style={{ backgroundColor: '#060D0A', border: '1px solid #162B23', borderRadius: '12px', padding: '0.9rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          <span style={{ width: '8px', height: '8px', backgroundColor: '#00FF88', borderRadius: '50%' }}></span>
-                          <strong style={{ color: '#FFF', fontSize: '0.9rem' }}>{c.usuario}</strong>
-                        </div>
-                        <p style={{ margin: '0.3rem 0 0.1rem 0', color: '#8AA398', fontSize: '0.8rem', fontStyle: 'italic' }}>{c.msg}</p>
-                        <span style={{ fontSize: '0.65rem', color: '#526B60' }}>{c.fecha}</span>
+                        <strong style={{ color: '#FFF', fontSize: '0.9rem' }}>{c.usuario}</strong>
+                        <p style={{ margin: '0.3rem 0', color: '#8AA398', fontSize: '0.8rem' }}>{c.msg}</p>
                       </div>
-                      <div>
-                        {c.badge ? (
-                          <span style={{ backgroundColor: '#FFB300', color: '#000', padding: '0.3rem 0.6rem', borderRadius: '12px', fontSize: '0.7rem', fontWeight: 'bold' }}>{c.badge}</span>
-                        ) : (
-                          <button onClick={() => setModalChat(true)} style={{ backgroundColor: 'transparent', border: 'none', color: '#00FF88', fontSize: '0.8rem', fontWeight: 'bold', cursor: 'pointer' }}>Abrir →</button>
-                        )}
-                      </div>
+                      <button onClick={() => setModalChat(true)} style={{ backgroundColor: 'transparent', border: 'none', color: '#00FF88', fontWeight: 'bold', cursor: 'pointer' }}>Abrir →</button>
                     </div>
                   ))}
                 </div>
               </div>
             )}
 
-            {/* 📊 SUB-PESTAÑA 2: MÉTRICAS */}
-            {subTabAdmin === 'metricas' && (
-              <div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.8rem', marginBottom: '1.5rem' }}>
-                  <div style={{ backgroundColor: '#060D0A', border: '1px solid #162B23', padding: '1rem', borderRadius: '12px', textAlign: 'center' }}>
-                    <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#FFF' }}>3</div>
-                    <div style={{ fontSize: '0.75rem', color: '#8AA398' }}>Total de Reportes</div>
-                  </div>
-                  <div style={{ backgroundColor: '#060D0A', border: '1px solid #00FF88', padding: '1rem', borderRadius: '12px', textAlign: 'center' }}>
-                    <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#00FF88' }}>1</div>
-                    <div style={{ fontSize: '0.75rem', color: '#8AA398' }}>Reportes Aprobados (33%)</div>
-                  </div>
-                  <div style={{ backgroundColor: '#060D0A', border: '1px solid #FFB300', padding: '1rem', borderRadius: '12px', textAlign: 'center' }}>
-                    <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#FFB300' }}>3</div>
-                    <div style={{ fontSize: '0.75rem', color: '#8AA398' }}>Usuarios Registrados</div>
-                  </div>
-                  <div style={{ backgroundColor: '#060D0A', border: '1px solid #D32F2F', padding: '1rem', borderRadius: '12px', textAlign: 'center' }}>
-                    <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#D32F2F' }}>0</div>
-                    <div style={{ fontSize: '0.75rem', color: '#8AA398' }}>Cuentas Suspendidas</div>
-                  </div>
-                </div>
-
-                <div style={{ backgroundColor: '#060D0A', border: '1px solid #162B23', borderRadius: '12px', padding: '1rem' }}>
-                  <h4 style={{ margin: '0 0 0.8rem 0', color: '#00FF88', fontSize: '0.9rem' }}>🏆 Top Especies Más Avistadas en Los Santos</h4>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.6rem', backgroundColor: '#0B1A14', borderRadius: '8px' }}>
-                    <span style={{ fontSize: '0.85rem', color: '#FFF', fontStyle: 'italic' }}><strong>#1</strong> Agalychnis annae</span>
-                    <span style={{ backgroundColor: '#0D261C', color: '#00FF88', padding: '0.2rem 0.6rem', borderRadius: '10px', fontSize: '0.75rem', fontWeight: 'bold' }}>1 registros</span>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* 👥 SUB-PESTAÑA 3: USUARIOS */}
-            {subTabAdmin === 'usuarios' && (
-              <div>
-                <h4 style={{ margin: '0 0 1rem 0', color: '#FFF', fontSize: '0.95rem' }}>👥 Gestión de Usuarios y Permisos</h4>
-                <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', textAlign: 'left' }}>
-                    <thead>
-                      <tr style={{ borderBottom: '1px solid #162B23', color: '#00FF88' }}>
-                        <th style={{ padding: '0.6rem' }}>USUARIO</th>
-                        <th style={{ padding: '0.6rem' }}>CONTACTO</th>
-                        <th style={{ padding: '0.6rem' }}>COMUNIDAD</th>
-                        <th style={{ padding: '0.6rem' }}>ROL ACTUAL</th>
-                        <th style={{ padding: '0.6rem' }}>ACCIÓN</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {listaUsuarios.map((u) => (
-                        <tr key={u.id} style={{ borderBottom: '1px solid #0D1A15' }}>
-                          <td style={{ padding: '0.6rem', fontWeight: 'bold', color: '#FFF' }}>{u.nombre}</td>
-                          <td style={{ padding: '0.6rem', color: '#8AA398' }}>{u.email}<br /><span style={{ fontSize: '0.7rem' }}>{u.tel}</span></td>
-                          <td style={{ padding: '0.6rem', color: '#A0C2B4' }}>{u.comunidad}</td>
-                          <td style={{ padding: '0.6rem' }}>
-                            <select value={u.rol} onChange={(e) => {
-                              setListaUsuarios(listaUsuarios.map(item => item.id === u.id ? { ...item, rol: e.target.value } : item));
-                            }} style={{ backgroundColor: '#050A08', color: '#00FF88', border: '1px solid #1B3D2F', borderRadius: '12px', padding: '0.3rem 0.5rem', fontSize: '0.75rem' }}>
-                              <option value="Admin Experto">🛡️ Admin Experto</option>
-                              <option value="Experto">🎓 Experto</option>
-                              <option value="Observador">👤 Observador</option>
-                            </select>
-                          </td>
-                          <td style={{ padding: '0.6rem' }}>
-                            <button onClick={() => alert(`Usuario ${u.nombre} suspendido.`)} style={{ backgroundColor: '#D32F2F', color: '#FFF', border: 'none', borderRadius: '12px', padding: '0.3rem 0.6rem', fontSize: '0.7rem', fontWeight: 'bold', cursor: 'pointer' }}>🚫 Ban</button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-
-            {/* 🎓 SUB-PESTAÑA 4: SOLICITUDES */}
-            {subTabAdmin === 'solicitudes' && (
-              <div>
-                <h4 style={{ margin: '0 0 1rem 0', color: '#FFB300', fontSize: '0.95rem' }}>🎓 Solicitudes de Rol Experto</h4>
-                <p style={{ color: '#8AA398', fontSize: '0.85rem' }}>No hay solicitudes pendientes.</p>
-              </div>
-            )}
-
-            {/* 📋 SUB-PESTAÑA 5: MODERACIÓN */}
             {subTabAdmin === 'moderacion' && (
               <div>
                 <h4 style={{ margin: '0 0 1rem 0', color: '#FFF', fontSize: '0.95rem' }}>📋 Moderación de Reportes</h4>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
                   {registros.map((r) => (
-                    <div key={r.id} style={{ backgroundColor: '#060D0A', border: '1px solid #162B23', borderRadius: '12px', padding: '0.9rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+                    <div key={r.id} style={{ backgroundColor: '#060D0A', border: '1px solid #162B23', borderRadius: '12px', padding: '0.9rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div>
                         <strong style={{ color: '#FFF', fontSize: '0.85rem' }}>{r.nombreComun} ({r.especie})</strong>
-                        <div style={{ fontSize: '0.75rem', color: '#8AA398', marginTop: '0.2rem' }}>
-                          📍 {r.ubicacion} | 👤 Reportó: {r.reportante} | Estado: <span style={{ color: r.estado === 'VALIDATED' ? '#00FF88' : '#FFB300', fontWeight: 'bold' }}>{r.estado}</span>
-                        </div>
+                        <div style={{ fontSize: '0.75rem', color: '#8AA398' }}>📍 {r.ubicacion} | 👤 Reportó: {r.reportante}</div>
                       </div>
-                      <div style={{ display: 'flex', gap: '0.4rem' }}>
-                        <button style={{ backgroundColor: '#0A1410', color: '#00FF88', border: '1px solid #1B3D2F', padding: '0.3rem 0.6rem', borderRadius: '8px', fontSize: '0.7rem', cursor: 'pointer' }}>✏️ Editar</button>
-                        <button style={{ backgroundColor: '#0A1410', color: '#FFB300', border: '1px solid #1B3D2F', padding: '0.3rem 0.6rem', borderRadius: '8px', fontSize: '0.7rem', cursor: 'pointer' }}>🔒 Bloquear Chat</button>
-                        <button onClick={() => setRegistros(registros.filter(item => item.id !== r.id))} style={{ backgroundColor: '#D32F2F', color: '#FFF', border: 'none', padding: '0.3rem 0.6rem', borderRadius: '8px', fontSize: '0.7rem', fontWeight: 'bold', cursor: 'pointer' }}>🗑️ Borrar</button>
-                      </div>
+                      <button onClick={() => setRegistroSeleccionado(r)} style={{ backgroundColor: '#00E676', color: '#000', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}>Ver Ficha & Moderar</button>
                     </div>
                   ))}
                 </div>
@@ -469,56 +365,115 @@ export default function App() {
         </div>
       )}
 
-      {/* 👤 MODAL PERFIL DE USUARIO & NIVEL */}
+      {/* 🔍 MODAL: FICHA DEL AVISTAMIENTO & MODERACIÓN COMPLETA (IMÁGENES 3 Y 4) */}
+      {registroSeleccionado && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.88)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999, padding: '1rem' }}>
+          <div style={{ backgroundColor: '#09130F', borderRadius: '16px', border: '1px solid #1B3D2F', width: '100%', maxWidth: '850px', maxHeight: '90vh', overflowY: 'auto', padding: '1.2rem' }}>
+            
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid #122B20', paddingBottom: '0.5rem' }}>
+              <h3 style={{ margin: 0, color: '#FFF', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                🔍 Ficha del Avistamiento & Moderación
+              </h3>
+              <button onClick={() => setRegistroSeleccionado(null)} style={{ backgroundColor: 'transparent', border: 'none', color: '#FFF', fontSize: '1.3rem', cursor: 'pointer' }}>✕</button>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.2rem' }}>
+              
+              {/* COLUMNA IZQUIERDA: IMAGEN, REPRODUCTOR DE CANTO Y DETALLES DE CAMPO */}
+              <div>
+                <div style={{ borderRadius: '12px', overflow: 'hidden', height: '220px', marginBottom: '0.8rem', border: '1px solid #1B3D2F' }}>
+                  <img src={registroSeleccionado.img} alt="Fauna" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                </div>
+
+                {/* Reproductor de Audio Canto */}
+                <div style={{ backgroundColor: '#0D1E18', border: '1px solid #1B3D2F', borderRadius: '10px', padding: '0.8rem', marginBottom: '0.8rem' }}>
+                  <label style={{ display: 'block', fontSize: '0.75rem', color: '#00FF88', fontWeight: 'bold', marginBottom: '0.4rem' }}>🎵 Grabación de Voz / Canto</label>
+                  <audio controls style={{ width: '100%', height: '35px' }}>
+                    <source src="#" type="audio/mpeg" />
+                    Tu navegador no soporta el reproductor de audio.
+                  </audio>
+                </div>
+
+                <button onClick={() => setModalChat(true)} style={{ width: '100%', padding: '0.7rem', backgroundColor: '#0A2E23', color: '#00FF88', border: '1px solid #00FF88', borderRadius: '20px', fontWeight: 'bold', fontSize: '0.8rem', cursor: 'pointer', marginBottom: '0.8rem' }}>
+                  💬 Consultar a un Experto en Privado (1 a 1)
+                </button>
+
+                {/* Acciones de Admin */}
+                <div style={{ backgroundColor: '#1C0D0D', border: '1px solid #5C1D1D', padding: '0.8rem', borderRadius: '10px' }}>
+                  <span style={{ fontSize: '0.7rem', color: '#E53935', fontWeight: 'bold', display: 'block', marginBottom: '0.4rem' }}>🛡️ ACCIONES ADMIN</span>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.4rem' }}>
+                    <button style={{ backgroundColor: '#2B1A1A', color: '#FFF', border: '1px solid #5C1D1D', borderRadius: '6px', padding: '0.4rem', fontSize: '0.7rem', cursor: 'pointer' }}>✏️ Editar</button>
+                    <button style={{ backgroundColor: '#2B1A1A', color: '#FFB300', border: '1px solid #5C1D1D', borderRadius: '6px', padding: '0.4rem', fontSize: '0.7rem', cursor: 'pointer' }}>🔒 Bloquear</button>
+                    <button onClick={() => { setRegistros(registros.filter(r => r.id !== registroSeleccionado.id)); setRegistroSeleccionado(null); }} style={{ backgroundColor: '#D32F2F', color: '#FFF', border: 'none', borderRadius: '6px', padding: '0.4rem', fontSize: '0.7rem', fontWeight: 'bold', cursor: 'pointer' }}>🗑️ Borrar</button>
+                  </div>
+                </div>
+              </div>
+
+              {/* COLUMNA DERECHA: DATOS DE CAMPO Y PANEL DE APROBACIÓN EXPERTA */}
+              <div>
+                <span style={{ fontSize: '0.75rem', color: '#00FF88', fontWeight: 'bold' }}>🐸 {registroSeleccionado.categoria} • ⏳ {registroSeleccionado.estado}</span>
+                <h2 style={{ margin: '0.2rem 0', color: '#FFF', fontSize: '1.2rem' }}>{registroSeleccionado.nombreComun}</h2>
+                <h4 style={{ margin: '0 0 0.8rem 0', color: '#00C853', fontStyle: 'italic', fontSize: '0.9rem', fontWeight: 'normal' }}>{registroSeleccionado.especie}</h4>
+
+                <div style={{ backgroundColor: '#0D1E18', border: '1px solid #1B3D2F', borderRadius: '10px', padding: '0.8rem', fontSize: '0.8rem', display: 'flex', flexDirection: 'column', gap: '0.4rem', marginBottom: '1rem' }}>
+                  <div>📍 <strong>Ubicación:</strong> {registroSeleccionado.ubicacion}</div>
+                  <div>🌡️ <strong>Temperatura / Humedad:</strong> {registroSeleccionado.temp} / {registroSeleccionado.humedad}</div>
+                  <div>🍃 <strong>Microhábitat:</strong> {registroSeleccionado.microhabitat}</div>
+                  <div>🧬 <strong>Estado:</strong> {registroSeleccionado.estadoVida}</div>
+                  <hr style={{ borderColor: '#122B20', margin: '0.3rem 0' }} />
+                  <div>👤 <strong>Reportado por:</strong> {registroSeleccionado.reportante}</div>
+                  <div>🪪 <strong>Contacto:</strong> {registroSeleccionado.contacto}</div>
+                </div>
+
+                {/* PANEL DE APROBACIÓN EXPERTA HERPID */}
+                <div style={{ backgroundColor: '#1A1807', border: '1px solid #5C4D0A', borderRadius: '12px', padding: '0.9rem' }}>
+                  <h4 style={{ margin: '0 0 0.6rem 0', color: '#FFB300', fontSize: '0.85rem' }}>🎓 PANEL DE APROBACIÓN EXPERTA HERPID</h4>
+                  
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.7rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.2rem' }}>NOMBRE CIENTÍFICO CONFIRMADO:</label>
+                      <input type="text" placeholder="Ej. Agalychnis annae" style={{ width: '100%', padding: '0.5rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '6px', fontSize: '0.8rem' }} />
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.7rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.2rem' }}>NOMBRE COMÚN CONFIRMADO:</label>
+                      <input type="text" placeholder="Especie por identificar" style={{ width: '100%', padding: '0.5rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '6px', fontSize: '0.8rem' }} />
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.7rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.2rem' }}>NOTAS DE DIAGNÓSTICO TAXONÓMICO:</label>
+                      <textarea rows="2" placeholder="Detalla los caracteres..." style={{ width: '100%', padding: '0.5rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '6px', fontSize: '0.8rem' }} />
+                    </div>
+
+                    <button 
+                      onClick={() => {
+                        alert('Especie aprobada y publicada en el catálogo.');
+                        setRegistroSeleccionado(null);
+                      }} 
+                      style={{ width: '100%', padding: '0.7rem', backgroundColor: '#00E676', color: '#000', fontWeight: 'bold', border: 'none', borderRadius: '8px', cursor: 'pointer', marginTop: '0.4rem', fontSize: '0.85rem' }}
+                    >
+                      ✔ Aprobar y Publicar en Catálogo
+                    </button>
+                  </div>
+                </div>
+
+              </div>
+
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* 👤 MODAL PERFIL */}
       {modalPerfil && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999, padding: '1rem' }}>
           <div style={{ backgroundColor: '#09130F', borderRadius: '16px', border: '1px solid #1B3D2F', width: '100%', maxWidth: '500px', padding: '1.2rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid #122B20', paddingBottom: '0.5rem' }}>
-              <h3 style={{ margin: 0, color: '#FFF', fontSize: '1.1rem' }}>👤 Perfil de Usuario & Nivel</h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h3 style={{ margin: 0, color: '#FFF' }}>👤 Perfil de Usuario</h3>
               <button onClick={() => setModalPerfil(false)} style={{ backgroundColor: 'transparent', border: 'none', color: '#FFF', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
             </div>
-
-            <div style={{ backgroundColor: '#060D0A', border: '1px solid #1B3D2F', borderRadius: '12px', padding: '0.8rem', textAlign: 'center', marginBottom: '1rem' }}>
-              <span style={{ color: '#E53935', fontWeight: 'bold', fontSize: '0.85rem' }}>🛡️ {usuario.rol.toUpperCase()}</span>
-              <div style={{ fontSize: '0.7rem', color: '#7A9A8C', marginTop: '0.2rem' }}>Comunidad HerpID Los Santos CR</div>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '0.75rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.3rem' }}>NOMBRE COMPLETO *</label>
-                <input type="text" value={usuario.nombre} onChange={(e) => setUsuario({ ...usuario, nombre: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }} />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '0.75rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.3rem' }}>CORREO ELECTRÓNICO (OBLIGATORIO) *</label>
-                <input type="email" value={usuario.email} onChange={(e) => setUsuario({ ...usuario, email: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }} />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '0.75rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.3rem' }}>NÚMERO DE CELULAR *</label>
-                <input type="text" value={usuario.telefono} onChange={(e) => setUsuario({ ...usuario, telefono: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }} />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '0.75rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.3rem' }}>COMUNIDAD EN LOS SANTOS</label>
-                <select value={usuario.comunidad} onChange={(e) => setUsuario({ ...usuario, comunidad: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }}>
-                  <option>Tarrazú (San Marcos, San Lorenzo, Carlos)</option>
-                  <option>Dota (Santa María, Copey, Jardín)</option>
-                  <option>León Cortés (San Pablo, San Rafael)</option>
-                </select>
-              </div>
-
-              <div style={{ backgroundColor: '#1A1807', border: '1px solid #5C4D0A', padding: '0.8rem', borderRadius: '10px' }}>
-                <label style={{ display: 'block', fontSize: '0.75rem', color: '#FFB300', fontWeight: 'bold', marginBottom: '0.4rem' }}>⚙️ CONMUTAR ROL DE USUARIO (PARA PRUEBAS)</label>
-                <select value={usuario.rol} onChange={(e) => setUsuario({ ...usuario, rol: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#0A1410', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }}>
-                  <option value="Observador de Campo">👤 Observador de Campo</option>
-                  <option value="Experto Herpetólogo">🎓 Experto Herpetólogo</option>
-                  <option value="Administrador Experto (Control Total)">🛡️ Administrador Experto (Control Total)</option>
-                </select>
-              </div>
-            </div>
-
-            <button onClick={() => setModalPerfil(false)} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#00E676', color: '#000', fontWeight: 'bold', border: 'none', borderRadius: '10px', marginTop: '1.2rem', cursor: 'pointer' }}>Guardar Cambios</button>
+            <button onClick={() => setModalPerfil(false)} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#00E676', color: '#000', fontWeight: 'bold', border: 'none', borderRadius: '10px', cursor: 'pointer' }}>Guardar Cambios</button>
           </div>
         </div>
       )}
@@ -527,11 +482,10 @@ export default function App() {
       {modalChat && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999, padding: '1rem' }}>
           <div style={{ backgroundColor: '#09130F', borderRadius: '16px', border: '1px solid #1B3D2F', width: '100%', maxWidth: '520px', padding: '1.2rem', display: 'flex', flexDirection: 'column', height: '80vh' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.8rem', borderBottom: '1px solid #122B20', paddingBottom: '0.5rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.8rem' }}>
               <h3 style={{ margin: 0, color: '#FFF', fontSize: '1.05rem' }}>💭 Chat Privado con: <span style={{ color: '#00FF88' }}>{usuario.nombre}</span></h3>
               <button onClick={() => setModalChat(false)} style={{ backgroundColor: 'transparent', border: 'none', color: '#FFF', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
             </div>
-
             <div style={{ flex: 1, backgroundColor: '#050A08', border: '1px solid #122B20', borderRadius: '12px', padding: '1rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.8rem', marginBottom: '0.8rem' }}>
               {chatMensajes.map((m) => (
                 <div key={m.id} style={{ alignSelf: m.emisor === 'usuario' ? 'flex-end' : 'flex-start', backgroundColor: m.emisor === 'usuario' ? '#0F2B20' : '#101C17', border: m.emisor === 'usuario' ? '1px solid #00FF88' : '1px solid #1B3D2F', padding: '0.6rem 0.9rem', borderRadius: '12px', maxWidth: '80%', color: '#FFF', fontSize: '0.85rem' }}>
@@ -539,16 +493,6 @@ export default function App() {
                 </div>
               ))}
             </div>
-
-            <div style={{ backgroundColor: '#060D0A', border: '1px solid #162B23', borderRadius: '12px', padding: '0.6rem', marginBottom: '0.8rem' }}>
-              <div style={{ fontSize: '0.65rem', color: '#FFB300', fontWeight: 'bold', marginBottom: '0.4rem', textAlign: 'center' }}>🚨 BARRA DE ALERTAS DE SEGURIDAD (EXCLUSIVO EXPERTOS)</div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.4rem' }}>
-                <button onClick={() => enviarMensajeChat('🚨 ATENCIÓN: Organismo VENENOSO (PELIGRO). No intentar manipular bajo ninguna circunstancia.')} style={{ backgroundColor: '#D32F2F', color: '#FFF', border: 'none', padding: '0.5rem 0.2rem', borderRadius: '8px', fontSize: '0.65rem', fontWeight: 'bold', cursor: 'pointer' }}>🔴 ☠️ VENENOSA</button>
-                <button onClick={() => enviarMensajeChat('⚠️ PRECAUCIÓN: NO TOCAR / NO ACERCARSE. Mantener distancia prudencial.')} style={{ backgroundColor: '#E65100', color: '#FFF', border: 'none', padding: '0.5rem 0.2rem', borderRadius: '8px', fontSize: '0.65rem', fontWeight: 'bold', cursor: 'pointer' }}>🟠 ✋ NO TOCAR</button>
-                <button onClick={() => enviarMensajeChat('🆘 SOLICITAR AYUDA: Envoi de equipo de rescate / evaluación en progreso.')} style={{ backgroundColor: '#F57F17', color: '#FFF', border: 'none', padding: '0.5rem 0.2rem', borderRadius: '8px', fontSize: '0.65rem', fontWeight: 'bold', cursor: 'pointer' }}>🟡 🆘 AYUDA</button>
-              </div>
-            </div>
-
             <div style={{ display: 'flex', gap: '0.5rem' }}>
               <input type="text" placeholder="Escribe tu consulta privada..." value={nuevoMensaje} onChange={(e) => setNuevoMensaje(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && enviarMensajeChat(nuevoMensaje)} style={{ flex: 1, padding: '0.7rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '20px', fontSize: '0.85rem' }} />
               <button onClick={() => enviarMensajeChat(nuevoMensaje)} style={{ backgroundColor: '#00E676', color: '#000', border: 'none', padding: '0.7rem 1.2rem', borderRadius: '20px', fontWeight: 'bold', cursor: 'pointer' }}>Enviar →</button>
@@ -557,81 +501,16 @@ export default function App() {
         </div>
       )}
 
-      {/* 📌 MODAL REGISTRAR AVISTAMIENTO EN CAMPO (ACTIVADO POR EL BOTÓN '+') */}
+      {/* 📌 MODAL REGISTRAR AVISTAMIENTO (+) */}
       {modalRegistro && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999, padding: '1rem' }}>
           <div style={{ backgroundColor: '#09130F', borderRadius: '16px', border: '1px solid #1B3D2F', width: '100%', maxWidth: '550px', padding: '1.2rem', maxHeight: '92vh', overflowY: 'auto' }}>
             
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid #122B20', paddingBottom: '0.5rem' }}>
-              <h3 style={{ margin: 0, color: '#FFF', fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>🐸 Registrar Avistamiento en Campo</h3>
+              <h3 style={{ margin: 0, color: '#FFF', fontSize: '1.2rem' }}>🐸 Registrar Avistamiento en Campo</h3>
               <button onClick={() => setModalRegistro(false)} style={{ backgroundColor: 'transparent', border: 'none', color: '#FFF', fontSize: '1.3rem', cursor: 'pointer' }}>✕</button>
             </div>
 
-            <div style={{ backgroundColor: '#1C1B0A', border: '1px solid #5C4D0A', color: '#EEDC82', padding: '0.8rem', borderRadius: '10px', fontSize: '0.75rem', marginBottom: '1.2rem', display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
-              <span>🛡️</span>
-              <div><strong>Protocolo de Seguridad:</strong> Mantén una distancia mínima de 1.5 a 2 metros con cualquier serpiente u organismo desconocido. No manipules fauna venenosa.</div>
-            </div>
-
-            {/* PASO 1 */}
-            <div style={{ marginBottom: '1.2rem' }}>
-              <label style={{ display: 'block', fontSize: '0.8rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.5rem' }}>1. TIPO DE FAUNA *</label>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.8rem' }}>
-                <button type="button" onClick={() => setTipoFauna('Anfibio')} style={{ backgroundColor: tipoFauna === 'Anfibio' ? '#0F2B20' : '#0A1410', border: tipoFauna === 'Anfibio' ? '2px solid #00FF88' : '1px solid #1B3D2F', borderRadius: '10px', padding: '0.8rem', color: '#FFF', display: 'flex', alignItems: 'center', gap: '0.8rem', cursor: 'pointer' }}>
-                  <span style={{ fontSize: '1.8rem' }}>🐸</span>
-                  <div style={{ textAlign: 'left' }}><div style={{ fontWeight: 'bold' }}>Anfibio</div><div style={{ fontSize: '0.65rem', color: '#7A9A8C' }}>Ranas, sapos</div></div>
-                </button>
-                <button type="button" onClick={() => setTipoFauna('Reptil')} style={{ backgroundColor: tipoFauna === 'Reptil' ? '#0F2B20' : '#0A1410', border: tipoFauna === 'Reptil' ? '2px solid #00FF88' : '1px solid #1B3D2F', borderRadius: '10px', padding: '0.8rem', color: '#FFF', display: 'flex', alignItems: 'center', gap: '0.8rem', cursor: 'pointer' }}>
-                  <span style={{ fontSize: '1.8rem' }}>🦎</span>
-                  <div style={{ textAlign: 'left' }}><div style={{ fontWeight: 'bold' }}>Reptil</div><div style={{ fontSize: '0.65rem', color: '#7A9A8C' }}>Serpientes, lagartijas</div></div>
-                </button>
-              </div>
-            </div>
-
-            {/* PASO 2 */}
-            <div style={{ marginBottom: '1.2rem' }}>
-              <label style={{ display: 'block', fontSize: '0.8rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.5rem' }}>2. SELECTOR VISUAL DE FORMA POR SILUETA *</label>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem' }}>
-                {[{ id: 'Sapo Terrestre', icon: '🐸' }, { id: 'Rana Arborícola', icon: '🍃' }, { id: 'Serpiente', icon: '🐍' }, { id: 'Lagartija', icon: '🦎' }].map((s) => (
-                  <button key={s.id} type="button" onClick={() => setSilueta(s.id)} style={{ backgroundColor: silueta === s.id ? '#0F2B20' : '#0A1410', border: silueta === s.id ? '2px solid #00FF88' : '1px solid #1B3D2F', borderRadius: '10px', padding: '0.6rem 0.3rem', color: '#FFF', display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer' }}>
-                    <span style={{ fontSize: '1.5rem' }}>{s.icon}</span>
-                    <span style={{ fontSize: '0.65rem', fontWeight: 'bold' }}>{s.id}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* PASO 3 */}
-            <div style={{ marginBottom: '1.2rem' }}>
-              <label style={{ display: 'block', fontSize: '0.8rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.5rem' }}>3. TAXONOMÍA / ESPECIE</label>
-              <div onClick={() => setDesconocido(!desconocido)} style={{ backgroundColor: '#0D1E18', border: '1px solid #1B3D2F', padding: '0.7rem', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.6rem' }}>
-                <input type="checkbox" checked={desconocido} onChange={() => {}} style={{ accentColor: '#00FF88' }} />
-                <span style={{ color: '#00FF88', fontSize: '0.75rem', fontWeight: 'bold' }}>❓ No sé la especie (Marcar como "Desconocido" para que el experto la identifique)</span>
-              </div>
-              {!desconocido && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                  <input type="text" placeholder="Nombre científico" value={nombreCientifico} onChange={(e) => setNombreCientifico(e.target.value)} style={{ padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.8rem' }} />
-                  <input type="text" placeholder="Nombre común" value={nombreComun} onChange={(e) => setNombreComun(e.target.value)} style={{ padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.8rem' }} />
-                </div>
-              )}
-            </div>
-
-            {/* PASO 4 */}
-            <div style={{ marginBottom: '1.2rem' }}>
-              <label style={{ display: 'block', fontSize: '0.8rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.5rem' }}>4. COORDENADAS GPS (LATITUD, LONGITUD) *</label>
-              <div style={{ backgroundColor: '#0D1E18', border: '1px border-dashed #1B3D2F', borderRadius: '8px', padding: '0.8rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                  <span style={{ fontSize: '0.75rem', color: '#00FF88' }}>✅ GPS Capturado: Lat {lat}, Lng {lng}</span>
-                  <button type="button" onClick={obtenerGPS} style={{ backgroundColor: '#00E676', color: '#000', border: 'none', padding: '0.3rem 0.8rem', borderRadius: '15px', fontWeight: 'bold', fontSize: '0.75rem', cursor: 'pointer' }}>GPS 🎯</button>
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                  <input type="text" value={lat} readOnly style={{ padding: '0.5rem', backgroundColor: '#050A08', border: '1px solid #1B3D2F', color: '#FFF', borderRadius: '6px', fontSize: '0.8rem' }} />
-                  <input type="text" value={lng} readOnly style={{ padding: '0.5rem', backgroundColor: '#050A08', border: '1px solid #1B3D2F', color: '#FFF', borderRadius: '6px', fontSize: '0.8rem' }} />
-                </div>
-                <input type="text" placeholder="Comunidad (ej. San Marcos de Tarrazú)" value={comunidad} onChange={(e) => setComunidad(e.target.value)} style={{ width: '100%', padding: '0.5rem', backgroundColor: '#050A08', border: '1px solid #1B3D2F', color: '#FFF', borderRadius: '6px', fontSize: '0.8rem' }} />
-              </div>
-            </div>
-
-            {/* PASO 5 */}
             <div style={{ marginBottom: '1.2rem' }}>
               <label style={{ display: 'block', fontSize: '0.8rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.5rem' }}>5. FOTOGRAFÍA DEL EJEMPLAR *</label>
               <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', border: '2px dashed #1B3D2F', borderRadius: '10px', padding: '1rem', cursor: 'pointer', backgroundColor: '#0A1410' }}>
@@ -640,49 +519,10 @@ export default function App() {
                 <input type="file" accept="image/*" capture="environment" onChange={handleFotoUpload} style={{ display: 'none' }} />
               </label>
               {fotoPreview && (
-                <div style={{ marginTop: '0.6rem', borderRadius: '8px', overflow: 'hidden', height: '120px' }}>
+                <div style={{ marginTop: '0.6rem', borderRadius: '8px', overflow: 'hidden', height: '140px' }}>
                   <img src={fotoPreview} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 </div>
               )}
-            </div>
-
-            {/* PASO 6 */}
-            <div style={{ marginBottom: '1.2rem' }}>
-              <label style={{ display: 'block', fontSize: '0.8rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.5rem' }}>6. GRABACIÓN DEL CANTO / VOCALIZACIÓN (OPCIONAL)</label>
-              <button type="button" onClick={() => setCantoGrabado(!cantoGrabado)} style={{ width: '100%', padding: '0.6rem', backgroundColor: cantoGrabado ? '#1B4D3E' : '#E53935', color: '#FFF', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>
-                {cantoGrabado ? '✅ Canto grabado con éxito' : '🎙️ Grabar Canto (Nota de Voz)'}
-              </button>
-            </div>
-
-            {/* PASO 7 */}
-            <div style={{ marginBottom: '1.2rem' }}>
-              <label style={{ display: 'block', fontSize: '0.8rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.5rem' }}>7. MICROHÁBITAT Y ESTADO</label>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                <select value={estadoOrganismo} onChange={(e) => setEstadoOrganismo(e.target.value)} style={{ padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.8rem' }}>
-                  <option value="Vivo / Activo">Vivo / Activo</option>
-                  <option value="Vivo / Inactivo">Vivo / Inactivo</option>
-                  <option value="Muerto / Atropellado">Muerto / Atropellado</option>
-                </select>
-                <select value={etapa} onChange={(e) => setEtapa(e.target.value)} style={{ padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.8rem' }}>
-                  <option value="Adulto">Adulto</option>
-                  <option value="Juvenil">Juvenil</option>
-                  <option value="Renacuajo / Larva">Renacuajo / Larva</option>
-                </select>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                <input type="text" value={temp} onChange={(e) => setTemp(e.target.value)} placeholder="Temp °C" style={{ padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.8rem' }} />
-                <input type="text" value={humedad} onChange={(e) => setHumedad(e.target.value)} placeholder="Humedad %" style={{ padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.8rem' }} />
-              </div>
-              <select value={microhabitat} onChange={(e) => setMicrohabitat(e.target.value)} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.8rem' }}>
-                <option value="Vegetación / Finca Cafetalera">☕ Vegetación / Finca Cafetalera</option>
-                <option value="Hoja o Roca en Quebrada">🪨 Hoja o Roca en Quebrada</option>
-                <option value="Bosque de Roble">🌲 Bosque de Roble</option>
-              </select>
-            </div>
-
-            <div style={{ marginBottom: '1.2rem' }}>
-              <label style={{ display: 'block', fontSize: '0.8rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.5rem' }}>NOTAS ADICIONALES</label>
-              <textarea rows="3" placeholder="Detalles observados..." value={notas} onChange={(e) => setNotas(e.target.value)} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.8rem' }} />
             </div>
 
             <div style={{ display: 'flex', gap: '0.8rem', marginTop: '1.5rem' }}>
@@ -694,7 +534,7 @@ export default function App() {
                     especie: desconocido ? 'Especie por identificar' : nombreCientifico,
                     nombreComun: desconocido ? 'Desconocido (Por determinar por experto)' : nombreComun,
                     categoria: tipoFauna.toUpperCase(),
-                    estado: 'PENDING',
+                    estado: 'EN REVISIÓN EXPERTA',
                     ubicacion: comunidad || 'Zona de los Santos',
                     temp: `${temp}°C`,
                     microhabitat: microhabitat,
@@ -729,7 +569,6 @@ export default function App() {
           <span style={{ fontSize: '0.65rem' }}>Galería</span>
         </button>
 
-        {/* Botón flotante central (+): Abre el modal del formulario completo de 7 pasos */}
         <button onClick={() => setModalRegistro(true)} style={{ backgroundColor: '#00E676', border: '4px solid #070D0B', color: '#000', width: '52px', height: '52px', borderRadius: '50%', fontSize: '1.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', marginTop: '-25px', boxShadow: '0 0 10px rgba(0,230,118,0.4)' }}>
           +
         </button>
