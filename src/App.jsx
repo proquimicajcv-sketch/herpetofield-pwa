@@ -58,8 +58,8 @@ export default function App() {
   const [modalInstalar, setModalInstalar] = useState(false);
   const [registroSeleccionado, setRegistroSeleccionado] = useState(null);
 
-  // Vistas de Autenticación
-  const [vistaPerfil, setVistaPerfil] = useState('perfil');
+  // Vistas de Autenticación ('perfil', 'login', 'registro', 'recuperar')
+  const [vistaPerfil, setVistaPerfil] = useState('login');
   const [metodoRecuperacion, setMetodoRecuperacion] = useState('correo');
   const [mensajeAuthOk, setMensajeAuthOk] = useState('');
 
@@ -90,26 +90,31 @@ export default function App() {
     }
   };
 
-  // USUARIO ACTUAL (Por defecto Máximo Rango)
+  // Base de datos simulada de cuentas registradas con sus contraseñas
+  const [cuentasRegistradas, setCuentasRegistradas] = useState([
+    { id: 1, nombre: 'Jorge Carvajal', email: 'jorge.carvajal@docente.edu', tel: '+506 8888-9999', comunidad: 'Tarrazú (San Marcos, San Lorenzo, Carlos)', rol: 'Administrador Experto (Máximo Rango)', pass: 'admin123', estadoConexion: 'online' },
+    { id: 2, nombre: 'Dra. Sofía Herpetóloga', email: 'sofia.herpeto@ucr.ac.cr', tel: '+506 8765-4321', comunidad: 'Dota (Santa María, Copey, Jardín)', rol: 'Experto Herpetólogo', pass: 'sofia123', estadoConexion: 'online' },
+    { id: 3, nombre: 'Carlos Picado', email: 'cpicado@comunidad.cr', tel: '+506 8555-1234', comunidad: 'León Cortés (San Pablo, San Rafael)', rol: 'Usuario Regular', pass: 'carlos123', estadoConexion: 'offline' }
+  ]);
+
+  // USUARIO ACTIVO EN LA SESIÓN (Inicia como la cuenta de Jorge Carvajal pero cambia al iniciar sesión con cualquier otra cuenta)
   const [usuario, setUsuario] = useState({
     isLoggedIn: true,
     nombre: 'Jorge Carvajal',
     email: 'jorge.carvajal@docente.edu',
     telefono: '+506 8888-9999',
     comunidad: 'Tarrazú (San Marcos, San Lorenzo, Carlos)',
-    rol: 'Administrador Experto (Máximo Rango)',
-    pass: '123456'
+    rol: 'Administrador Experto (Máximo Rango)'
   });
 
-  // Determinar si el usuario tiene permisos de edición taxonómica
-  const esExpertoOAdmin = usuario.rol.includes('Administrador') || usuario.rol.includes('Experto');
+  // Permiso de edición taxonómica según la cuenta activa
+  const esExpertoOAdmin = usuario.isLoggedIn && (usuario.rol.includes('Administrador') || usuario.rol.includes('Experto'));
 
-  // Formulario temporal de edición en Ficha de Avistamiento
+  // Formulario temporal de edición en Ficha
   const [editCientifico, setEditCientifico] = useState('');
   const [editComun, setEditComun] = useState('');
   const [editNotasTaxo, setEditNotasTaxo] = useState('');
 
-  // Sincronizar campos de edición cuando se abre un registro
   useEffect(() => {
     if (registroSeleccionado) {
       setEditCientifico(registroSeleccionado.especie !== 'Especie por identificar' ? registroSeleccionado.especie : '');
@@ -118,30 +123,23 @@ export default function App() {
     }
   }, [registroSeleccionado]);
 
-  // Forms
+  // Form de Autenticación
   const [formLogin, setFormLogin] = useState({ emailOrTel: '', pass: '' });
   const [formReg, setFormReg] = useState({ nombre: '', email: '', telefono: '', comunidad: 'Tarrazú (San Marcos, San Lorenzo, Carlos)', pass: '', confirmPass: '', solicitaExperto: false });
   const [formRecuperar, setFormRecuperar] = useState({ contacto: '' });
 
-  // Lista de Usuarios
-  const [listaUsuarios, setListaUsuarios] = useState([
-    { id: 1, nombre: 'Jorge Carvajal', email: 'jorge.carvajal@docente.edu', tel: '+506 8888-9999', comunidad: 'San Marcos de Tarrazú', rol: 'Administrador Experto (Máximo Rango)', estadoConexion: 'online' },
-    { id: 2, nombre: 'Dra. Sofía Herpetóloga', email: 'sofia.herpeto@ucr.ac.cr', tel: '+506 8765-4321', comunidad: 'Santa María de Dota', rol: 'Experto Herpetólogo', estadoConexion: 'online' },
-    { id: 3, nombre: 'Carlos Picado', email: 'cpicado@comunidad.cr', tel: '+506 8555-1234', comunidad: 'San Pablo de León Cortés', rol: 'Usuario Regular', estadoConexion: 'offline' }
-  ]);
-
-  // Solicitudes pendientes de validación para ser Experto
+  // Solicitudes pendientes de biólogos
   const [solicitudesExpertos, setSolicitudesExpertos] = useState([
     { id: 101, nombre: 'MSc. Juan Abarca', email: 'jabarca@herpeto.org', tel: '+506 8333-4444', atencedentes: 'Biólogo especialista en Isthmohyla nacientes.', fecha: '24/07/2026' }
   ]);
 
-  // Chat Privado
+  // Chat
   const [chatMensajes, setChatMensajes] = useState([
     { id: 1, texto: '👋 Has iniciado una consulta privada directa. Escribe tu mensaje abajo.', emisor: 'sistema' }
   ]);
   const [nuevoMensaje, setNuevoMensaje] = useState('');
 
-  // Formulario Registro Avistamiento (7 Pasos)
+  // Formulario 7 Pasos
   const [tipoFauna, setTipoFauna] = useState('Anfibio');
   const [silueta, setSilueta] = useState('Rana Arborícola');
   const [desconocido, setDesconocido] = useState(true);
@@ -158,7 +156,7 @@ export default function App() {
   const [notas, setNotas] = useState('');
   const [fotoPreview, setFotoPreview] = useState('https://images.unsplash.com/photo-1590005354167-6da97870c757?auto=format&fit=crop&w=600&q=80');
 
-  // Grabación de Audio
+  // Grabador
   const [grabandoAudio, setGrabandoAudio] = useState(false);
   const [tiempoGrabacion, setTiempoGrabacion] = useState(0);
   const [audioURL, setAudioURL] = useState(null);
@@ -298,7 +296,7 @@ export default function App() {
       especie: 'Especie por identificar',
       nombreComun: 'Desconocido (Por determinar por experto)',
       categoria: 'REPTIL',
-      silueta: 'Salamandra',
+      silueta: 'Lagartija',
       estado: 'EN REVISIÓN EXPERTA',
       ubicacion: 'Tarrazú',
       reportante: 'Carlos Picado',
@@ -342,7 +340,7 @@ export default function App() {
   return (
     <div style={{ backgroundColor: '#070D0B', color: '#E0E6E3', minHeight: '100vh', fontFamily: 'system-ui, sans-serif', paddingBottom: '90px' }}>
       
-      {/* 🟢 BARRA SUPERIOR */}
+      {/* 🟢 BARRA SUPERIOR DINÁMICA */}
       <header style={{ backgroundColor: '#0B1512', padding: '0.8rem 1.2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #162B23', flexWrap: 'wrap', gap: '0.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
           <div style={{ backgroundColor: '#0A1E16', border: '1px solid #00FF88', borderRadius: '12px', padding: '3px 8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -363,8 +361,9 @@ export default function App() {
             💬 Chat 1 a 1
           </button>
 
-          <button onClick={() => { setVistaPerfil('perfil'); setModalPerfil(true); }} style={{ backgroundColor: '#00C853', color: '#000', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '20px', fontWeight: 'bold', fontSize: '0.75rem', cursor: 'pointer' }}>
-            {usuario.isLoggedIn ? `🛡️ ${usuario.nombre}` : '👤 USUARIO'}
+          {/* Muestra dinámicamente el nombre y rol del usuario activo o la opción de ingresar */}
+          <button onClick={() => { setVistaPerfil(usuario.isLoggedIn ? 'perfil' : 'login'); setModalPerfil(true); }} style={{ backgroundColor: '#00C853', color: '#000', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '20px', fontWeight: 'bold', fontSize: '0.75rem', cursor: 'pointer' }}>
+            {usuario.isLoggedIn ? `${usuario.rol.includes('Admin') ? '🛡️' : usuario.rol.includes('Experto') ? '🎓' : '👤'} ${usuario.nombre}` : '🔑 INICIAR SESIÓN / REGISTRARSE'}
           </button>
 
           <button onClick={ejecutarInstalacionApp} style={{ backgroundColor: '#00E676', color: '#000', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '20px', fontWeight: 'bold', fontSize: '0.75rem', cursor: 'pointer' }}>
@@ -416,7 +415,8 @@ export default function App() {
                   <Popup>
                     <strong style={{ color: '#00C853' }}>{reg.nombreComun}</strong><br />
                     <em>{reg.especie}</em><br />
-                    📍 {reg.ubicacion}
+                    📍 {reg.ubicacion}<br />
+                    👤 Reporta: {reg.reportante}
                   </Popup>
                 </Marker>
               ))}
@@ -473,7 +473,7 @@ export default function App() {
                 <div style={{ padding: '0.9rem' }}>
                   <span style={{ fontSize: '0.75rem', color: '#00FF88', fontWeight: 'bold' }}>🐸 {reg.categoria} • {reg.silueta}</span>
                   <h3 style={{ margin: '0.3rem 0', fontSize: '1rem', color: '#FFF' }}>{reg.nombreComun}</h3>
-                  <p style={{ margin: '0.2rem 0', fontSize: '0.8rem', color: '#8AA398' }}>📍 {reg.ubicacion}</p>
+                  <p style={{ margin: '0.2rem 0', fontSize: '0.8rem', color: '#8AA398' }}>📍 {reg.ubicacion} • 👤 {reg.reportante}</p>
                 </div>
               </div>
             ))}
@@ -516,7 +516,7 @@ export default function App() {
               <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', backgroundColor: '#050A08', padding: '0.3rem', borderRadius: '20px', border: '1px solid #122B20' }}>
                 <button onClick={() => setSubTabAdmin('consultas')} style={{ backgroundColor: subTabAdmin === 'consultas' ? '#0F2B20' : 'transparent', color: subTabAdmin === 'consultas' ? '#00FF88' : '#8AA398', border: subTabAdmin === 'consultas' ? '1px solid #00FF88' : 'none', borderRadius: '15px', padding: '0.3rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>💬 Consultas 1 a 1</button>
                 <button onClick={() => setSubTabAdmin('metricas')} style={{ backgroundColor: subTabAdmin === 'metricas' ? '#0F2B20' : 'transparent', color: subTabAdmin === 'metricas' ? '#00FF88' : '#8AA398', border: subTabAdmin === 'metricas' ? '1px solid #00FF88' : 'none', borderRadius: '15px', padding: '0.3rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>📊 Métricas</button>
-                <button onClick={() => setSubTabAdmin('usuarios')} style={{ backgroundColor: subTabAdmin === 'usuarios' ? '#0F2B20' : 'transparent', color: subTabAdmin === 'usuarios' ? '#00FF88' : '#8AA398', border: subTabAdmin === 'usuarios' ? '1px solid #00FF88' : 'none', borderRadius: '15px', padding: '0.3rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>👥 Usuarios</button>
+                <button onClick={() => setSubTabAdmin('usuarios')} style={{ backgroundColor: subTabAdmin === 'usuarios' ? '#0F2B20' : 'transparent', color: subTabAdmin === 'usuarios' ? '#00FF88' : '#8AA398', border: subTabAdmin === 'usuarios' ? '1px solid #00FF88' : 'none', borderRadius: '15px', padding: '0.3rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>👥 Usuarios ({cuentasRegistradas.length})</button>
                 <button onClick={() => setSubTabAdmin('solicitudes')} style={{ backgroundColor: subTabAdmin === 'solicitudes' ? '#0F2B20' : 'transparent', color: subTabAdmin === 'solicitudes' ? '#00FF88' : '#8AA398', border: subTabAdmin === 'solicitudes' ? '1px solid #00FF88' : 'none', borderRadius: '15px', padding: '0.3rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>🎓 Solicitudes ({solicitudesExpertos.length})</button>
                 <button onClick={() => setSubTabAdmin('moderacion')} style={{ backgroundColor: subTabAdmin === 'moderacion' ? '#0F2B20' : 'transparent', color: subTabAdmin === 'moderacion' ? '#00FF88' : '#8AA398', border: subTabAdmin === 'moderacion' ? '1px solid #00FF88' : 'none', borderRadius: '15px', padding: '0.3rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>📋 Moderación</button>
               </div>
@@ -533,8 +533,8 @@ export default function App() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
                   <div style={{ backgroundColor: '#060D0A', border: '1px solid #162B23', borderRadius: '12px', padding: '0.9rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
-                      <strong style={{ color: '#FFF', fontSize: '0.9rem' }}>Jorge Carvajal (Admin Experto)</strong>
-                      <p style={{ margin: '0.3rem 0', color: '#8AA398', fontSize: '0.8rem' }}>"Consulta directa iniciada."</p>
+                      <strong style={{ color: '#FFF', fontSize: '0.9rem' }}>{usuario.nombre} ({usuario.rol})</strong>
+                      <p style={{ margin: '0.3rem 0', color: '#8AA398', fontSize: '0.8rem' }}>"Consulta directa de campo iniciada."</p>
                     </div>
                     <button onClick={() => setModalChat(true)} style={{ backgroundColor: 'transparent', border: 'none', color: '#00FF88', fontWeight: 'bold', cursor: 'pointer' }}>Abrir →</button>
                   </div>
@@ -562,7 +562,7 @@ export default function App() {
                     <div style={{ fontSize: '0.75rem', color: '#8AA398' }}>Aprobados</div>
                   </div>
                   <div style={{ backgroundColor: '#060D0A', border: '1px solid #FFB300', padding: '1.2rem', borderRadius: '12px', textAlign: 'center' }}>
-                    <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#FFB300' }}>{listaUsuarios.length}</div>
+                    <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#FFB300' }}>{cuentasRegistradas.length}</div>
                     <div style={{ fontSize: '0.75rem', color: '#8AA398' }}>Usuarios Registrados</div>
                   </div>
                   <div style={{ backgroundColor: '#060D0A', border: '1px solid #FF5252', padding: '1.2rem', borderRadius: '12px', textAlign: 'center' }}>
@@ -576,22 +576,22 @@ export default function App() {
             {/* GESTIÓN DE USUARIOS */}
             {subTabAdmin === 'usuarios' && (
               <div>
-                <h4 style={{ margin: '0 0 1rem 0', color: '#FFF', fontSize: '0.95rem' }}>👥 Gestión de Usuarios, Jerarquía de Permisos y Cobertura</h4>
+                <h4 style={{ margin: '0 0 1rem 0', color: '#FFF', fontSize: '0.95rem' }}>👥 Gestión de Cuentas y Jerarquía de Permisos</h4>
                 <div style={{ overflowX: 'auto' }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', textAlign: 'left' }}>
                     <thead>
                       <tr style={{ borderBottom: '1px solid #162B23', color: '#00FF88' }}>
                         <th style={{ padding: '0.6rem' }}>ESTADO</th>
-                        <th style={{ padding: '0.6rem' }}>USUARIO</th>
-                        <th style={{ padding: '0.6rem' }}>CONTACTO</th>
+                        <th style={{ padding: '0.6rem' }}>NOMBRE</th>
+                        <th style={{ padding: '0.6rem' }}>CORREO / TELÉFONO</th>
                         <th style={{ padding: '0.6rem' }}>COMUNIDAD</th>
                         <th style={{ padding: '0.6rem' }}>ROL ASIGNADO</th>
                         <th style={{ padding: '0.6rem' }}>ACCIÓN</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {listaUsuarios.map((u) => {
-                        const badg = getBadgetConexion(u.id === 1 ? estadoConexion : u.estadoConexion);
+                      {cuentasRegistradas.map((u) => {
+                        const badg = getBadgetConexion(u.estadoConexion || 'online');
                         return (
                           <tr key={u.id} style={{ borderBottom: '1px solid #0D1A15' }}>
                             <td style={{ padding: '0.6rem' }}>
@@ -604,7 +604,7 @@ export default function App() {
                               <select 
                                 value={u.rol} 
                                 onChange={(e) => {
-                                  setListaUsuarios(listaUsuarios.map(item => item.id === u.id ? { ...item, rol: e.target.value } : item));
+                                  setCuentasRegistradas(cuentasRegistradas.map(item => item.id === u.id ? { ...item, rol: e.target.value } : item));
                                 }} 
                                 style={{ backgroundColor: '#050A08', color: '#00FF88', border: '1px solid #1B3D2F', borderRadius: '12px', padding: '0.3rem 0.5rem', fontSize: '0.75rem' }}
                               >
@@ -615,7 +615,7 @@ export default function App() {
                               </select>
                             </td>
                             <td style={{ padding: '0.6rem' }}>
-                              <button onClick={() => alert(`Usuario ${u.nombre} suspendido.`)} style={{ backgroundColor: '#D32F2F', color: '#FFF', border: 'none', borderRadius: '12px', padding: '0.3rem 0.6rem', fontSize: '0.7rem', fontWeight: 'bold', cursor: 'pointer' }}>🚫 Ban</button>
+                              <button onClick={() => alert(`Cuenta de ${u.nombre} suspendida.`)} style={{ backgroundColor: '#D32F2F', color: '#FFF', border: 'none', borderRadius: '12px', padding: '0.3rem 0.6rem', fontSize: '0.7rem', fontWeight: 'bold', cursor: 'pointer' }}>🚫 Ban</button>
                             </td>
                           </tr>
                         );
@@ -644,7 +644,7 @@ export default function App() {
                         <div style={{ display: 'flex', gap: '0.5rem' }}>
                           <button 
                             onClick={() => {
-                              setListaUsuarios([...listaUsuarios, { id: Date.now(), nombre: s.nombre, email: s.email, tel: s.tel, comunidad: 'Zona de los Santos', rol: 'Experto Herpetólogo', estadoConexion: 'online' }]);
+                              setCuentasRegistradas([...cuentasRegistradas, { id: Date.now(), nombre: s.nombre, email: s.email, tel: s.tel, comunidad: 'Zona de los Santos', rol: 'Experto Herpetólogo', pass: '123456', estadoConexion: 'online' }]);
                               setSolicitudesExpertos(solicitudesExpertos.filter(item => item.id !== s.id));
                               alert(`¡Rango EXPERTO aprobado para ${s.nombre}!`);
                             }} 
@@ -672,9 +672,9 @@ export default function App() {
                     <div key={r.id} style={{ backgroundColor: '#060D0A', border: '1px solid #162B23', borderRadius: '12px', padding: '0.9rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div>
                         <strong style={{ color: '#FFF', fontSize: '0.85rem' }}>{r.nombreComun} ({r.especie})</strong>
-                        <div style={{ fontSize: '0.75rem', color: '#8AA398' }}>📍 {r.ubicacion} | Estado: {r.estado}</div>
+                        <div style={{ fontSize: '0.75rem', color: '#8AA398' }}>📍 {r.ubicacion} | Reporta: {r.reportante}</div>
                       </div>
-                      <button onClick={() => setRegistroSeleccionado(r)} style={{ backgroundColor: '#00E676', color: '#000', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}>Moderar</button>
+                      <button onClick={() => setRegistroSeleccionado(r)} style={{ backgroundColor: '#00E676', color: '#000', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}>Moderar / Editar</button>
                     </div>
                   ))}
                 </div>
@@ -685,12 +685,11 @@ export default function App() {
         </div>
       )}
 
-      {/* 🔍 MODAL: FICHA DEL AVISTAMIENTO & MODERACIÓN / EDICIÓN EXPERTA COMPLETA */}
+      {/* 🔍 MODAL: FICHA DEL AVISTAMIENTO & CURADURÍA */}
       {registroSeleccionado && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.88)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999, padding: '1rem' }}>
           <div style={{ backgroundColor: '#09130F', borderRadius: '16px', border: '1px solid #1B3D2F', width: '100%', maxWidth: '880px', maxHeight: '92vh', overflowY: 'auto', padding: '1.2rem' }}>
             
-            {/* Header Modal */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid #122B20', paddingBottom: '0.5rem' }}>
               <h3 style={{ margin: 0, color: '#FFF', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 🔍 Ficha del Avistamiento & Curaduría
@@ -700,7 +699,6 @@ export default function App() {
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.2rem' }}>
               
-              {/* COLUMNA IZQUIERDA: FOTO, CHAT Y DATOS REPORTADOS */}
               <div>
                 <div style={{ borderRadius: '12px', overflow: 'hidden', height: '220px', marginBottom: '0.8rem', border: '1px solid #1B3D2F' }}>
                   <img src={registroSeleccionado.img} alt="Fauna" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -718,7 +716,6 @@ export default function App() {
                 </button>
               </div>
 
-              {/* COLUMNA DERECHA: EDICIÓN Y SELLO DE EDICIÓN */}
               <div>
                 <span style={{ fontSize: '0.75rem', color: '#00FF88', fontWeight: 'bold' }}>
                   🐸 {registroSeleccionado.categoria} • <span style={{ color: registroSeleccionado.estado === 'VALIDADO' ? '#00E676' : '#FFB300' }}>{registroSeleccionado.estado}</span>
@@ -727,7 +724,7 @@ export default function App() {
                 <h2 style={{ margin: '0.2rem 0', color: '#FFF', fontSize: '1.2rem' }}>{registroSeleccionado.nombreComun}</h2>
                 <h4 style={{ margin: '0 0 0.8rem 0', color: '#00C853', fontStyle: 'italic', fontSize: '0.9rem', fontWeight: 'normal' }}>{registroSeleccionado.especie}</h4>
 
-                {/* MUESTRA QUIÉN EDITÓ / VALIDO LA FICHA SI YA FUE CURADA */}
+                {/* MUESTRA EDITADO POR SI FUE EDITADO */}
                 {registroSeleccionado.editadoPor && (
                   <div style={{ backgroundColor: '#0A1E16', border: '1px solid #00FF88', color: '#00FF88', padding: '0.6rem', borderRadius: '8px', fontSize: '0.75rem', marginBottom: '1rem' }}>
                     ✍️ <strong>EDITADO Y VALIDADO POR:</strong><br />
@@ -736,7 +733,7 @@ export default function App() {
                   </div>
                 )}
 
-                {/* FORMULARIO DE EDICIÓN TAXONÓMICA (SOLO VISIBLE PARA EXPERTOS O ADMIN) */}
+                {/* EDICIÓN TAXONÓMICA RESERVADA A EXPERTOS O ADMIN */}
                 {esExpertoOAdmin ? (
                   <div style={{ backgroundColor: '#1A1807', border: '1px solid #5C4D0A', borderRadius: '12px', padding: '0.9rem' }}>
                     <h4 style={{ margin: '0 0 0.6rem 0', color: '#FFB300', fontSize: '0.85rem' }}>✏️ PANEL DE DIAGNÓSTICO Y EDICIÓN EXPERTA</h4>
@@ -760,7 +757,7 @@ export default function App() {
                       <button 
                         onClick={() => {
                           const fechaHoy = new Date().toLocaleString();
-                          const nombreEditor = `${usuario.nombre} (${usuario.rol.split(' ')[0]})`;
+                          const nombreEditor = `${usuario.nombre} (${usuario.rol})`;
 
                           const registrosActualizados = registros.map(r => {
                             if (r.id === registroSeleccionado.id) {
@@ -789,7 +786,7 @@ export default function App() {
                   </div>
                 ) : (
                   <div style={{ backgroundColor: '#060D0A', border: '1px solid #162B23', padding: '0.8rem', borderRadius: '10px', fontSize: '0.75rem', color: '#8AA398' }}>
-                    ℹ️ Esta ficha se encuentra en proceso de revisión por los expertos de la zona.
+                    ℹ️ Esta ficha se encuentra en proceso de revisión por los expertos autorizados de la zona.
                   </div>
                 )}
 
@@ -801,7 +798,7 @@ export default function App() {
         </div>
       )}
 
-      {/* 👤 MODAL PERFIL */}
+      {/* 👤 MODAL PERFIL CON INICIO DE SESIÓN / REGISTRO / CAMBIO DE CUENTA */}
       {modalPerfil && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999, padding: '1rem' }}>
           <div style={{ backgroundColor: '#09130F', borderRadius: '16px', border: '1px solid #1B3D2F', width: '100%', maxWidth: '520px', padding: '1.2rem', maxHeight: '90vh', overflowY: 'auto' }}>
@@ -809,7 +806,7 @@ export default function App() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid #122B20', paddingBottom: '0.5rem' }}>
               <h3 style={{ color: '#FFF', margin: 0, fontSize: '1.1rem' }}>
                 {vistaPerfil === 'perfil' && '👤 Mi Perfil & Disponibilidad'}
-                {vistaPerfil === 'login' && '🔑 Iniciar Sesión'}
+                {vistaPerfil === 'login' && '🔑 Iniciar Sesión en HerpID'}
                 {vistaPerfil === 'registro' && '📝 Crear Cuenta Nueva'}
                 {vistaPerfil === 'recuperar' && '📲 Recuperar Contraseña'}
               </h3>
@@ -826,8 +823,9 @@ export default function App() {
             {vistaPerfil === 'perfil' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
                 <div style={{ backgroundColor: '#060D0A', border: '1px solid #1B3D2F', borderRadius: '12px', padding: '0.8rem', textAlign: 'center' }}>
-                  <span style={{ color: '#E53935', fontWeight: 'bold', fontSize: '0.85rem' }}>🛡️ {usuario.rol.toUpperCase()}</span>
-                  <div style={{ fontSize: '0.7rem', color: '#7A9A8C', marginTop: '0.2rem' }}>Comunidad HerpID Los Santos CR</div>
+                  <span style={{ color: '#00FF88', fontWeight: 'bold', fontSize: '0.85rem' }}>🛡️ {usuario.rol.toUpperCase()}</span>
+                  <div style={{ fontSize: '0.75rem', color: '#FFF', fontWeight: 'bold', marginTop: '0.3rem' }}>{usuario.nombre}</div>
+                  <div style={{ fontSize: '0.7rem', color: '#7A9A8C' }}>{usuario.email} | {usuario.telefono}</div>
                 </div>
 
                 <div style={{ backgroundColor: '#0A1E16', border: '1px solid #00FF88', padding: '0.8rem', borderRadius: '10px' }}>
@@ -841,37 +839,66 @@ export default function App() {
                   </select>
                 </div>
 
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.75rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.3rem' }}>NOMBRE COMPLETO *</label>
-                  <input type="text" value={usuario.nombre} onChange={(e) => setUsuario({ ...usuario, nombre: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }} />
-                </div>
+                <button onClick={() => setModalPerfil(false)} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#00E676', color: '#000', fontWeight: 'bold', border: 'none', borderRadius: '10px', cursor: 'pointer' }}>Guardar Cambios</button>
 
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.75rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.3rem' }}>CORREO ELECTRÓNICO *</label>
-                  <input type="email" value={usuario.email} onChange={(e) => setUsuario({ ...usuario, email: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }} />
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.5rem' }}>
+                  <button onClick={() => { setUsuario({ isLoggedIn: false, nombre: 'USUARIO', email: '', telefono: '', comunidad: '', rol: 'Usuario Regular' }); setVistaPerfil('login'); }} style={{ backgroundColor: 'transparent', border: 'none', color: '#FF5252', fontSize: '0.75rem', cursor: 'pointer', textDecoration: 'underline' }}>Cerrar Sesión</button>
+                  <button onClick={() => setVistaPerfil('login')} style={{ backgroundColor: 'transparent', border: 'none', color: '#00FF88', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>Cambiar de Cuenta</button>
                 </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.75rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.3rem' }}>NÚMERO DE CELULAR *</label>
-                  <input type="text" value={usuario.telefono} onChange={(e) => setUsuario({ ...usuario, telefono: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }} />
-                </div>
-
-                {/* Selector de Rango/Rol */}
-                <div style={{ backgroundColor: '#1A1807', border: '1px solid #5C4D0A', padding: '0.8rem', borderRadius: '10px' }}>
-                  <label style={{ display: 'block', fontSize: '0.75rem', color: '#FFB300', fontWeight: 'bold', marginBottom: '0.4rem' }}>⚙️ CONMUTAR ROL / JERARQUÍA (PRUEBAS)</label>
-                  <select value={usuario.rol} onChange={(e) => setUsuario({ ...usuario, rol: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#0A1410', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }}>
-                    <option value="Administrador Experto (Máximo Rango)">🛡️ Administrador Experto (Máximo Rango)</option>
-                    <option value="Administrador">⚔️ Administrador</option>
-                    <option value="Experto Herpetólogo">🎓 Experto Herpetólogo</option>
-                    <option value="Usuario Regular">👤 Usuario Regular</option>
-                  </select>
-                </div>
-
-                <button onClick={() => setModalPerfil(false)} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#00E676', color: '#000', fontWeight: 'bold', border: 'none', borderRadius: '10px', cursor: 'pointer' }}>Guardar y Actualizar Perfil</button>
               </div>
             )}
 
-            {/* REGISTRO */}
+            {/* INICIAR SESIÓN */}
+            {vistaPerfil === 'login' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.3rem' }}>CORREO O NÚMERO DE CELULAR *</label>
+                  <input type="text" placeholder="Ej. jorge.carvajal@docente.edu o cpicado@comunidad.cr" value={formLogin.emailOrTel} onChange={(e) => setFormLogin({ ...formLogin, emailOrTel: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }} />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.3rem' }}>CONTRASEÑA PERSONAL *</label>
+                  <input type="password" placeholder="••••••••" value={formLogin.pass} onChange={(e) => setFormLogin({ ...formLogin, pass: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }} />
+                </div>
+
+                <div style={{ textAlign: 'right' }}>
+                  <button onClick={() => setVistaPerfil('recuperar')} style={{ backgroundColor: 'transparent', border: 'none', color: '#FFB300', fontSize: '0.75rem', cursor: 'pointer', textDecoration: 'underline' }}>¿Olvidaste tu contraseña?</button>
+                </div>
+
+                <button 
+                  onClick={() => {
+                    const usuarioEncontrado = cuentasRegistradas.find(c => (c.email.toLowerCase() === formLogin.emailOrTel.toLowerCase() || c.tel === formLogin.emailOrTel) && c.pass === formLogin.pass);
+                    
+                    if (usuarioEncontrado) {
+                      setUsuario({
+                        isLoggedIn: true,
+                        nombre: usuarioEncontrado.nombre,
+                        email: usuarioEncontrado.email,
+                        telefono: usuarioEncontrado.tel,
+                        comunidad: usuarioEncontrado.comunidad,
+                        rol: usuarioEncontrado.rol
+                      });
+                      setMensajeAuthOk(`¡Bienvenido de nuevo, ${usuarioEncontrado.nombre}!`);
+                      setTimeout(() => { setMensajeAuthOk(''); setVistaPerfil('perfil'); }, 1500);
+                    } else if (!formLogin.emailOrTel) {
+                      alert('Ingresa tu correo o teléfono.');
+                    } else {
+                      alert('Credenciales incorrectas. Verifica tu correo y contraseña.');
+                    }
+                  }} 
+                  style={{ width: '100%', padding: '0.8rem', backgroundColor: '#00E676', color: '#000', fontWeight: 'bold', border: 'none', borderRadius: '10px', cursor: 'pointer' }}
+                >
+                  Ingresar a HerpID
+                </button>
+
+                <div style={{ textAlign: 'center', marginTop: '0.5rem' }}>
+                  <span style={{ fontSize: '0.75rem', color: '#8AA398' }}>¿No tienes una cuenta aún? </span>
+                  <button onClick={() => setVistaPerfil('registro')} style={{ backgroundColor: 'transparent', border: 'none', color: '#00FF88', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}>Regístrate aquí</button>
+                </div>
+              </div>
+            )}
+
+            {/* CREAR CUENTA NUEVA */}
             {vistaPerfil === 'registro' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
                 <div>
@@ -911,20 +938,35 @@ export default function App() {
                       alert('Por favor completa todos los campos requeridos.');
                       return;
                     }
+
+                    const nuevaCuenta = {
+                      id: Date.now(),
+                      nombre: formReg.nombre,
+                      email: formReg.email,
+                      tel: formReg.telefono,
+                      comunidad: formReg.comunidad,
+                      rol: 'Usuario Regular',
+                      pass: formReg.pass,
+                      estadoConexion: 'online'
+                    };
+
+                    setCuentasRegistradas([...cuentasRegistradas, nuevaCuenta]);
+
                     if (formReg.solicitaExperto) {
                       setSolicitudesExpertos([...solicitudesExpertos, { id: Date.now(), nombre: formReg.nombre, email: formReg.email, tel: formReg.telefono, atencedentes: 'Solicitó rango de Experto al registrarse.', fecha: 'Hoy' }]);
                     }
+
                     setUsuario({
                       isLoggedIn: true,
                       nombre: formReg.nombre,
                       email: formReg.email,
                       telefono: formReg.telefono,
                       comunidad: formReg.comunidad,
-                      rol: 'Usuario Regular',
-                      pass: formReg.pass
+                      rol: 'Usuario Regular'
                     });
-                    setMensajeAuthOk(formReg.solicitaExperto ? '¡Cuenta registrada! Tu solicitud de Experto quedó en revisión.' : '¡Cuenta registrada exitosamente!');
-                    setTimeout(() => { setMensajeAuthOk(''); setVistaPerfil('perfil'); }, 2000);
+
+                    setMensajeAuthOk(formReg.solicitaExperto ? '¡Cuenta registrada! Tu solicitud de Experto quedó en revisión.' : '¡Cuenta creada con éxito!');
+                    setTimeout(() => { setMensajeAuthOk(''); setVistaPerfil('perfil'); }, 1800);
                   }} 
                   style={{ width: '100%', padding: '0.8rem', backgroundColor: '#00E676', color: '#000', fontWeight: 'bold', border: 'none', borderRadius: '10px', cursor: 'pointer' }}
                 >
@@ -942,7 +984,7 @@ export default function App() {
                   <button onClick={() => setMetodoRecuperacion('sms')} style={{ backgroundColor: metodoRecuperacion === 'sms' ? '#0F2B20' : '#050A08', color: '#FFF', border: metodoRecuperacion === 'sms' ? '2px solid #00FF88' : '1px solid #1B3D2F', padding: '0.6rem', borderRadius: '8px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 'bold' }}>💬 Por Mensaje (SMS)</button>
                 </div>
                 <input type="text" placeholder={metodoRecuperacion === 'correo' ? 'Correo registrado' : 'Celular registrado'} value={formRecuperar.contacto} onChange={(e) => setFormRecuperar({ contacto: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }} />
-                <button onClick={() => { setMensajeAuthOk(`¡Enviado por ${metodoRecuperacion === 'correo' ? 'Correo' : 'SMS'}!`); setTimeout(() => { setMensajeAuthOk(''); setVistaPerfil('perfil'); }, 2000); }} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#00E676', color: '#000', fontWeight: 'bold', border: 'none', borderRadius: '10px', cursor: 'pointer' }}>Enviar Instrucciones</button>
+                <button onClick={() => { setMensajeAuthOk(`¡Enviado por ${metodoRecuperacion === 'correo' ? 'Correo' : 'SMS'}!`); setTimeout(() => { setMensajeAuthOk(''); setVistaPerfil('login'); }, 2000); }} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#00E676', color: '#000', fontWeight: 'bold', border: 'none', borderRadius: '10px', cursor: 'pointer' }}>Enviar Instrucciones</button>
               </div>
             )}
 
@@ -1173,8 +1215,8 @@ export default function App() {
                     silueta: silueta,
                     estado: 'EN REVISIÓN EXPERTA',
                     ubicacion: comunidad || 'Zona de los Santos',
-                    reportante: usuario.nombre,
-                    contacto: usuario.email,
+                    reportante: usuario.isLoggedIn ? usuario.nombre : 'Usuario Anónimo',
+                    contacto: usuario.isLoggedIn ? usuario.email : 'Sin contacto',
                     temp: `${temp}°C`,
                     humedad: `${humedad}% H.R.`,
                     microhabitat: microhabitat,
