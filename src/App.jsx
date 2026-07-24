@@ -109,6 +109,7 @@ export default function App() {
       id: null,
       nombre: '',
       email: '',
+      codigoPais: '+506',
       telefono: '',
       comunidad: '',
       rol: 'Usuario Regular',
@@ -151,9 +152,9 @@ export default function App() {
 
   // Base de Cuentas Registradas
   const [cuentasRegistradas, setCuentasRegistradas] = useState([
-    { id: 1, nombre: 'Jorge Carvajal', email: 'jorge.carvajal@docente.edu', tel: '+506 8888-9999', comunidad: 'Tarrazú (San Marcos, San Lorenzo, Carlos)', rol: 'Administrador Experto (Máximo Rango)', pass: 'admin123', estadoConexion: 'online', fechaIngreso: '2026-03-01 08:30:00', mostrarTelefono: false, estatusCuenta: 'activo', cuentaVerificada: true },
-    { id: 2, nombre: 'Dra. Sofía Herpetóloga', email: 'sofia.herpeto@ucr.ac.cr', tel: '+506 8765-4321', comunidad: 'Dota (Santa María, Copey, Jardín)', rol: 'Experto Herpetólogo', pass: 'sofia123', estadoConexion: 'online', fechaIngreso: '2026-04-12 14:15:00', mostrarTelefono: false, estatusCuenta: 'activo', cuentaVerificada: true },
-    { id: 3, nombre: 'Carlos Picado', email: 'cpicado@comunidad.cr', tel: '+506 8555-1234', comunidad: 'León Cortés (San Pablo, San Rafael)', rol: 'Usuario Regular', pass: 'carlos123', estadoConexion: 'offline', fechaIngreso: '2026-05-20 11:45:00', mostrarTelefono: true, estatusCuenta: 'activo', cuentaVerificada: true }
+    { id: 1, nombre: 'Jorge Carvajal', email: 'jorge.carvajal@docente.edu', codigoPais: '+506', tel: '8888-9999', comunidad: 'Tarrazú (San Marcos, San Lorenzo, Carlos)', rol: 'Administrador Experto (Máximo Rango)', pass: 'admin123', estadoConexion: 'online', fechaIngreso: '2026-03-01 08:30:00', mostrarTelefono: false, estatusCuenta: 'activo', cuentaVerificada: true },
+    { id: 2, nombre: 'Dra. Sofía Herpetóloga', email: 'sofia.herpeto@ucr.ac.cr', codigoPais: '+506', tel: '8765-4321', comunidad: 'Dota (Santa María, Copey, Jardín)', rol: 'Experto Herpetólogo', pass: 'sofia123', estadoConexion: 'online', fechaIngreso: '2026-04-12 14:15:00', mostrarTelefono: false, estatusCuenta: 'activo', cuentaVerificada: true },
+    { id: 3, nombre: 'Carlos Picado', email: 'cpicado@comunidad.cr', codigoPais: '+506', tel: '8555-1234', comunidad: 'León Cortés (San Pablo, San Rafael)', rol: 'Usuario Regular', pass: 'carlos123', estadoConexion: 'offline', fechaIngreso: '2026-05-20 11:45:00', mostrarTelefono: true, estatusCuenta: 'activo', cuentaVerificada: true }
   ]);
 
   // ROLES Y NIVELES DE PERMISOS
@@ -173,10 +174,24 @@ export default function App() {
     }
   }, [registroSeleccionado]);
 
-  // Forms de Autenticación
+  // Forms de Autenticación con Código de País (Costa Rica +506 por defecto primero)
   const [formLogin, setFormLogin] = useState({ emailOrTel: '', pass: '' });
-  const [formReg, setFormReg] = useState({ nombre: '', email: '', telefono: '', comunidad: 'Tarrazú (San Marcos, San Lorenzo, Carlos)', pass: '', confirmPass: '', solicitaExperto: false, medioVerificacion: 'correo' });
+  const [formReg, setFormReg] = useState({ nombre: '', email: '', codigoPais: '+506', telefono: '', comunidad: 'Tarrazú (San Marcos, San Lorenzo, Carlos)', pass: '', confirmPass: '', solicitaExperto: false, medioVerificacion: 'correo' });
   const [formRecuperar, setFormRecuperar] = useState({ contacto: '' });
+
+  // Lista de Códigos de Área Internacionales (Costa Rica primero)
+  const codigosPaises = [
+    { code: '+506', label: '🇨🇷 Costa Rica (+506)' },
+    { code: '+1', label: '🇺🇸/🇨🇦 Estados Unidos / Canadá (+1)' },
+    { code: '+52', label: '🇲🇽 México (+52)' },
+    { code: '+507', label: '🇵🇦 Panamá (+507)' },
+    { code: '+57', label: '🇨🇴 Colombia (+57)' },
+    { code: '+34', label: '🇪🇸 España (+34)' },
+    { code: '+54', label: '🇦🇷 Argentina (+54)' },
+    { code: '+56', label: '🇨🇱 Chile (+56)' },
+    { code: '+51', label: '🇵🇪 Perú (+51)' },
+    { code: '+49', label: '🇩🇪 Alemania (+49)' }
+  ];
 
   // Solicitudes pendientes de biólogos
   const [solicitudesExpertos, setSolicitudesExpertos] = useState([
@@ -448,41 +463,44 @@ export default function App() {
   return (
     <div style={{ backgroundColor: '#070D0B', color: '#E0E6E3', minHeight: '100vh', fontFamily: 'system-ui, sans-serif', paddingBottom: '90px' }}>
       
-      {/* 🟢 BARRA SUPERIOR DINÁMICA CON NUEVO LOGOTIPO INNOVADOR (VECTORIAL) */}
-      <header style={{ backgroundColor: '#0B1512', padding: '0.8rem 1.2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #162B23', flexWrap: 'wrap', gap: '0.5rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
+      {/* 🟢 BARRA SUPERIOR CON LOGOTIPO DE ALTA GAMA (GRANDE E INNOVADOR) */}
+      <header style={{ backgroundColor: '#0B1512', padding: '0.9rem 1.4rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1.5px solid #162B23', flexWrap: 'wrap', gap: '0.8rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           
-          {/* LOGOTIPO INNOVADOR ESTILIZADO */}
+          {/* INSIGNIA LOGOTIPO GRANDE E INNOVADORA */}
           <div style={{
-            background: 'linear-gradient(135deg, #0A261C 0%, #04100B 100%)',
-            border: '1.5px solid #00FF88',
-            borderRadius: '16px',
-            width: '46px',
-            height: '46px',
+            background: 'linear-gradient(135deg, #0D2E21 0%, #030A07 100%)',
+            border: '2px solid #00FF88',
+            borderRadius: '20px',
+            width: '56px',
+            height: '56px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            boxShadow: '0 0 14px rgba(0,230,118,0.3)',
+            boxShadow: '0 0 20px rgba(0,230,118,0.4), inset 0 0 10px rgba(0,255,136,0.2)',
             position: 'relative',
             overflow: 'hidden'
           }}>
-            <div style={{ position: 'absolute', width: '32px', height: '32px', border: '1px dashed rgba(0,255,136,0.4)', borderRadius: '50%' }}></div>
-            <span style={{ fontSize: '1.5rem', filter: 'drop-shadow(0 2px 4px rgba(0,255,136,0.5))' }}>🐸</span>
+            {/* Anillos de Radar/GPS concéntricos */}
+            <div style={{ position: 'absolute', width: '42px', height: '42px', border: '1px solid rgba(0,255,136,0.3)', borderRadius: '50%' }}></div>
+            <div style={{ position: 'absolute', width: '28px', height: '28px', border: '1px dashed rgba(0,255,136,0.5)', borderRadius: '50%' }}></div>
+            <span style={{ fontSize: '1.9rem', filter: 'drop-shadow(0 3px 6px rgba(0,255,136,0.7))', zIndex: 2 }}>🐸</span>
             <div style={{
               position: 'absolute',
-              bottom: '4px',
-              right: '4px',
-              backgroundColor: '#FFB300',
-              width: '10px',
-              height: '10px',
+              bottom: '5px',
+              right: '5px',
+              backgroundColor: '#00FF88',
+              width: '12px',
+              height: '12px',
               borderRadius: '50%',
-              border: '1.5px solid #070D0B'
+              border: '2px solid #070D0B',
+              boxShadow: '0 0 8px #00FF88'
             }}></div>
           </div>
 
           <div>
-            <h1 style={{ margin: 0, fontSize: '1.1rem', color: '#00FF88', fontWeight: 'bold', letterSpacing: '0.3px' }}>HerpID Los Santos CR</h1>
-            <p style={{ margin: 0, fontSize: '0.7rem', color: '#6A8A7D', letterSpacing: '0.8px', fontWeight: '500' }}>IDENTIFICADOR DE HERPETOFAUNA</p>
+            <h1 style={{ margin: 0, fontSize: '1.3rem', color: '#00FF88', fontWeight: '900', letterSpacing: '0.5px' }}>HerpID Los Santos CR</h1>
+            <p style={{ margin: 0, fontSize: '0.75rem', color: '#7AA394', letterSpacing: '1px', fontWeight: 'bold' }}>PLATAFORMA CIENTÍFICA DE HERPETOFAUNA</p>
           </div>
         </div>
 
@@ -828,7 +846,7 @@ export default function App() {
                                 <td style={{ padding: '0.6rem', color: '#8AA398' }}>
                                   📧 {u.email}<br />
                                   <span style={{ fontSize: '0.7rem', color: esContactoOculto ? '#FFB300' : '#A0C2B4' }}>
-                                    📱 {esContactoOculto ? '🔒 [Celular Privado]' : u.tel}
+                                    📱 {esContactoOculto ? '🔒 [Celular Privado]' : `${u.codigoPais || '+506'} ${u.tel}`}
                                   </span>
                                 </td>
                                 <td style={{ padding: '0.6rem', color: '#A0C2B4' }}>{u.comunidad}</td>
@@ -906,7 +924,7 @@ export default function App() {
                                   const existe = cuentasRegistradas.some(u => u.id === s.userId);
                                   
                                   if (!existe) {
-                                    cuentasActualizadas.push({ id: s.userId || Date.now(), nombre: s.nombre, email: s.email, tel: s.tel, comunidad: 'Zona de los Santos', rol: 'Experto Herpetólogo', pass: '123456', estadoConexion: 'online', fechaIngreso: fechaHoraActual, mostrarTelefono: false, estatusCuenta: 'activo', cuentaVerificada: true });
+                                    cuentasActualizadas.push({ id: s.userId || Date.now(), nombre: s.nombre, email: s.email, codigoPais: '+506', tel: s.tel, comunidad: 'Zona de los Santos', rol: 'Experto Herpetólogo', pass: '123456', estadoConexion: 'online', fechaIngreso: fechaHoraActual, mostrarTelefono: false, estatusCuenta: 'activo', cuentaVerificada: true });
                                   }
 
                                   setCuentasRegistradas(cuentasActualizadas);
@@ -1119,7 +1137,7 @@ export default function App() {
         </div>
       )}
 
-      {/* 👤 MODAL PERFIL CON VERIFICACIÓN OTP */}
+      {/* 👤 MODAL PERFIL CON CÓDIGO DE PAÍS INTERNACIONAL EN REGISTRO */}
       {modalPerfil && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999, padding: '1rem' }}>
           <div style={{ backgroundColor: '#09130F', borderRadius: '16px', border: '1px solid #1B3D2F', width: '100%', maxWidth: '520px', padding: '1.2rem', maxHeight: '90vh', overflowY: 'auto' }}>
@@ -1159,8 +1177,13 @@ export default function App() {
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.75rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.3rem' }}>NÚMERO DE CELULAR *</label>
-                  <input type="text" value={usuario.telefono} onChange={(e) => setUsuario({ ...usuario, telefono: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }} />
+                  <label style={{ display: 'block', fontSize: '0.75rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.3rem' }}>CÓDIGO DE PAÍS Y CELULAR *</label>
+                  <div style={{ display: 'grid', gridTemplateColumns: '130px 1fr', gap: '0.5rem' }}>
+                    <select value={usuario.codigoPais || '+506'} onChange={(e) => setUsuario({ ...usuario, codigoPais: e.target.value })} style={{ padding: '0.6rem', backgroundColor: '#050A08', color: '#00FF88', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 'bold' }}>
+                      {codigosPaises.map(cp => <option key={cp.code} value={cp.code}>{cp.code} ({cp.label.split(' ')[0]})</option>)}
+                    </select>
+                    <input type="text" value={usuario.telefono} onChange={(e) => setUsuario({ ...usuario, telefono: e.target.value })} placeholder="8888-0000" style={{ padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }} />
+                  </div>
                 </div>
 
                 {esExpertoOAdmin && (
@@ -1187,7 +1210,7 @@ export default function App() {
                 <button onClick={() => { setModalPerfil(false); alert('¡Perfil actualizado con éxito!'); }} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#00E676', color: '#000', fontWeight: 'bold', border: 'none', borderRadius: '10px', cursor: 'pointer' }}>Guardar Cambios en Perfil</button>
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.5rem' }}>
-                  <button onClick={() => { setUsuario({ isLoggedIn: false, id: null, nombre: '', email: '', telefono: '', comunidad: '', rol: 'Usuario Regular', mostrarTelefono: false }); localStorage.removeItem('herpid_usuario_sesion'); setVistaPerfil('login'); }} style={{ backgroundColor: 'transparent', border: 'none', color: '#FF5252', fontSize: '0.75rem', cursor: 'pointer', textDecoration: 'underline' }}>🔴 Cerrar Sesión</button>
+                  <button onClick={() => { setUsuario({ isLoggedIn: false, id: null, nombre: '', email: '', codigoPais: '+506', telefono: '', comunidad: '', rol: 'Usuario Regular', mostrarTelefono: false }); localStorage.removeItem('herpid_usuario_sesion'); setVistaPerfil('login'); }} style={{ backgroundColor: 'transparent', border: 'none', color: '#FF5252', fontSize: '0.75rem', cursor: 'pointer', textDecoration: 'underline' }}>🔴 Cerrar Sesión</button>
                   <button onClick={() => setVistaPerfil('login')} style={{ backgroundColor: 'transparent', border: 'none', color: '#00FF88', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>Cambiar de Cuenta</button>
                 </div>
               </div>
@@ -1198,7 +1221,7 @@ export default function App() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.75rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.3rem' }}>CORREO O NÚMERO DE CELULAR *</label>
-                  <input type="text" placeholder="Ej. jorge.carvajal@docente.edu o cpicado@comunidad.cr" value={formLogin.emailOrTel} onChange={(e) => setFormLogin({ ...formLogin, emailOrTel: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }} />
+                  <input type="text" placeholder="Ej. jorge.carvajal@docente.edu o 88889999" value={formLogin.emailOrTel} onChange={(e) => setFormLogin({ ...formLogin, emailOrTel: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }} />
                 </div>
 
                 <div>
@@ -1220,6 +1243,7 @@ export default function App() {
                         id: usuarioEncontrado.id,
                         nombre: usuarioEncontrado.nombre,
                         email: usuarioEncontrado.email,
+                        codigoPais: usuarioEncontrado.codigoPais || '+506',
                         telefono: usuarioEncontrado.tel,
                         comunidad: usuarioEncontrado.comunidad,
                         rol: usuarioEncontrado.rol,
@@ -1245,7 +1269,7 @@ export default function App() {
               </div>
             )}
 
-            {/* VISTA 3: REGISTRO */}
+            {/* VISTA 3: REGISTRO CON SELECTOR DE CÓDIGO INTERNACIONAL DE TELÉFONO (+506 COSTA RICA PRIMERO) */}
             {vistaPerfil === 'registro' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
                 <div>
@@ -1259,8 +1283,13 @@ export default function App() {
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.75rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.3rem' }}>NÚMERO DE CELULAR *</label>
-                  <input type="text" placeholder="+506 8888-0000" value={formReg.telefono} onChange={(e) => setFormReg({ ...formReg, telefono: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }} />
+                  <label style={{ display: 'block', fontSize: '0.75rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.3rem' }}>NÚMERO DE CELULAR (CON CÓDIGO DE PAÍS) *</label>
+                  <div style={{ display: 'grid', gridTemplateColumns: '130px 1fr', gap: '0.5rem' }}>
+                    <select value={formReg.codigoPais} onChange={(e) => setFormReg({ ...formReg, codigoPais: e.target.value })} style={{ padding: '0.6rem', backgroundColor: '#050A08', color: '#00FF88', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 'bold' }}>
+                      {codigosPaises.map(cp => <option key={cp.code} value={cp.code}>{cp.code} ({cp.label.split(' ')[0]})</option>)}
+                    </select>
+                    <input type="text" placeholder="8888-0000" value={formReg.telefono} onChange={(e) => setFormReg({ ...formReg, telefono: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }} />
+                  </div>
                 </div>
 
                 <div style={{ backgroundColor: '#0D1E18', border: '1px solid #1B3D2F', padding: '0.8rem', borderRadius: '8px' }}>
@@ -1302,6 +1331,7 @@ export default function App() {
                       id: newId,
                       nombre: formReg.nombre,
                       email: formReg.email,
+                      codigoPais: formReg.codigoPais,
                       tel: formReg.telefono,
                       comunidad: formReg.comunidad,
                       rol: 'Usuario Regular',
@@ -1328,7 +1358,7 @@ export default function App() {
             {vistaPerfil === 'verificar' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem', textAlign: 'center' }}>
                 <div style={{ backgroundColor: '#0A1E16', border: '1px solid #00FF88', padding: '0.8rem', borderRadius: '10px', color: '#00FF88', fontSize: '0.8rem' }}>
-                  💬 Código de verificación enviado a <strong>{formReg.medioVerificacion === 'correo' ? formReg.email : formReg.telefono}</strong>:<br />
+                  💬 Código de verificación enviado a <strong>{formReg.medioVerificacion === 'correo' ? formReg.email : `${formReg.codigoPais} ${formReg.telefono}`}</strong>:<br />
                   <span style={{ fontSize: '1.4rem', fontWeight: 'bold', color: '#FFF', display: 'block', marginTop: '0.3rem', letterSpacing: '3px' }}>
                     {codigoOtpGenerado}
                   </span>
@@ -1353,7 +1383,7 @@ export default function App() {
                       setCuentasRegistradas([...cuentasRegistradas, cuentaVerificadaFinal]);
 
                       if (formReg.solicitaExperto) {
-                        setSolicitudesExpertos([...solicitudesExpertos, { id: Date.now(), userId: cuentaVerificadaFinal.id, nombre: formReg.nombre, email: formReg.email, tel: formReg.telefono, atencedentes: 'Solicitó rango de Experto Herpetólogo al registrarse.', fecha: 'Hoy' }]);
+                        setSolicitudesExpertos([...solicitudesExpertos, { id: Date.now(), userId: cuentaVerificadaFinal.id, nombre: formReg.nombre, email: formReg.email, tel: `${formReg.codigoPais} ${formReg.telefono}`, atencedentes: 'Solicitó rango de Experto Herpetólogo al registrarse.', fecha: 'Hoy' }]);
                       }
 
                       setUsuario({
@@ -1361,6 +1391,7 @@ export default function App() {
                         id: cuentaVerificadaFinal.id,
                         nombre: cuentaVerificadaFinal.nombre,
                         email: cuentaVerificadaFinal.email,
+                        codigoPais: cuentaVerificadaFinal.codigoPais,
                         telefono: cuentaVerificadaFinal.tel,
                         comunidad: cuentaVerificadaFinal.comunidad,
                         rol: 'Usuario Regular',
@@ -1660,7 +1691,7 @@ export default function App() {
                 onClick={() => {
                   const textoContacto = (esExpertoOAdmin && !usuario.mostrarTelefono) 
                     ? `${usuario.email} | 🔒 [Celular Privado]` 
-                    : (usuario.isLoggedIn ? `${usuario.email} | ${usuario.telefono}` : 'Sin contacto');
+                    : (usuario.isLoggedIn ? `${usuario.email} | ${usuario.codigoPais || '+506'} ${usuario.telefono}` : 'Sin contacto');
 
                   const nuevo = {
                     id: Date.now(),
