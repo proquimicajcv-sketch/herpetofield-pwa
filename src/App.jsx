@@ -91,6 +91,7 @@ export default function App() {
   const [mapLayer, setMapLayer] = useState('callejero');
   const [filtroEspecie, setFiltroEspecie] = useState('todas');
   const [busquedaGaleria, setBusquedaGaleria] = useState('');
+  const [filtroEstadoUsuario, setFiltroEstadoUsuario] = useState('todos');
 
   // Estado de Cobertura Red
   const [estadoConexion, setEstadoConexion] = useState('online');
@@ -105,7 +106,8 @@ export default function App() {
       email: '',
       telefono: '',
       comunidad: '',
-      rol: 'Usuario Regular'
+      rol: 'Usuario Regular',
+      mostrarTelefono: false
     };
   });
 
@@ -142,17 +144,16 @@ export default function App() {
     }
   };
 
-  // Cuentas registradas
+  // Base de Cuentas Registradas con Fecha de Ingreso y Opción de Visibilidad de Teléfono
   const [cuentasRegistradas, setCuentasRegistradas] = useState([
-    { id: 1, nombre: 'Jorge Carvajal', email: 'jorge.carvajal@docente.edu', tel: '+506 8888-9999', comunidad: 'Tarrazú (San Marcos, San Lorenzo, Carlos)', rol: 'Administrador Experto (Máximo Rango)', pass: 'admin123', estadoConexion: 'online' },
-    { id: 2, nombre: 'Dra. Sofía Herpetóloga', email: 'sofia.herpeto@ucr.ac.cr', tel: '+506 8765-4321', comunidad: 'Dota (Santa María, Copey, Jardín)', rol: 'Experto Herpetólogo', pass: 'sofia123', estadoConexion: 'online' },
-    { id: 3, nombre: 'Carlos Picado', email: 'cpicado@comunidad.cr', tel: '+506 8555-1234', comunidad: 'León Cortés (San Pablo, San Rafael)', rol: 'Usuario Regular', pass: 'carlos123', estadoConexion: 'offline' }
+    { id: 1, nombre: 'Jorge Carvajal', email: 'jorge.carvajal@docente.edu', tel: '+506 8888-9999', comunidad: 'Tarrazú (San Marcos, San Lorenzo, Carlos)', rol: 'Administrador Experto (Máximo Rango)', pass: 'admin123', estadoConexion: 'online', fechaIngreso: '2026-03-01 08:30:00', mostrarTelefono: false, estatusCuenta: 'activo' },
+    { id: 2, nombre: 'Dra. Sofía Herpetóloga', email: 'sofia.herpeto@ucr.ac.cr', tel: '+506 8765-4321', comunidad: 'Dota (Santa María, Copey, Jardín)', rol: 'Experto Herpetólogo', pass: 'sofia123', estadoConexion: 'online', fechaIngreso: '2026-04-12 14:15:00', mostrarTelefono: false, estatusCuenta: 'activo' },
+    { id: 3, nombre: 'Carlos Picado', email: 'cpicado@comunidad.cr', tel: '+506 8555-1234', comunidad: 'León Cortés (San Pablo, San Rafael)', rol: 'Usuario Regular', pass: 'carlos123', estadoConexion: 'offline', fechaIngreso: '2026-05-20 11:45:00', mostrarTelefono: true, estatusCuenta: 'activo' }
   ]);
 
   // ROLES Y NIVELES DE PERMISOS
   const esExpertoOAdmin = usuario.isLoggedIn && (usuario.rol.includes('Administrador') || usuario.rol.includes('Experto'));
   const esAdminAbsoluto = usuario.isLoggedIn && usuario.rol.includes('Administrador');
-  const esUsuarioRegular = usuario.isLoggedIn && !esExpertoOAdmin;
 
   // Formulario temporal de edición en Ficha
   const [editCientifico, setEditCientifico] = useState('');
@@ -319,7 +320,7 @@ export default function App() {
       estado: 'VALIDADO',
       ubicacion: 'San Marcos de Tarrazú',
       reportante: 'Jorge Carvajal',
-      contacto: 'jorge.carvajal@docente.edu | +506 8888-9999',
+      contacto: 'jorge.carvajal@docente.edu | 🔒 [Celular Privado]',
       temp: '21.0°C',
       humedad: '80% H.R.',
       microhabitat: 'Vegetación / Finca Cafetalera',
@@ -339,7 +340,7 @@ export default function App() {
       estado: 'VALIDADO',
       ubicacion: 'San Pablo de León Cortés',
       reportante: 'Dra. Sofía Herpetóloga',
-      contacto: 'sofia.herpeto@ucr.ac.cr | +506 8765-4321',
+      contacto: 'sofia.herpeto@ucr.ac.cr | 🔒 [Celular Privado]',
       temp: '17.5°C',
       humedad: '90% H.R.',
       microhabitat: 'Hojarasca de bosque de roble',
@@ -423,9 +424,7 @@ export default function App() {
     setModalGuiaEdit(false);
   };
 
-  // REGLA CRÍTICA DE FILTRADO:
-  // Los usuarios regulares sólo ven reportes "VALIDADO". 
-  // Los Expertos y Admin ven TODOS los reportes (incluyendo los que están EN REVISIÓN EXPERTA).
+  // Filtrado de reportes por rol
   const registrosFiltrados = registros.filter((r) => {
     const esVisiblePorRol = esExpertoOAdmin || r.estado === 'VALIDADO';
     const coincideBusqueda = r.nombreComun.toLowerCase().includes(busquedaGaleria.toLowerCase()) || r.especie.toLowerCase().includes(busquedaGaleria.toLowerCase()) || r.ubicacion.toLowerCase().includes(busquedaGaleria.toLowerCase());
@@ -435,6 +434,11 @@ export default function App() {
     if (filtroEspecie === 'reptiles') return r.categoria === 'REPTIL' && coincideBusqueda;
     return coincideBusqueda;
   });
+
+  // Ordenamiento cronológico de usuarios por fecha y hora de ingreso (más reciente primero)
+  const usuariosOrdenadosYFiltrados = cuentasRegistradas
+    .filter(u => filtroEstadoUsuario === 'todos' || u.estadoConexion === filtroEstadoUsuario)
+    .sort((a, b) => new Date(b.fechaIngreso) - new Date(a.fechaIngreso));
 
   return (
     <div style={{ backgroundColor: '#070D0B', color: '#E0E6E3', minHeight: '100vh', fontFamily: 'system-ui, sans-serif', paddingBottom: '90px' }}>
@@ -552,7 +556,7 @@ export default function App() {
         </div>
       )}
 
-      {/* 🖼️ GALERÍA (MUESTRA SOLO VALIDADOS A USUARIOS REGULARES) */}
+      {/* 🖼️ GALERÍA */}
       {tab === 'galeria' && (
         <div style={{ padding: '1rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.8rem' }}>
@@ -639,7 +643,7 @@ export default function App() {
         </div>
       )}
 
-      {/* 📊 PANEL ADMIN / BUZÓN DE CONSULTAS CON PERMISOS RESTRINGIDOS SEGÚN ROL */}
+      {/* 📊 PANEL ADMIN / BUZÓN DE CONSULTAS */}
       {tab === 'admin' && (
         <div style={{ padding: '1.2rem' }}>
           {!usuario.isLoggedIn ? (
@@ -664,28 +668,22 @@ export default function App() {
                     📫 Buzón & Herramientas
                   </h3>
                   
-                  {/* PESTAÑAS SEGÚN ROL DILIGENCIADO */}
                   <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', backgroundColor: '#050A08', padding: '0.3rem', borderRadius: '20px', border: '1px solid #122B20' }}>
-                    
-                    {/* VISIBLE PARA TODOS LOS USUARIOS AUTENTICADOS */}
                     <button onClick={() => setSubTabAdmin('consultas')} style={{ backgroundColor: subTabAdmin === 'consultas' ? '#0F2B20' : 'transparent', color: subTabAdmin === 'consultas' ? '#00FF88' : '#8AA398', border: subTabAdmin === 'consultas' ? '1px solid #00FF88' : 'none', borderRadius: '15px', padding: '0.3rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>💬 Consultas 1 a 1</button>
                     
-                    {/* VISIBLE PARA EXPERTOS Y ADMIN */}
                     {esExpertoOAdmin && (
                       <button onClick={() => setSubTabAdmin('metricas')} style={{ backgroundColor: subTabAdmin === 'metricas' ? '#0F2B20' : 'transparent', color: subTabAdmin === 'metricas' ? '#00FF88' : '#8AA398', border: subTabAdmin === 'metricas' ? '1px solid #00FF88' : 'none', borderRadius: '15px', padding: '0.3rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>📊 Métricas</button>
                     )}
 
-                    {/* SUBPESTAÑA USUARIOS: EXCLUSIVO ADMIN (LOS EXPERTOS NO TIENEN ESTE CONTROL) */}
+                    {/* NUEVA PESTAÑA USUARIOS: EXCLUSIVA PARA ADMINS CON ORDEN CRONOLÓGICO Y FILTRO */}
                     {esAdminAbsoluto && (
-                      <button onClick={() => setSubTabAdmin('usuarios')} style={{ backgroundColor: subTabAdmin === 'usuarios' ? '#0F2B20' : 'transparent', color: subTabAdmin === 'usuarios' ? '#00FF88' : '#8AA398', border: subTabAdmin === 'usuarios' ? '1px solid #00FF88' : 'none', borderRadius: '15px', padding: '0.3rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>👥 Usuarios ({cuentasRegistradas.length})</button>
+                      <button onClick={() => setSubTabAdmin('usuarios')} style={{ backgroundColor: subTabAdmin === 'usuarios' ? '#0F2B20' : 'transparent', color: subTabAdmin === 'usuarios' ? '#00FF88' : '#8AA398', border: subTabAdmin === 'usuarios' ? '1px solid #00FF88' : 'none', borderRadius: '15px', padding: '0.3rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>👥 USUARIOS ({cuentasRegistradas.length})</button>
                     )}
 
-                    {/* VISIBLE PARA EXPERTOS Y ADMIN */}
                     {esExpertoOAdmin && (
                       <button onClick={() => setSubTabAdmin('solicitudes')} style={{ backgroundColor: subTabAdmin === 'solicitudes' ? '#0F2B20' : 'transparent', color: subTabAdmin === 'solicitudes' ? '#00FF88' : '#8AA398', border: subTabAdmin === 'solicitudes' ? '1px solid #00FF88' : 'none', borderRadius: '15px', padding: '0.3rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>🎓 Solicitudes ({solicitudesExpertos.length})</button>
                     )}
 
-                    {/* VISIBLE PARA EXPERTOS Y ADMIN */}
                     {esExpertoOAdmin && (
                       <button onClick={() => setSubTabAdmin('moderacion')} style={{ backgroundColor: subTabAdmin === 'moderacion' ? '#0F2B20' : 'transparent', color: subTabAdmin === 'moderacion' ? '#00FF88' : '#8AA398', border: subTabAdmin === 'moderacion' ? '1px solid #00FF88' : 'none', borderRadius: '15px', padding: '0.3rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>📋 Moderación</button>
                     )}
@@ -693,7 +691,7 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* CONSULTAS 1 A 1 (VISIBLE PARA USUARIOS REGULARES, EXPERTOS Y ADMIN) */}
+                {/* CONSULTAS 1 A 1 */}
                 {subTabAdmin === 'consultas' && (
                   <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
@@ -713,7 +711,7 @@ export default function App() {
                   </div>
                 )}
 
-                {/* MÉTRICAS (EXPERTOS Y ADMIN) */}
+                {/* MÉTRICAS */}
                 {subTabAdmin === 'metricas' && esExpertoOAdmin && (
                   <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
@@ -744,32 +742,60 @@ export default function App() {
                   </div>
                 )}
 
-                {/* GESTIÓN DE USUARIOS (EXCLUSIVO ADMIN: EXPERTOS NO TIENEN ACCESO A ESTO) */}
+                {/* 👥 PESTAÑA USUARIOS (EXCLUSIVO ADMIN: ORDEN CRONOLÓGICO, DESPLEGABLE DE ESTADO Y CONTROLES BAN/EXPULSAR) */}
                 {subTabAdmin === 'usuarios' && esAdminAbsoluto && (
                   <div>
-                    <h4 style={{ margin: '0 0 1rem 0', color: '#FFF', fontSize: '0.95rem' }}>👥 Gestión de Cuentas y Control de Permisos (EXCLUSIVO ADMIN)</h4>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.8rem' }}>
+                      <h4 style={{ margin: 0, color: '#FFF', fontSize: '0.95rem' }}>👥 Gestión de Usuarios Aceptados y Control de Acceso</h4>
+                      
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <label style={{ fontSize: '0.75rem', color: '#00FF88', fontWeight: 'bold' }}>🔍 Filtrar por Estado:</label>
+                        <select 
+                          value={filtroEstadoUsuario} 
+                          onChange={(e) => setFiltroEstadoUsuario(e.target.value)} 
+                          style={{ backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '12px', padding: '0.4rem 0.8rem', fontSize: '0.75rem', fontWeight: 'bold' }}
+                        >
+                          <option value="todos">🌐 Todos los Estados</option>
+                          <option value="online">🟢 En línea</option>
+                          <option value="busy">🟠 Ocupado en campo</option>
+                          <option value="offline">🔴 Fuera de cobertura</option>
+                        </select>
+                      </div>
+                    </div>
+
                     <div style={{ overflowX: 'auto' }}>
                       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', textAlign: 'left' }}>
                         <thead>
                           <tr style={{ borderBottom: '1px solid #162B23', color: '#00FF88' }}>
                             <th style={{ padding: '0.6rem' }}>ESTADO</th>
+                            <th style={{ padding: '0.6rem' }}>FECHA Y HORA INGRESO</th>
                             <th style={{ padding: '0.6rem' }}>NOMBRE</th>
-                            <th style={{ padding: '0.6rem' }}>CORREO / TELÉFONO</th>
+                            <th style={{ padding: '0.6rem' }}>CONTACTO</th>
                             <th style={{ padding: '0.6rem' }}>COMUNIDAD</th>
                             <th style={{ padding: '0.6rem' }}>ROL ASIGNADO</th>
-                            <th style={{ padding: '0.6rem' }}>ACCIÓN</th>
+                            <th style={{ padding: '0.6rem' }}>ACCIONES ADMIN</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {cuentasRegistradas.map((u) => {
+                          {usuariosOrdenadosYFiltrados.map((u) => {
                             const badg = getBadgetConexion(u.estadoConexion || 'online');
+                            const esContactoOculto = (u.rol.includes('Experto') || u.rol.includes('Admin')) && !u.mostrarTelefono;
+
                             return (
                               <tr key={u.id} style={{ borderBottom: '1px solid #0D1A15' }}>
                                 <td style={{ padding: '0.6rem' }}>
-                                  <span style={{ color: badg.color, fontWeight: 'bold' }} title={badg.label}>{badg.icon}</span>
+                                  <span style={{ color: badg.color, fontWeight: 'bold' }} title={badg.label}>{badg.icon} {badg.label}</span>
+                                </td>
+                                <td style={{ padding: '0.6rem', color: '#8AA398', fontSize: '0.75rem' }}>
+                                  📅 {u.fechaIngreso || '2026-03-01 08:00'}
                                 </td>
                                 <td style={{ padding: '0.6rem', fontWeight: 'bold', color: '#FFF' }}>{u.nombre}</td>
-                                <td style={{ padding: '0.6rem', color: '#8AA398' }}>{u.email}<br /><span style={{ fontSize: '0.7rem' }}>{u.tel}</span></td>
+                                <td style={{ padding: '0.6rem', color: '#8AA398' }}>
+                                  📧 {u.email}<br />
+                                  <span style={{ fontSize: '0.7rem', color: esContactoOculto ? '#FFB300' : '#A0C2B4' }}>
+                                    📱 {esContactoOculto ? '🔒 [Celular Privado]' : u.tel}
+                                  </span>
+                                </td>
                                 <td style={{ padding: '0.6rem', color: '#A0C2B4' }}>{u.comunidad}</td>
                                 <td style={{ padding: '0.6rem' }}>
                                   <select 
@@ -790,7 +816,28 @@ export default function App() {
                                   </select>
                                 </td>
                                 <td style={{ padding: '0.6rem' }}>
-                                  <button onClick={() => alert(`Cuenta de ${u.nombre} suspendida.`)} style={{ backgroundColor: '#D32F2F', color: '#FFF', border: 'none', borderRadius: '12px', padding: '0.3rem 0.6rem', fontSize: '0.7rem', fontWeight: 'bold', cursor: 'pointer' }}>🚫 Ban</button>
+                                  <div style={{ display: 'flex', gap: '0.4rem' }}>
+                                    <button 
+                                      onClick={() => {
+                                        setCuentasRegistradas(cuentasRegistradas.map(item => item.id === u.id ? { ...item, estatusCuenta: 'suspendido' } : item));
+                                        alert(`⚠️ La cuenta de ${u.nombre} ha sido baneada (suspendida).`);
+                                      }} 
+                                      style={{ backgroundColor: '#D32F2F', color: '#FFF', border: 'none', borderRadius: '8px', padding: '0.3rem 0.5rem', fontSize: '0.7rem', fontWeight: 'bold', cursor: 'pointer' }}
+                                    >
+                                      🚫 Banear
+                                    </button>
+                                    <button 
+                                      onClick={() => {
+                                        if (confirm(`¿Estás seguro de expulsar e eliminar permanentemente la cuenta de ${u.nombre}?`)) {
+                                          setCuentasRegistradas(cuentasRegistradas.filter(item => item.id !== u.id));
+                                          alert(`❌ La cuenta de ${u.nombre} fue expulsada del sistema.`);
+                                        }
+                                      }} 
+                                      style={{ backgroundColor: '#FF5252', color: '#FFF', border: 'none', borderRadius: '8px', padding: '0.3rem 0.5rem', fontSize: '0.7rem', fontWeight: 'bold', cursor: 'pointer' }}
+                                    >
+                                      ❌ Expulsar
+                                    </button>
+                                  </div>
                                 </td>
                               </tr>
                             );
@@ -801,7 +848,7 @@ export default function App() {
                   </div>
                 )}
 
-                {/* SOLICITUDES DE EXPERTOS (EXPERTOS Y ADMIN) */}
+                {/* SOLICITUDES DE EXPERTOS */}
                 {subTabAdmin === 'solicitudes' && esExpertoOAdmin && (
                   <div>
                     <h4 style={{ margin: '0 0 1rem 0', color: '#FFB300', fontSize: '0.95rem' }}>🎓 Solicitudes de Acreditación de Rango Experto (Biólogos)</h4>
@@ -819,20 +866,22 @@ export default function App() {
                             <div style={{ display: 'flex', gap: '0.5rem' }}>
                               <button 
                                 onClick={() => {
-                                  const cuentasActualizadas = cuentasRegistradas.map(u => u.id === s.userId ? { ...u, rol: 'Experto Herpetólogo' } : u);
+                                  const fechaHoraActual = new Date().toISOString().replace('T', ' ').substring(0, 19);
+                                  const cuentasActualizadas = cuentasRegistradas.map(u => u.id === s.userId ? { ...u, rol: 'Experto Herpetólogo', mostrarTelefono: false } : u);
                                   const existe = cuentasRegistradas.some(u => u.id === s.userId);
+                                  
                                   if (!existe) {
-                                    cuentasActualizadas.push({ id: s.userId || Date.now(), nombre: s.nombre, email: s.email, tel: s.tel, comunidad: 'Zona de los Santos', rol: 'Experto Herpetólogo', pass: '123456', estadoConexion: 'online' });
+                                    cuentasActualizadas.push({ id: s.userId || Date.now(), nombre: s.nombre, email: s.email, tel: s.tel, comunidad: 'Zona de los Santos', rol: 'Experto Herpetólogo', pass: '123456', estadoConexion: 'online', fechaIngreso: fechaHoraActual, mostrarTelefono: false, estatusCuenta: 'activo' });
                                   }
 
                                   setCuentasRegistradas(cuentasActualizadas);
 
                                   if (usuario.id === s.userId || usuario.email === s.email) {
-                                    setUsuario(prev => ({ ...prev, rol: 'Experto Herpetólogo' }));
+                                    setUsuario(prev => ({ ...prev, rol: 'Experto Herpetólogo', mostrarTelefono: false }));
                                   }
 
                                   setSolicitudesExpertos(solicitudesExpertos.filter(item => item.id !== s.id));
-                                  alert(`¡Acreditación Aprobada! ${s.nombre} ahora tiene el rango EXPERTO HERPETÓLOGO con permisos de edición y respuesta.`);
+                                  alert(`¡Acreditación Aprobada! ${s.nombre} ahora tiene el rango EXPERTO HERPETÓLOGO con celular privado por defecto.`);
                                 }} 
                                 style={{ backgroundColor: '#00E676', color: '#000', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}
                               >
@@ -849,7 +898,7 @@ export default function App() {
                   </div>
                 )}
 
-                {/* MODERACIÓN (EXPERTOS Y ADMIN) */}
+                {/* MODERACIÓN */}
                 {subTabAdmin === 'moderacion' && esExpertoOAdmin && (
                   <div>
                     <h4 style={{ margin: '0 0 1rem 0', color: '#FFF', fontSize: '0.95rem' }}>📋 Moderación y Edición de Reportes Pendientes</h4>
@@ -897,6 +946,7 @@ export default function App() {
                   <div>🌡️ <strong>Temp / Humedad:</strong> {registroSeleccionado.temp} / {registroSeleccionado.humedad}</div>
                   <div>🍃 <strong>Microhábitat:</strong> {registroSeleccionado.microhabitat}</div>
                   <div>👤 <strong>Reportado por:</strong> {registroSeleccionado.reportante}</div>
+                  <div>📱 <strong>Contacto:</strong> {registroSeleccionado.contacto}</div>
                 </div>
 
                 <button onClick={() => setModalChat(true)} style={{ width: '100%', padding: '0.7rem', backgroundColor: '#0A2E23', color: '#00FF88', border: '1px solid #00FF88', borderRadius: '20px', fontWeight: 'bold', fontSize: '0.8rem', cursor: 'pointer' }}>
@@ -920,7 +970,6 @@ export default function App() {
                   </div>
                 )}
 
-                {/* EDICIÓN TAXONÓMICA EXCLUSIVA PARA CUENTAS EXPERTAS O ADMIN */}
                 {esExpertoOAdmin ? (
                   <div style={{ backgroundColor: '#1A1807', border: '1px solid #5C4D0A', borderRadius: '12px', padding: '0.9rem' }}>
                     <h4 style={{ margin: '0 0 0.6rem 0', color: '#FFB300', fontSize: '0.85rem' }}>✏️ PANEL DE DIAGNÓSTICO Y EDICIÓN EXPERTA</h4>
@@ -1035,7 +1084,7 @@ export default function App() {
         </div>
       )}
 
-      {/* 👤 MODAL PERFIL CON CONTROL DE ACCESO */}
+      {/* 👤 MODAL PERFIL (CON INTERRUPTOR DE VISIBILIDAD DE TELÉFONO PRIVADO) */}
       {modalPerfil && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999, padding: '1rem' }}>
           <div style={{ backgroundColor: '#09130F', borderRadius: '16px', border: '1px solid #1B3D2F', width: '100%', maxWidth: '520px', padding: '1.2rem', maxHeight: '90vh', overflowY: 'auto' }}>
@@ -1061,11 +1110,6 @@ export default function App() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
                 <div style={{ backgroundColor: '#060D0A', border: '1px solid #1B3D2F', borderRadius: '12px', padding: '0.8rem', textAlign: 'center' }}>
                   <span style={{ color: '#00FF88', fontWeight: 'bold', fontSize: '0.85rem' }}>🛡️ ROL: {usuario.rol.toUpperCase()}</span>
-                  {usuario.rol === 'Usuario Regular' && (
-                    <div style={{ fontSize: '0.7rem', color: '#FFB300', marginTop: '0.3rem' }}>
-                      (Si solicitaste Rango Experto, tu solicitud está en proceso de revisión por los ADMIN).
-                    </div>
-                  )}
                 </div>
 
                 <div>
@@ -1083,6 +1127,17 @@ export default function App() {
                   <input type="text" value={usuario.telefono} onChange={(e) => setUsuario({ ...usuario, telefono: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }} />
                 </div>
 
+                {/* OPCIÓN DE PRIVACIDAD DE CELULAR PARA EXPERTOS Y ADMIN */}
+                {esExpertoOAdmin && (
+                  <div style={{ backgroundColor: '#0D1E18', border: '1px solid #1B3D2F', padding: '0.8rem', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }} onClick={() => setUsuario({ ...usuario, mostrarTelefono: !usuario.mostrarTelefono })}>
+                    <div>
+                      <span style={{ display: 'block', color: '#00FF88', fontSize: '0.75rem', fontWeight: 'bold' }}>🔒 Ocultar mi número celular en reportes</span>
+                      <span style={{ fontSize: '0.65rem', color: '#8AA398' }}>{usuario.mostrarTelefono ? '🟢 Teléfono visible en fichas' : '🔴 Oculto por defecto como [Celular Privado]'}</span>
+                    </div>
+                    <input type="checkbox" checked={!usuario.mostrarTelefono} onChange={() => {}} style={{ accentColor: '#00FF88' }} />
+                  </div>
+                )}
+
                 <div style={{ backgroundColor: '#0A1E16', border: '1px solid #00FF88', padding: '0.8rem', borderRadius: '10px' }}>
                   <label style={{ display: 'block', fontSize: '0.75rem', color: '#00FF88', fontWeight: 'bold', marginBottom: '0.4rem' }}>
                     📡 ESTADO DE COBERTURA Y DISPONIBILIDAD
@@ -1097,7 +1152,7 @@ export default function App() {
                 <button onClick={() => { setModalPerfil(false); alert('¡Perfil actualizado con éxito!'); }} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#00E676', color: '#000', fontWeight: 'bold', border: 'none', borderRadius: '10px', cursor: 'pointer' }}>Guardar Cambios en Perfil</button>
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.5rem' }}>
-                  <button onClick={() => { setUsuario({ isLoggedIn: false, id: null, nombre: '', email: '', telefono: '', comunidad: '', rol: 'Usuario Regular' }); localStorage.removeItem('herpid_usuario_sesion'); setVistaPerfil('login'); }} style={{ backgroundColor: 'transparent', border: 'none', color: '#FF5252', fontSize: '0.75rem', cursor: 'pointer', textDecoration: 'underline' }}>🔴 Cerrar Sesión</button>
+                  <button onClick={() => { setUsuario({ isLoggedIn: false, id: null, nombre: '', email: '', telefono: '', comunidad: '', rol: 'Usuario Regular', mostrarTelefono: false }); localStorage.removeItem('herpid_usuario_sesion'); setVistaPerfil('login'); }} style={{ backgroundColor: 'transparent', border: 'none', color: '#FF5252', fontSize: '0.75rem', cursor: 'pointer', textDecoration: 'underline' }}>🔴 Cerrar Sesión</button>
                   <button onClick={() => setVistaPerfil('login')} style={{ backgroundColor: 'transparent', border: 'none', color: '#00FF88', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>Cambiar de Cuenta</button>
                 </div>
               </div>
@@ -1132,7 +1187,8 @@ export default function App() {
                         email: usuarioEncontrado.email,
                         telefono: usuarioEncontrado.tel,
                         comunidad: usuarioEncontrado.comunidad,
-                        rol: usuarioEncontrado.rol
+                        rol: usuarioEncontrado.rol,
+                        mostrarTelefono: usuarioEncontrado.mostrarTelefono || false
                       });
                       setMensajeAuthOk(`¡Bienvenido de nuevo, ${usuarioEncontrado.nombre}!`);
                       setTimeout(() => { setMensajeAuthOk(''); setVistaPerfil('perfil'); setModalPerfil(false); }, 1500);
@@ -1196,6 +1252,8 @@ export default function App() {
                     }
 
                     const newId = Date.now();
+                    const fechaActual = new Date().toISOString().replace('T', ' ').substring(0, 19);
+
                     const nuevaCuenta = {
                       id: newId,
                       nombre: formReg.nombre,
@@ -1204,7 +1262,10 @@ export default function App() {
                       comunidad: formReg.comunidad,
                       rol: 'Usuario Regular',
                       pass: formReg.pass,
-                      estadoConexion: 'online'
+                      estadoConexion: 'online',
+                      fechaIngreso: fechaActual,
+                      mostrarTelefono: true,
+                      estatusCuenta: 'activo'
                     };
 
                     setCuentasRegistradas([...cuentasRegistradas, nuevaCuenta]);
@@ -1220,7 +1281,8 @@ export default function App() {
                       email: formReg.email,
                       telefono: formReg.telefono,
                       comunidad: formReg.comunidad,
-                      rol: 'Usuario Regular'
+                      rol: 'Usuario Regular',
+                      mostrarTelefono: true
                     });
 
                     setMensajeAuthOk(formReg.solicitaExperto ? '¡Cuenta creada! Has ingresado como Usuario Regular. Tu solicitud de Experto fue enviada a los ADMIN.' : '¡Cuenta registrada con éxito!');
@@ -1511,6 +1573,10 @@ export default function App() {
               
               <button 
                 onClick={() => {
+                  const textoContacto = (esExpertoOAdmin && !usuario.mostrarTelefono) 
+                    ? `${usuario.email} | 🔒 [Celular Privado]` 
+                    : (usuario.isLoggedIn ? `${usuario.email} | ${usuario.telefono}` : 'Sin contacto');
+
                   const nuevo = {
                     id: Date.now(),
                     especie: desconocido ? 'Especie por identificar' : nombreCientifico,
@@ -1520,7 +1586,7 @@ export default function App() {
                     estado: 'EN REVISIÓN EXPERTA',
                     ubicacion: comunidad || 'Zona de los Santos',
                     reportante: usuario.isLoggedIn ? usuario.nombre : 'Usuario Anónimo',
-                    contacto: usuario.isLoggedIn ? usuario.email : 'Sin contacto',
+                    contacto: textoContacto,
                     temp: `${temp}°C`,
                     humedad: `${humedad}% H.R.`,
                     microhabitat: microhabitat,
