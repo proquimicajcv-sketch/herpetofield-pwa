@@ -48,7 +48,7 @@ const crearIconoPersonalizado = (silueta, estado) => {
   });
 };
 
-// Icono de Alfiler Rojo
+// Icono de Alfiler Rojo para selección exacta en mapa
 const iconoAlfilerRojo = L.divIcon({
   className: 'red-pin-marker',
   html: `<div style="font-size: 32px; filter: drop-shadow(0px 3px 5px rgba(255,0,0,0.6)); cursor: pointer;">📍</div>`,
@@ -56,7 +56,7 @@ const iconoAlfilerRojo = L.divIcon({
   iconAnchor: [16, 32]
 });
 
-// Capturador de clics en el mapa
+// Componente para capturar clic en el mapa del formulario
 function EventoMapaPin({ setLat, setLng, setPosPin, setTemp, setAltitud }) {
   useMapEvents({
     click(e) {
@@ -76,6 +76,7 @@ function EventoMapaPin({ setLat, setLng, setPosPin, setTemp, setAltitud }) {
 }
 
 export default function App() {
+  // === ESTADOS GLOBALES ===
   const [tab, setTab] = useState('mapa');
   const [subTabAdmin, setSubTabAdmin] = useState('consultas');
   
@@ -88,7 +89,7 @@ export default function App() {
   const [modalGuiaEdit, setModalGuiaEdit] = useState(false);
   const [registroSeleccionado, setRegistroSeleccionado] = useState(null);
 
-  // Autenticación
+  // Autenticación y Perfil
   const [vistaPerfil, setVistaPerfil] = useState('login');
   const [metodoRecuperacion, setMetodoRecuperacion] = useState('correo');
   const [mensajeAuthOk, setMensajeAuthOk] = useState('');
@@ -101,16 +102,22 @@ export default function App() {
   const [filtroEspecie, setFiltroEspecie] = useState('todas');
   const [busquedaGaleria, setBusquedaGaleria] = useState('');
   const [filtroEstadoUsuario, setFiltroEstadoUsuario] = useState('todos');
-
-  // Estado Red
   const [estadoConexion, setEstadoConexion] = useState('online');
 
-  // 1. SESIÓN (Persistente)
+  // === PERSISTENCIA LOCAL ===
+  
+  // Usuario Logueado (A prueba de fallos)
   const [usuario, setUsuario] = useState(() => {
     try {
       const sesionGuardada = localStorage.getItem('herpid_usuario_sesion');
-      if (sesionGuardada) return JSON.parse(sesionGuardada);
-    } catch (e) {}
+      if (sesionGuardada) {
+        const parsed = JSON.parse(sesionGuardada);
+        return {
+          ...parsed,
+          rol: parsed.rol || 'Usuario Regular' // Blindaje si el rol está corrupto
+        };
+      }
+    } catch (e) { console.error(e); }
     return { isLoggedIn: false, id: null, nombre: '', email: '', codigoPais: '+506', telefono: '', comunidad: '', rol: 'Usuario Regular', mostrarTelefono: false };
   });
 
@@ -118,14 +125,12 @@ export default function App() {
     localStorage.setItem('herpid_usuario_sesion', JSON.stringify(usuario));
   }, [usuario]);
 
-  // 2. REGISTROS PRINCIPALES (Persistencia Robusta a prueba de refresh)
+  // Registros Públicos (A prueba de fallos y refrescos)
   const [registros, setRegistros] = useState(() => {
     try {
       const guardados = localStorage.getItem('herpid_registros_avistamientos');
       if (guardados) return JSON.parse(guardados);
-    } catch (e) {
-      console.error("Error cargando registros locales", e);
-    }
+    } catch (e) { console.error(e); }
     return [
       {
         id: 1,
@@ -143,59 +148,75 @@ export default function App() {
         microhabitat: 'Vegetación / Finca Cafetalera',
         estadoVida: 'Vivo / Activo (Adulto)',
         tieneAudio: true,
-        fotos: [
-          'https://images.unsplash.com/photo-1548802673-380ab8ebc7b7?auto=format&fit=crop&w=600&q=80',
-        ],
+        fotos: ['https://images.unsplash.com/photo-1548802673-380ab8ebc7b7?auto=format&fit=crop&w=600&q=80'],
         img: 'https://images.unsplash.com/photo-1548802673-380ab8ebc7b7?auto=format&fit=crop&w=600&q=80',
         coords: [9.650565, -84.000236],
         editadoPor: 'Jorge Carvajal (Administrador Experto)',
         fechaEdicion: '24/07/2026, 00:15'
+      },
+      {
+        id: 2,
+        especie: 'Cerrophidion godmani',
+        nombreComun: 'Toboba de Montaña',
+        categoria: 'REPTIL',
+        silueta: 'Serpiente',
+        estado: 'VALIDADO',
+        ubicacion: 'San Pablo de León Cortés',
+        reportante: 'Dra. Sofía Herpetóloga',
+        contacto: 'sofia.herpeto@ucr.ac.cr | 🔒 [Celular Privado]',
+        temp: '17.5 °C',
+        altitud: '1900 msnm',
+        horaRegistro: '24/07/2026, 09:12:00 (Exacta)',
+        microhabitat: 'Hojarasca de bosque de roble',
+        estadoVida: 'Vivo / Activo (Adulto)',
+        tieneAudio: false,
+        fotos: ['https://images.unsplash.com/photo-1531386151447-fd76ad50012f?auto=format&fit=crop&w=600&q=80'],
+        img: 'https://images.unsplash.com/photo-1531386151447-fd76ad50012f?auto=format&fit=crop&w=600&q=80',
+        coords: [9.6682, -84.0141],
+        editadoPor: 'Dra. Sofía Herpetóloga (Experto Herpetólogo)',
+        fechaEdicion: '24/07/2026, 00:30'
       }
     ];
   });
 
   useEffect(() => {
-    try {
-      localStorage.setItem('herpid_registros_avistamientos', JSON.stringify(registros));
-    } catch (e) {
-      alert("⚠️ Almacenamiento local lleno. Se borrarán algunos registros offline si sigues subiendo fotos muy pesadas sin conexión.");
-    }
+    try { localStorage.setItem('herpid_registros_avistamientos', JSON.stringify(registros)); } 
+    catch (e) { console.error("LocalStorage lleno"); }
   }, [registros]);
 
-  // 3. OFFLINE
+  // Registros Offline Pendientes
   const [pendientesOffline, setPendientesOffline] = useState(() => {
     try {
       const guardados = localStorage.getItem('herpid_pendientes_offline');
       if (guardados) return JSON.parse(guardados);
-    } catch (e) {}
+    } catch (e) { console.error(e); }
     return [];
   });
 
   useEffect(() => {
-    try {
-      localStorage.setItem('herpid_pendientes_offline', JSON.stringify(pendientesOffline));
-    } catch (e) {}
+    localStorage.setItem('herpid_pendientes_offline', JSON.stringify(pendientesOffline));
   }, [pendientesOffline]);
 
-  // Instalación PWA
-  const [deferredPrompt, setDeferredPrompt] = useState(null);
-  useEffect(() => {
-    window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); setDeferredPrompt(e); });
-  }, []);
-
-  const ejecutarInstalacionApp = () => {
-    if (deferredPrompt) { deferredPrompt.prompt(); deferredPrompt.userChoice.then(() => setDeferredPrompt(null)); } 
-    else { setModalInstalar(true); }
-  };
-
+  // === BASE DE DATOS LOCAL ===
   const [cuentasRegistradas, setCuentasRegistradas] = useState([
-    { id: 1, nombre: 'Jorge Carvajal', email: 'jorge.carvajal@docente.edu', codigoPais: '+506', tel: '8888-9999', comunidad: 'Tarrazú (San Marcos, San Lorenzo, Carlos)', rol: 'Administrador Experto (Máximo Rango)', pass: 'admin123', estadoConexion: 'online', fechaIngreso: '2026-03-01 08:30:00', mostrarTelefono: false, estatusCuenta: 'activo', cuentaVerificada: true },
-    { id: 2, nombre: 'Dra. Sofía Herpetóloga', email: 'sofia.herpeto@ucr.ac.cr', codigoPais: '+506', tel: '8765-4321', comunidad: 'Dota (Santa María, Copey, Jardín)', rol: 'Experto Herpetólogo', pass: 'sofia123', estadoConexion: 'online', fechaIngreso: '2026-04-12 14:15:00', mostrarTelefono: false, estatusCuenta: 'activo', cuentaVerificada: true },
+    { id: 1, nombre: 'Jorge Carvajal', email: 'jorge.carvajal@docente.edu', codigoPais: '+506', tel: '88889999', comunidad: 'Tarrazú (San Marcos, San Lorenzo, Carlos)', rol: 'Administrador Experto (Máximo Rango)', pass: 'admin123', estadoConexion: 'online', fechaIngreso: '2026-03-01 08:30:00', mostrarTelefono: false, estatusCuenta: 'activo', cuentaVerificada: true },
+    { id: 2, nombre: 'Dra. Sofía Herpetóloga', email: 'sofia.herpeto@ucr.ac.cr', codigoPais: '+506', tel: '87654321', comunidad: 'Dota (Santa María, Copey, Jardín)', rol: 'Experto Herpetólogo', pass: 'sofia123', estadoConexion: 'online', fechaIngreso: '2026-04-12 14:15:00', mostrarTelefono: false, estatusCuenta: 'activo', cuentaVerificada: true },
+    { id: 3, nombre: 'Carlos Picado', email: 'cpicado@comunidad.cr', codigoPais: '+506', tel: '85551234', comunidad: 'León Cortés (San Pablo, San Rafael)', rol: 'Usuario Regular', pass: 'carlos123', estadoConexion: 'offline', fechaIngreso: '2026-05-20 11:45:00', mostrarTelefono: true, estatusCuenta: 'activo', cuentaVerificada: true }
   ]);
 
-  const esExpertoOAdmin = usuario.isLoggedIn && (usuario.rol.includes('Administrador') || usuario.rol.includes('Experto'));
-  const esAdminAbsoluto = usuario.isLoggedIn && usuario.rol.includes('Administrador');
+  const codigosPaises = [
+    { code: '+506', label: '🇨🇷 Costa Rica (+506)' },
+    { code: '+1', label: '🇺🇸/🇨🇦 Estados Unidos / Canadá (+1)' },
+    { code: '+52', label: '🇲🇽 México (+52)' },
+    { code: '+507', label: '🇵🇦 Panamá (+507)' },
+    { code: '+57', label: '🇨🇴 Colombia (+57)' }
+  ];
 
+  // === ROLES ===
+  const esExpertoOAdmin = usuario?.isLoggedIn && usuario?.rol && (usuario.rol.includes('Administrador') || usuario.rol.includes('Experto'));
+  const esAdminAbsoluto = usuario?.isLoggedIn && usuario?.rol && usuario.rol.includes('Administrador');
+
+  // === EDICIÓN EXPERTA ===
   const [editCientifico, setEditCientifico] = useState('');
   const [editComun, setEditComun] = useState('');
   const [editNotasTaxo, setEditNotasTaxo] = useState('');
@@ -210,23 +231,16 @@ export default function App() {
     }
   }, [registroSeleccionado]);
 
+  // === FORMULARIOS ===
   const [formLogin, setFormLogin] = useState({ emailOrTel: '', pass: '' });
   const [formReg, setFormReg] = useState({ nombre: '', email: '', codigoPais: '+506', telefono: '', comunidad: 'Tarrazú', pass: '', confirmPass: '', solicitaExperto: false, medioVerificacion: 'correo' });
   const [formRecuperar, setFormRecuperar] = useState({ contacto: '' });
-
-  const codigosPaises = [
-    { code: '+506', label: '🇨🇷 Costa Rica (+506)' },
-    { code: '+1', label: '🇺🇸/🇨🇦 Estados Unidos / Canadá (+1)' },
-    { code: '+52', label: '🇲🇽 México (+52)' },
-    { code: '+507', label: '🇵🇦 Panamá (+507)' },
-    { code: '+57', label: '🇨🇴 Colombia (+57)' },
-  ];
-
-  const [solicitudesExpertos, setSolicitudesExpertos] = useState([]);
-  const [chatMensajes, setChatMensajes] = useState([{ id: 1, texto: '👋 Has iniciado una consulta privada directa.', emisor: 'sistema' }]);
+  const [solicitudesExpertos, setSolicitudesExpertos] = useState([{ id: 101, userId: 3, nombre: 'MSc. Juan Abarca', email: 'jabarca@herpeto.org', tel: '+506 8333-4444', atencedentes: 'Biólogo especialista en Isthmohyla nacientes.', fecha: '24/07/2026' }]);
+  
+  const [chatMensajes, setChatMensajes] = useState([{ id: 1, texto: '👋 Has iniciado una consulta privada directa. Escribe tu mensaje abajo.', emisor: 'sistema' }]);
   const [nuevoMensaje, setNuevoMensaje] = useState('');
 
-  // 📝 VARIABLES DEL FORMULARIO DE REGISTRO
+  // Formulario 7 Pasos Avistamiento
   const [tipoFauna, setTipoFauna] = useState('Anfibio');
   const [silueta, setSilueta] = useState('Rana Arborícola');
   const [desconocido, setDesconocido] = useState(true);
@@ -243,7 +257,7 @@ export default function App() {
   const [horaAproximada, setHoraAproximada] = useState('');
   const [microhabitat, setMicrohabitat] = useState('Vegetación / Finca Cafetalera');
   const [notas, setNotas] = useState('');
-  const [fotosRegistro, setFotosRegistro] = useState([]); // Arreglo vacío por defecto
+  const [fotosRegistro, setFotosRegistro] = useState([]); 
   
   // Audio
   const [grabandoAudio, setGrabandoAudio] = useState(false);
@@ -253,7 +267,18 @@ export default function App() {
   const audioChunksRef = useRef([]);
   const timerIntervalRef = useRef(null);
 
-  // FUNCIÓN PARA ABRIR Y LIMPIAR EL MODAL DE REGISTRO TOTALMENTE
+  // Instalación PWA
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
+  useEffect(() => {
+    window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); setDeferredPrompt(e); });
+  }, []);
+
+  const ejecutarInstalacionApp = () => {
+    if (deferredPrompt) { deferredPrompt.prompt(); deferredPrompt.userChoice.then(() => setDeferredPrompt(null)); } 
+    else { setModalInstalar(true); }
+  };
+
+  // FUNCIONES DE UTILIDAD
   const abrirModalRegistro = () => {
     setTipoFauna('Anfibio');
     setSilueta('Rana Arborícola');
@@ -271,7 +296,6 @@ export default function App() {
     setModalRegistro(true);
   };
 
-  // 📷 MOTOR DE COMPRESIÓN DE FOTOS (Evita que el LocalStorage colapse y se pierdan los datos)
   const comprimirImagen = (file) => {
     return new Promise((resolve) => {
       const reader = new FileReader();
@@ -281,7 +305,7 @@ export default function App() {
         img.src = event.target.result;
         img.onload = () => {
           const canvas = document.createElement('canvas');
-          const MAX_SIZE = 800; // Resolución optimizada para PWA y biólogos
+          const MAX_SIZE = 800; 
           let width = img.width;
           let height = img.height;
 
@@ -294,7 +318,7 @@ export default function App() {
           canvas.height = height;
           const ctx = canvas.getContext('2d');
           ctx.drawImage(img, 0, 0, width, height);
-          resolve(canvas.toDataURL('image/jpeg', 0.6)); // Compresión a JPEG 60% calidad (Texto Base64 seguro para memoria)
+          resolve(canvas.toDataURL('image/jpeg', 0.6)); 
         };
       };
     });
@@ -318,30 +342,18 @@ export default function App() {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       mediaRecorderRef.current = new MediaRecorder(stream);
       audioChunksRef.current = [];
-
-      mediaRecorderRef.current.ondataavailable = (event) => {
-        if (event.data.size > 0) audioChunksRef.current.push(event.data);
-      };
-
+      mediaRecorderRef.current.ondataavailable = (event) => { if (event.data.size > 0) audioChunksRef.current.push(event.data); };
       mediaRecorderRef.current.onstop = () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/mp3' });
-        const url = URL.createObjectURL(audioBlob);
-        setAudioURL(url);
+        setAudioURL(URL.createObjectURL(audioBlob));
       };
-
       mediaRecorderRef.current.start();
       setGrabandoAudio(true);
       setTiempoGrabacion(0);
-
       timerIntervalRef.current = setInterval(() => {
-        setTiempoGrabacion((prev) => {
-          if (prev >= 30) { detenerGrabacion(); return 30; }
-          return prev + 1;
-        });
+        setTiempoGrabacion((prev) => { if (prev >= 30) { detenerGrabacion(); return 30; } return prev + 1; });
       }, 1000);
-    } catch (err) {
-      alert('Permiso de micrófono no disponible.');
-    }
+    } catch (err) { alert('Permiso de micrófono no disponible.'); }
   };
 
   const detenerGrabacion = () => {
@@ -391,41 +403,30 @@ export default function App() {
     const headers = "ID,Nombre Comun,Especie,Categoria,Estado,Ubicacion,Reportante,Temperatura,Altitud,HoraRegistro,EditadoPor\n";
     const rows = registros.map(r => `${r.id},"${r.nombreComun}","${r.especie}",${r.categoria},${r.estado},"${r.ubicacion}","${r.reportante}",${r.temp},${r.altitud},"${r.horaRegistro}","${r.editadoPor || 'N/A'}"`).join("\n");
     const blob = new Blob([headers + rows], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url;
+    a.href = window.URL.createObjectURL(blob);
     a.download = `HerpID_LosSantos_Avistamientos.csv`;
     a.click();
   };
 
   const sincronizarPendientes = () => {
-    if (pendientesOffline.length === 0) {
-      alert('No hay registros almacenados offline para sincronizar.');
-      return;
-    }
+    if (pendientesOffline.length === 0) { alert('No hay registros almacenados offline.'); return; }
     setRegistros([...pendientesOffline, ...registros]);
     setPendientesOffline([]);
-    alert('¡Sincronización exitosa! Se subieron todos los reportes guardados en la memoria local.');
+    alert('¡Sincronización exitosa!');
     setModalSincronizar(false);
   };
 
+  // GUÍA EDITABLE
   const [especiesGuia, setEspeciesGuia] = useState([
     {
-      id: 1,
-      nombre: 'Agalychnis annae',
-      comun: 'Rana Verde de Palmera',
-      tipo: 'ANFIBIO • IUCN: EN (En Peligro)',
-      habitat: 'Vegetación de cafetal y jardines (1200 - 1800 msnm)',
-      desc: 'Rana arborícola de color verde intenso con flancos amarillos o azules.',
+      id: 1, nombre: 'Agalychnis annae', comun: 'Rana Verde de Palmera', tipo: 'ANFIBIO • IUCN: EN (En Peligro)',
+      habitat: 'Vegetación de cafetal y jardines (1200 - 1800 msnm)', desc: 'Rana arborícola de color verde intenso con flancos amarillos.',
       img: 'https://images.unsplash.com/photo-1548802673-380ab8ebc7b7?auto=format&fit=crop&w=600&q=80'
     },
     {
-      id: 2,
-      nombre: 'Cerrophidion godmani',
-      comun: 'Toboba de Montaña',
-      tipo: 'REPTIL • IUCN: LC (Preocupación Menor)',
-      habitat: 'Hojarasca de bosque de roble (>1800 msnm)',
-      desc: 'Serpiente venenosa pequeña de hábitos terrestres.',
+      id: 2, nombre: 'Cerrophidion godmani', comun: 'Toboba de Montaña', tipo: 'REPTIL • IUCN: LC (Preocupación Menor)',
+      habitat: 'Hojarasca de bosque de roble (>1800 msnm)', desc: 'Serpiente venenosa pequeña de hábitos terrestres.',
       img: 'https://images.unsplash.com/photo-1531386151447-fd76ad50012f?auto=format&fit=crop&w=600&q=80'
     }
   ]);
@@ -445,7 +446,7 @@ export default function App() {
   };
 
   const guardarEspecieGuia = () => {
-    if (!formGuia.nombre || !formGuia.comun) { alert('Nombre y nombre común obligatorios.'); return; }
+    if (!formGuia.nombre || !formGuia.comun) { alert('Nombre científico y nombre común son obligatorios.'); return; }
     if (especieGuiaEditando) {
       setEspeciesGuia(especiesGuia.map(sp => sp.id === especieGuiaEditando.id ? { ...sp, ...formGuia } : sp));
       alert('¡Ficha actualizada con éxito!');
@@ -512,9 +513,10 @@ export default function App() {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+          
           {pendientesOffline.length > 0 && (
             <button onClick={() => setModalSincronizar(true)} style={{ backgroundColor: '#FFB300', color: '#000', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '20px', fontWeight: 'bold', fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-              ⏳ {pendientesOffline.length} Pendiente(s)
+              ⏳ {pendientesOffline.length} Pendiente(s) Offline
             </button>
           )}
 
@@ -527,10 +529,14 @@ export default function App() {
           </button>
 
           <button 
-            onClick={() => { setVistaPerfil(usuario.isLoggedIn ? 'perfil' : 'login'); setModalPerfil(true); }} 
-            style={{ backgroundColor: usuario.isLoggedIn ? '#00C853' : '#102E23', color: usuario.isLoggedIn ? '#000' : '#00FF88', border: usuario.isLoggedIn ? 'none' : '1px solid #00FF88', padding: '0.4rem 0.8rem', borderRadius: '20px', fontWeight: 'bold', fontSize: '0.75rem', cursor: 'pointer' }}
+            onClick={() => { setVistaPerfil(usuario?.isLoggedIn ? 'perfil' : 'login'); setModalPerfil(true); }} 
+            style={{ backgroundColor: usuario?.isLoggedIn ? '#00C853' : '#102E23', color: usuario?.isLoggedIn ? '#000' : '#00FF88', border: usuario?.isLoggedIn ? 'none' : '1px solid #00FF88', padding: '0.4rem 0.8rem', borderRadius: '20px', fontWeight: 'bold', fontSize: '0.75rem', cursor: 'pointer' }}
           >
-            {usuario.isLoggedIn ? `${usuario.rol.includes('Admin') ? '🛡️' : usuario.rol.includes('Experto') ? '🎓' : '👤'} ${usuario.nombre}` : '🔑 INICIAR SESIÓN / REGISTRARSE'}
+            {usuario?.isLoggedIn ? `${usuario.rol.includes('Admin') ? '🛡️' : usuario.rol.includes('Experto') ? '🎓' : '👤'} ${usuario.nombre}` : '🔑 INICIAR SESIÓN / REGISTRARSE'}
+          </button>
+
+          <button onClick={ejecutarInstalacionApp} style={{ backgroundColor: '#00E676', color: '#000', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '20px', fontWeight: 'bold', fontSize: '0.75rem', cursor: 'pointer' }}>
+            📲 Instalar App
           </button>
         </div>
       </header>
@@ -541,7 +547,7 @@ export default function App() {
           <div style={{ position: 'absolute', top: '15px', left: '15px', zIndex: 1000, display: 'flex', flexDirection: 'column', gap: '8px' }}>
             <div style={{ backgroundColor: 'rgba(11, 21, 18, 0.9)', backdropFilter: 'blur(8px)', border: '1px solid #162B23', borderRadius: '25px', padding: '4px', display: 'flex', gap: '4px' }}>
               <button onClick={() => setFiltroEspecie('todas')} style={{ backgroundColor: filtroEspecie === 'todas' ? '#0F2B20' : 'transparent', color: filtroEspecie === 'todas' ? '#00FF88' : '#8AA398', border: filtroEspecie === 'todas' ? '1px solid #00FF88' : 'none', padding: '6px 14px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}>
-                Todas
+                Todas las Especies
               </button>
               <button onClick={() => setFiltroEspecie('anfibios')} style={{ backgroundColor: filtroEspecie === 'anfibios' ? '#0F2B20' : 'transparent', color: filtroEspecie === 'anfibios' ? '#00FF88' : '#8AA398', border: filtroEspecie === 'anfibios' ? '1px solid #00FF88' : 'none', padding: '6px 14px', borderRadius: '20px', fontSize: '0.75rem', cursor: 'pointer' }}>
                 🐸 Anfibios
@@ -556,13 +562,13 @@ export default function App() {
                 🗺️ Callejero
               </button>
               <button onClick={() => setMapLayer('satelite-hibrido')} style={{ backgroundColor: mapLayer === 'satelite-hibrido' ? '#0F2B20' : 'rgba(11, 21, 18, 0.9)', color: mapLayer === 'satelite-hibrido' ? '#00FF88' : '#FFF', border: '1px solid #00FF88', borderRadius: '20px', padding: '6px 12px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}>
-                🛰️ Satélite + Nombres
+                🛰️ Satélite con Nombres (Híbrido)
               </button>
             </div>
           </div>
 
           <div style={{ position: 'absolute', top: '15px', right: '15px', zIndex: 1000, backgroundColor: 'rgba(11, 21, 18, 0.9)', backdropFilter: 'blur(8px)', border: '1px solid #162B23', borderRadius: '20px', padding: '6px 12px', fontSize: '0.75rem', color: '#00FF88', fontWeight: 'bold' }}>
-            🛰️ GPS: {lat}, {lng}
+            🛰️ GPS: {lat}, {lng} ±182m
           </div>
 
           <div style={{ height: 'calc(100vh - 180px)', width: '100%' }}>
@@ -571,7 +577,7 @@ export default function App() {
                 <TileLayer attribution='&copy; OpenStreetMap' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
               ) : (
                 <>
-                  <TileLayer attribution='&copy; Esri' url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}" />
+                  <TileLayer attribution='&copy; Esri WorldImagery' url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}" />
                   <TileLayer attribution='&copy; CARTO' url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png" subdomains="abcd" maxZoom={20} />
                 </>
               )}
@@ -594,6 +600,25 @@ export default function App() {
               ))}
             </MapContainer>
           </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem', padding: '0.8rem 1rem', backgroundColor: '#0A120E', position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 1000 }}>
+            <div style={{ backgroundColor: '#101C17', padding: '0.5rem', borderRadius: '8px', textAlign: 'center', border: '1px solid #1A2E26' }}>
+              <div style={{ color: '#00FF88', fontSize: '1.2rem', fontWeight: 'bold' }}>{registros.filter(r => r.estado === 'VALIDADO').length}</div>
+              <div style={{ fontSize: '0.65rem', color: '#8AA398' }}>APROBADOS</div>
+            </div>
+            <div style={{ backgroundColor: '#101C17', padding: '0.5rem', borderRadius: '8px', textAlign: 'center', border: '1px solid #1A2E26' }}>
+              <div style={{ color: '#00FF88', fontSize: '1.2rem', fontWeight: 'bold' }}>{registros.filter(r => r.categoria === 'ANFIBIO').length}</div>
+              <div style={{ fontSize: '0.65rem', color: '#8AA398' }}>ANFIBIOS</div>
+            </div>
+            <div style={{ backgroundColor: '#101C17', padding: '0.5rem', borderRadius: '8px', textAlign: 'center', border: '1px solid #1A2E26' }}>
+              <div style={{ color: '#FFB300', fontSize: '1.2rem', fontWeight: 'bold' }}>{registros.filter(r => r.categoria === 'REPTIL').length}</div>
+              <div style={{ fontSize: '0.65rem', color: '#8AA398' }}>REPTILES</div>
+            </div>
+            <div style={{ backgroundColor: '#101C17', padding: '0.5rem', borderRadius: '8px', textAlign: 'center', border: '1px solid #1A2E26' }}>
+              <div style={{ color: '#FF5252', fontSize: '1.2rem', fontWeight: 'bold' }}>{registros.filter(r => r.estado !== 'VALIDADO').length}</div>
+              <div style={{ fontSize: '0.65rem', color: '#8AA398' }}>EN REVISIÓN</div>
+            </div>
+          </div>
         </div>
       )}
 
@@ -601,7 +626,7 @@ export default function App() {
       {tab === 'galeria' && (
         <div style={{ padding: '1rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.8rem' }}>
-            <h2 style={{ margin: 0, fontSize: '1.2rem', color: '#00FF88' }}>🌿 Herpetofauna de la Zona de los Santos</h2>
+            <h2 style={{ margin: '0', fontSize: '1.2rem', color: '#00FF88' }}>🌿 Herpetofauna de la Zona de los Santos</h2>
             <div style={{ display: 'flex', gap: '0.5rem', flex: 1, maxWidth: '400px' }}>
               <input 
                 type="text" 
@@ -612,7 +637,7 @@ export default function App() {
               />
               <button 
                 onClick={() => {
-                  if (!usuario.isLoggedIn) {
+                  if (!usuario?.isLoggedIn) {
                     alert('Debes iniciar sesión con tu usuario y contraseña para registrar un avistamiento.');
                     setVistaPerfil('login'); setModalPerfil(true);
                   } else {
@@ -670,6 +695,12 @@ export default function App() {
                     <p style={{ margin: '0.3rem 0', fontSize: '0.75rem', color: '#A0C2B4' }}>🏡 {sp.habitat}</p>
                     <p style={{ margin: '0.3rem 0', fontSize: '0.75rem', color: '#8AA398' }}>{sp.desc}</p>
                   </div>
+
+                  {esAdminAbsoluto && (
+                    <button onClick={() => abrirEdicionGuia(sp)} style={{ width: '100%', marginTop: '0.8rem', padding: '0.5rem', backgroundColor: '#1A1807', color: '#FFB300', border: '1px solid #5C4D0A', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}>
+                      ✏️ Editar Especie (ADMIN)
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
@@ -680,13 +711,13 @@ export default function App() {
       {/* 📊 PANEL ADMIN / BUZÓN DE CONSULTAS */}
       {tab === 'admin' && (
         <div style={{ padding: '1.2rem' }}>
-          {!usuario.isLoggedIn ? (
+          {!usuario?.isLoggedIn ? (
             <div style={{ backgroundColor: '#09130F', borderRadius: '16px', border: '1px solid #1B3D2F', padding: '2rem', textAlign: 'center' }}>
               <span style={{ fontSize: '3rem' }}>🔒</span>
               <h2 style={{ color: '#FFF', fontSize: '1.2rem', margin: '0.8rem 0' }}>Acceso Restringido</h2>
               <p style={{ color: '#8AA398', fontSize: '0.85rem', marginBottom: '1.2rem' }}>Debes iniciar sesión con tu usuario para ingresar al panel.</p>
               <button onClick={() => { setVistaPerfil('login'); setModalPerfil(true); }} style={{ backgroundColor: '#00E676', color: '#000', border: 'none', padding: '0.8rem 1.5rem', borderRadius: '20px', fontWeight: 'bold', cursor: 'pointer' }}>
-                🔑 Iniciar Sesión
+                🔑 Iniciar Sesión Ahora
               </button>
             </div>
           ) : (
@@ -706,11 +737,12 @@ export default function App() {
                     <button onClick={() => setSubTabAdmin('consultas')} style={{ backgroundColor: subTabAdmin === 'consultas' ? '#0F2B20' : 'transparent', color: subTabAdmin === 'consultas' ? '#00FF88' : '#8AA398', border: subTabAdmin === 'consultas' ? '1px solid #00FF88' : 'none', borderRadius: '15px', padding: '0.3rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>💬 Consultas</button>
                     {esExpertoOAdmin && <button onClick={() => setSubTabAdmin('metricas')} style={{ backgroundColor: subTabAdmin === 'metricas' ? '#0F2B20' : 'transparent', color: subTabAdmin === 'metricas' ? '#00FF88' : '#8AA398', border: subTabAdmin === 'metricas' ? '1px solid #00FF88' : 'none', borderRadius: '15px', padding: '0.3rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>📊 Métricas</button>}
                     {esAdminAbsoluto && <button onClick={() => setSubTabAdmin('usuarios')} style={{ backgroundColor: subTabAdmin === 'usuarios' ? '#0F2B20' : 'transparent', color: subTabAdmin === 'usuarios' ? '#00FF88' : '#8AA398', border: subTabAdmin === 'usuarios' ? '1px solid #00FF88' : 'none', borderRadius: '15px', padding: '0.3rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>👥 Usuarios</button>}
+                    {esExpertoOAdmin && <button onClick={() => setSubTabAdmin('solicitudes')} style={{ backgroundColor: subTabAdmin === 'solicitudes' ? '#0F2B20' : 'transparent', color: subTabAdmin === 'solicitudes' ? '#00FF88' : '#8AA398', border: subTabAdmin === 'solicitudes' ? '1px solid #00FF88' : 'none', borderRadius: '15px', padding: '0.3rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>🎓 Solicitudes</button>}
                     {esExpertoOAdmin && <button onClick={() => setSubTabAdmin('moderacion')} style={{ backgroundColor: subTabAdmin === 'moderacion' ? '#0F2B20' : 'transparent', color: subTabAdmin === 'moderacion' ? '#00FF88' : '#8AA398', border: subTabAdmin === 'moderacion' ? '1px solid #00FF88' : 'none', borderRadius: '15px', padding: '0.3rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>📋 Moderación</button>}
                   </div>
                 </div>
 
-                {/* MODERACIÓN (Para Expertos y Admins) */}
+                {/* MODERACIÓN */}
                 {subTabAdmin === 'moderacion' && esExpertoOAdmin && (
                   <div>
                     <h4 style={{ margin: '0 0 1rem 0', color: '#FFF', fontSize: '0.95rem' }}>📋 Moderación y Edición de Reportes</h4>
@@ -721,13 +753,13 @@ export default function App() {
                             <strong style={{ color: '#FFF', fontSize: '0.85rem' }}>{r.nombreComun} ({r.especie})</strong>
                             <div style={{ fontSize: '0.75rem', color: '#8AA398' }}>📍 {r.ubicacion} | 🕒 {r.horaRegistro} | Estado: <span style={{ color: r.estado === 'VALIDADO' ? '#00E676' : '#FFB300' }}>{r.estado}</span></div>
                           </div>
-                          <button onClick={() => setRegistroSeleccionado(r)} style={{ backgroundColor: '#00E676', color: '#000', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}>Moderar / Autorizar</button>
+                          <button onClick={() => setRegistroSeleccionado(r)} style={{ backgroundColor: '#00E676', color: '#000', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}>Moderar</button>
                         </div>
                       ))}
                     </div>
                   </div>
                 )}
-                {/* Las demás pestañas se mantienen operativas bajo el mismo formato... */}
+                {/* CONSULTAS 1 A 1 */}
                 {subTabAdmin === 'consultas' && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
                     <div style={{ backgroundColor: '#060D0A', border: '1px solid #162B23', borderRadius: '12px', padding: '0.9rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -801,7 +833,7 @@ export default function App() {
                 </div>
 
                 <button onClick={() => setModalChat(true)} style={{ width: '100%', padding: '0.7rem', backgroundColor: '#0A2E23', color: '#00FF88', border: '1px solid #00FF88', borderRadius: '20px', fontWeight: 'bold', fontSize: '0.8rem', cursor: 'pointer' }}>
-                  💬 Consultar a un Experto en Privado (1 a 1)
+                  💬 Consultar a un Experto (1 a 1)
                 </button>
               </div>
 
@@ -823,7 +855,7 @@ export default function App() {
 
                 {esExpertoOAdmin ? (
                   <div style={{ backgroundColor: '#1A1807', border: '1px solid #5C4D0A', borderRadius: '12px', padding: '0.9rem' }}>
-                    <h4 style={{ margin: '0 0 0.6rem 0', color: '#FFB300', fontSize: '0.85rem' }}>✏️ PANEL DE DIAGNÓSTICO Y EDICIÓN EXPERTA</h4>
+                    <h4 style={{ margin: '0 0 0.6rem 0', color: '#FFB300', fontSize: '0.85rem' }}>✏️ PANEL DE DIAGNÓSTICO EXPERTO</h4>
                     
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
                       <div>
@@ -886,7 +918,348 @@ export default function App() {
         </div>
       )}
 
-      {/* 📌 MODAL REGISTRAR AVISTAMIENTO (+) LIMPIO, CON 3 FOTOS, HORA Y SOBRE ROCA */}
+      {/* ✏️ MODAL EDITAR / CREAR ESPECIE EN LA GUÍA */}
+      {modalGuiaEdit && esAdminAbsoluto && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999, padding: '1rem' }}>
+          <div style={{ backgroundColor: '#09130F', borderRadius: '16px', border: '1px solid #1B3D2F', width: '100%', maxWidth: '520px', padding: '1.2rem', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid #122B20', paddingBottom: '0.5rem' }}>
+              <h3 style={{ color: '#FFF', margin: 0, fontSize: '1.1rem' }}>
+                {especieGuiaEditando ? '✏️ Editar Especie en la Guía' : '➕ Agregar Especie a la Guía'}
+              </h3>
+              <button onClick={() => setModalGuiaEdit(false)} style={{ backgroundColor: 'transparent', border: 'none', color: '#FFF', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.3rem' }}>NOMBRE CIENTÍFICO *</label>
+                <input type="text" placeholder="Ej. Isthmohyla nacientes" value={formGuia.nombre} onChange={(e) => setFormGuia({ ...formGuia, nombre: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }} />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.3rem' }}>NOMBRE COMÚN *</label>
+                <input type="text" placeholder="Ej. Rana de manantial" value={formGuia.comun} onChange={(e) => setFormGuia({ ...formGuia, comun: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }} />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.3rem' }}>CATEGORÍA Y ESTADO IUCN</label>
+                <input type="text" placeholder="Ej. ANFIBIO • IUCN: CR (En Peligro Crítico)" value={formGuia.tipo} onChange={(e) => setFormGuia({ ...formGuia, tipo: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }} />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.3rem' }}>HÁBITAT Y ALTITUD</label>
+                <input type="text" placeholder="Ej. Quebradas de bosque nublado (>1600 msnm)" value={formGuia.habitat} onChange={(e) => setFormGuia({ ...formGuia, habitat: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }} />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.3rem' }}>DESCRIPCIÓN TAXONÓMICA</label>
+                <textarea rows="3" placeholder="Detalles visuales e historia natural..." value={formGuia.desc} onChange={(e) => setFormGuia({ ...formGuia, desc: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }} />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.3rem' }}>URL DE FOTO DE REFERENCIA</label>
+                <input type="text" placeholder="URL de la imagen" value={formGuia.img} onChange={(e) => setFormGuia({ ...formGuia, img: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }} />
+              </div>
+
+              <button onClick={guardarEspecieGuia} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#00E676', color: '#000', fontWeight: 'bold', border: 'none', borderRadius: '10px', cursor: 'pointer', marginTop: '0.5rem' }}>
+                {especieGuiaEditando ? 'Guardar Cambios en la Guía' : 'Publicar Especie en la Guía'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 👤 MODAL PERFIL Y AUTENTICACIÓN */}
+      {modalPerfil && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999, padding: '1rem' }}>
+          <div style={{ backgroundColor: '#09130F', borderRadius: '16px', border: '1px solid #1B3D2F', width: '100%', maxWidth: '520px', padding: '1.2rem', maxHeight: '90vh', overflowY: 'auto' }}>
+            
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid #122B20', paddingBottom: '0.5rem' }}>
+              <h3 style={{ color: '#FFF', margin: 0, fontSize: '1.1rem' }}>
+                {vistaPerfil === 'perfil' && '👤 Mi Perfil & Disponibilidad'}
+                {vistaPerfil === 'login' && '🔑 Iniciar Sesión en HerpID'}
+                {vistaPerfil === 'registro' && '📝 Crear Cuenta Nueva'}
+                {vistaPerfil === 'verificar' && '📲 Verificación de Seguridad'}
+                {vistaPerfil === 'recuperar' && '🔑 Recuperar Contraseña'}
+              </h3>
+              <button onClick={() => setModalPerfil(false)} style={{ backgroundColor: 'transparent', border: 'none', color: '#FFF', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
+            </div>
+
+            {mensajeAuthOk && (
+              <div style={{ backgroundColor: '#0D261C', border: '1px solid #00FF88', color: '#00FF88', padding: '0.6rem', borderRadius: '8px', fontSize: '0.8rem', marginBottom: '1rem', textAlign: 'center' }}>
+                {mensajeAuthOk}
+              </div>
+            )}
+
+            {vistaPerfil === 'perfil' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
+                <div style={{ backgroundColor: '#060D0A', border: '1px solid #1B3D2F', borderRadius: '12px', padding: '0.8rem', textAlign: 'center' }}>
+                  <span style={{ color: '#00FF88', fontWeight: 'bold', fontSize: '0.85rem' }}>🛡️ ROL: {usuario.rol.toUpperCase()}</span>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.3rem' }}>MI NOMBRE COMPLETO *</label>
+                  <input type="text" value={usuario.nombre} onChange={(e) => setUsuario({ ...usuario, nombre: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }} />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.3rem' }}>CORREO ELECTRÓNICO *</label>
+                  <input type="email" value={usuario.email} onChange={(e) => setUsuario({ ...usuario, email: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }} />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.3rem' }}>CÓDIGO DE PAÍS Y CELULAR *</label>
+                  <div style={{ display: 'grid', gridTemplateColumns: '130px 1fr', gap: '0.5rem' }}>
+                    <select value={usuario.codigoPais || '+506'} onChange={(e) => setUsuario({ ...usuario, codigoPais: e.target.value })} style={{ padding: '0.6rem', backgroundColor: '#050A08', color: '#00FF88', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 'bold' }}>
+                      {codigosPaises.map(cp => <option key={cp.code} value={cp.code}>{cp.code} ({cp.label.split(' ')[0]})</option>)}
+                    </select>
+                    <input type="text" value={usuario.telefono} onChange={(e) => setUsuario({ ...usuario, telefono: e.target.value })} placeholder="8888-0000" style={{ padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }} />
+                  </div>
+                </div>
+
+                {esExpertoOAdmin && (
+                  <div style={{ backgroundColor: '#0D1E18', border: '1px solid #1B3D2F', padding: '0.8rem', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }} onClick={() => setUsuario({ ...usuario, mostrarTelefono: !usuario.mostrarTelefono })}>
+                    <div>
+                      <span style={{ display: 'block', color: '#00FF88', fontSize: '0.75rem', fontWeight: 'bold' }}>🔒 Ocultar mi número celular en reportes</span>
+                      <span style={{ fontSize: '0.65rem', color: '#8AA398' }}>{usuario.mostrarTelefono ? '🟢 Teléfono visible en fichas' : '🔴 Oculto por defecto como [Celular Privado]'}</span>
+                    </div>
+                    <input type="checkbox" checked={!usuario.mostrarTelefono} onChange={() => {}} style={{ accentColor: '#00FF88' }} />
+                  </div>
+                )}
+
+                <div style={{ backgroundColor: '#0A1E16', border: '1px solid #00FF88', padding: '0.8rem', borderRadius: '10px' }}>
+                  <label style={{ display: 'block', fontSize: '0.75rem', color: '#00FF88', fontWeight: 'bold', marginBottom: '0.4rem' }}>
+                    📡 ESTADO DE COBERTURA Y DISPONIBILIDAD
+                  </label>
+                  <select value={estadoConexion} onChange={(e) => setEstadoConexion(e.target.value)} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }}>
+                    <option value="online">🟢 En línea (Disponible para consultas)</option>
+                    <option value="busy">🟠 Ocupado en campo (Sin respuesta inmediata)</option>
+                    <option value="offline">🔴 Fuera de cobertura (Modo Offline activo)</option>
+                  </select>
+                </div>
+
+                <button onClick={() => { setModalPerfil(false); alert('¡Perfil actualizado con éxito!'); }} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#00E676', color: '#000', fontWeight: 'bold', border: 'none', borderRadius: '10px', cursor: 'pointer' }}>Guardar Cambios en Perfil</button>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.5rem' }}>
+                  <button onClick={() => { setUsuario({ isLoggedIn: false, id: null, nombre: '', email: '', codigoPais: '+506', telefono: '', comunidad: '', rol: 'Usuario Regular', mostrarTelefono: false }); localStorage.removeItem('herpid_usuario_sesion'); setVistaPerfil('login'); }} style={{ backgroundColor: 'transparent', border: 'none', color: '#FF5252', fontSize: '0.75rem', cursor: 'pointer', textDecoration: 'underline' }}>🔴 Cerrar Sesión</button>
+                  <button onClick={() => setVistaPerfil('login')} style={{ backgroundColor: 'transparent', border: 'none', color: '#00FF88', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>Cambiar de Cuenta</button>
+                </div>
+              </div>
+            )}
+
+            {vistaPerfil === 'login' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.3rem' }}>CORREO O NÚMERO DE CELULAR *</label>
+                  <input type="text" placeholder="Ej. jorge.carvajal@docente.edu o 88889999" value={formLogin.emailOrTel} onChange={(e) => setFormLogin({ ...formLogin, emailOrTel: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }} />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.3rem' }}>CONTRASEÑA PERSONAL *</label>
+                  <input type="password" placeholder="••••••••" value={formLogin.pass} onChange={(e) => setFormLogin({ ...formLogin, pass: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }} />
+                </div>
+
+                <div style={{ textAlign: 'right' }}>
+                  <button onClick={() => setVistaPerfil('recuperar')} style={{ backgroundColor: 'transparent', border: 'none', color: '#FFB300', fontSize: '0.75rem', cursor: 'pointer', textDecoration: 'underline' }}>¿Olvidaste tu contraseña?</button>
+                </div>
+
+                <button 
+                  onClick={() => {
+                    const usuarioEncontrado = cuentasRegistradas.find(c => 
+                      (c.email.toLowerCase() === formLogin.emailOrTel?.toLowerCase() || c.tel === formLogin.emailOrTel) && 
+                      c.pass === formLogin.pass
+                    );
+                    
+                    if (usuarioEncontrado) {
+                      setUsuario({
+                        isLoggedIn: true,
+                        id: usuarioEncontrado.id,
+                        nombre: usuarioEncontrado.nombre,
+                        email: usuarioEncontrado.email,
+                        codigoPais: usuarioEncontrado.codigoPais || '+506',
+                        telefono: usuarioEncontrado.tel,
+                        comunidad: usuarioEncontrado.comunidad,
+                        rol: usuarioEncontrado.rol,
+                        mostrarTelefono: usuarioEncontrado.mostrarTelefono || false
+                      });
+                      setMensajeAuthOk(`¡Bienvenido de nuevo, ${usuarioEncontrado.nombre}!`);
+                      setTimeout(() => { setMensajeAuthOk(''); setVistaPerfil('perfil'); setModalPerfil(false); }, 1500);
+                    } else if (!formLogin.emailOrTel || !formLogin.pass) {
+                      alert('Por favor ingresa tu correo/teléfono y contraseña.');
+                    } else {
+                      alert('Credenciales incorrectas. Revisa tu correo y contraseña.');
+                    }
+                  }} 
+                  style={{ width: '100%', padding: '0.8rem', backgroundColor: '#00E676', color: '#000', fontWeight: 'bold', border: 'none', borderRadius: '10px', cursor: 'pointer' }}
+                >
+                  Ingresar a HerpID
+                </button>
+
+                <div style={{ textAlign: 'center', marginTop: '0.5rem' }}>
+                  <span style={{ fontSize: '0.75rem', color: '#8AA398' }}>¿No tienes una cuenta aún? </span>
+                  <button onClick={() => setVistaPerfil('registro')} style={{ backgroundColor: 'transparent', border: 'none', color: '#00FF88', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}>Regístrate aquí</button>
+                </div>
+              </div>
+            )}
+
+            {vistaPerfil === 'registro' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.3rem' }}>NOMBRE COMPLETO *</label>
+                  <input type="text" placeholder="ej. María Fernández" value={formReg.nombre} onChange={(e) => setFormReg({ ...formReg, nombre: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }} />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.3rem' }}>CORREO ELECTRÓNICO *</label>
+                  <input type="email" placeholder="maria@ejemplo.com" value={formReg.email} onChange={(e) => setFormReg({ ...formReg, email: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }} />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.3rem' }}>NÚMERO DE CELULAR (CON CÓDIGO DE PAÍS) *</label>
+                  <div style={{ display: 'grid', gridTemplateColumns: '130px 1fr', gap: '0.5rem' }}>
+                    <select value={formReg.codigoPais} onChange={(e) => setFormReg({ ...formReg, codigoPais: e.target.value })} style={{ padding: '0.6rem', backgroundColor: '#050A08', color: '#00FF88', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 'bold' }}>
+                      {codigosPaises.map(cp => <option key={cp.code} value={cp.code}>{cp.code} ({cp.label.split(' ')[0]})</option>)}
+                    </select>
+                    <input type="text" placeholder="8888-0000" value={formReg.telefono} onChange={(e) => setFormReg({ ...formReg, telefono: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }} />
+                  </div>
+                </div>
+
+                <div style={{ backgroundColor: '#0D1E18', border: '1px solid #1B3D2F', padding: '0.8rem', borderRadius: '8px' }}>
+                  <label style={{ display: 'block', fontSize: '0.75rem', color: '#00FF88', fontWeight: 'bold', marginBottom: '0.4rem' }}>ENVIAR CÓDIGO OTP DE VERIFICACIÓN A *</label>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                    <button type="button" onClick={() => setFormReg({ ...formReg, medioVerificacion: 'correo' })} style={{ backgroundColor: formReg.medioVerificacion === 'correo' ? '#0F2B20' : '#050A08', color: '#FFF', border: formReg.medioVerificacion === 'correo' ? '2px solid #00FF88' : '1px solid #1B3D2F', padding: '0.5rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}>✉️ A su Correo</button>
+                    <button type="button" onClick={() => setFormReg({ ...formReg, medioVerificacion: 'sms' })} style={{ backgroundColor: formReg.medioVerificacion === 'sms' ? '#0F2B20' : '#050A08', color: '#FFF', border: formReg.medioVerificacion === 'sms' ? '2px solid #00FF88' : '1px solid #1B3D2F', padding: '0.5rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}>💬 A su Celular</button>
+                  </div>
+                </div>
+
+                <div style={{ backgroundColor: '#0D1E18', border: '1px solid #1B3D2F', padding: '0.7rem', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.6rem' }} onClick={() => setFormReg({ ...formReg, solicitaExperto: !formReg.solicitaExperto })}>
+                  <input type="checkbox" checked={formReg.solicitaExperto} onChange={() => {}} style={{ accentColor: '#00FF88' }} />
+                  <span style={{ color: '#00FF88', fontSize: '0.75rem', fontWeight: 'bold' }}>🎓 Soy Biólogo/Herpetólogo (Solicitar validación de Rango)</span>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.7rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.3rem' }}>CONTRASEÑA *</label>
+                    <input type="password" placeholder="••••••••" value={formReg.pass} onChange={(e) => setFormReg({ ...formReg, pass: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }} />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.7rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.3rem' }}>CONFIRMAR *</label>
+                    <input type="password" placeholder="••••••••" value={formReg.confirmPass} onChange={(e) => setFormReg({ ...formReg, confirmPass: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }} />
+                  </div>
+                </div>
+
+                <button 
+                  onClick={() => {
+                    if (!formReg.nombre || !formReg.email || !formReg.telefono || !formReg.pass) {
+                      alert('Por favor completa todos los campos requeridos.');
+                      return;
+                    }
+
+                    const codigoGenerado = Math.floor(100000 + Math.random() * 900000).toString();
+                    const newId = Date.now();
+                    const fechaActual = new Date().toISOString().replace('T', ' ').substring(0, 19);
+
+                    const nuevaCuentaTemp = {
+                      id: newId,
+                      nombre: formReg.nombre,
+                      email: formReg.email,
+                      codigoPais: formReg.codigoPais,
+                      tel: formReg.telefono,
+                      comunidad: formReg.comunidad,
+                      rol: 'Usuario Regular',
+                      pass: formReg.pass,
+                      estadoConexion: 'online',
+                      fechaIngreso: fechaActual,
+                      mostrarTelefono: true,
+                      estatusCuenta: 'activo',
+                      cuentaVerificada: false
+                    };
+
+                    setCodigoOtpGenerado(codigoGenerado);
+                    setUsuarioTemporalVerificacion(nuevaCuentaTemp);
+
+                    const destino = formReg.medioVerificacion === 'correo' ? formReg.email : `${formReg.codigoPais} ${formReg.telefono}`;
+                    alert(`📬 [SIMULACIÓN SERVIDOR]\nSe ha enviado exitosamente el código OTP de verificación a: (${destino}).\n\n(Código de prueba generado: ${codigoGenerado})`);
+
+                    setVistaPerfil('verificar');
+                  }} 
+                  style={{ width: '100%', padding: '0.8rem', backgroundColor: '#00E676', color: '#000', fontWeight: 'bold', border: 'none', borderRadius: '10px', cursor: 'pointer' }}
+                >
+                  Enviar Código y Continuar →
+                </button>
+              </div>
+            )}
+
+            {vistaPerfil === 'verificar' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem', textAlign: 'center' }}>
+                <div style={{ backgroundColor: '#0A1E16', border: '1px solid #00FF88', padding: '0.8rem', borderRadius: '10px', color: '#00FF88', fontSize: '0.8rem' }}>
+                  📲 Se ha enviado un código de seguridad a su {formReg.medioVerificacion === 'correo' ? 'Correo' : 'Celular'} registrado.<br />
+                  <span style={{ fontSize: '0.75rem', color: '#8AA398' }}>(Simulación, su código es: <strong>{codigoOtpGenerado}</strong>)</span>
+                </div>
+
+                <p style={{ fontSize: '0.8rem', color: '#8AA398', margin: 0 }}>Introduce el código de 6 dígitos recibido:</p>
+
+                <input 
+                  type="text" 
+                  maxLength="6" 
+                  placeholder="000000" 
+                  value={codigoOtpIngresado} 
+                  onChange={(e) => setCodigoOtpIngresado(e.target.value)} 
+                  style={{ width: '100%', padding: '0.8rem', backgroundColor: '#050A08', color: '#00FF88', border: '2px solid #00FF88', borderRadius: '10px', fontSize: '1.5rem', textAlign: 'center', letterSpacing: '6px', fontWeight: 'bold' }} 
+                />
+
+                <button 
+                  onClick={() => {
+                    if (codigoOtpIngresado.trim() === codigoOtpGenerado) {
+                      const cuentaVerificadaFinal = { ...usuarioTemporalVerificacion, cuentaVerificada: true };
+                      
+                      setCuentasRegistradas([...cuentasRegistradas, cuentaVerificadaFinal]);
+
+                      if (formReg.solicitaExperto) {
+                        setSolicitudesExpertos([...solicitudesExpertos, { id: Date.now(), userId: cuentaVerificadaFinal.id, nombre: formReg.nombre, email: formReg.email, tel: `${formReg.codigoPais} ${formReg.telefono}`, atencedentes: 'Solicitó rango de Experto Herpetólogo.', fecha: 'Hoy' }]);
+                      }
+
+                      setUsuario({
+                        isLoggedIn: true,
+                        id: cuentaVerificadaFinal.id,
+                        nombre: cuentaVerificadaFinal.nombre,
+                        email: cuentaVerificadaFinal.email,
+                        codigoPais: cuentaVerificadaFinal.codigoPais,
+                        telefono: cuentaVerificadaFinal.tel,
+                        comunidad: cuentaVerificadaFinal.comunidad,
+                        rol: 'Usuario Regular',
+                        mostrarTelefono: true
+                      });
+
+                      setMensajeAuthOk('✅ ¡Identidad Verificada con Éxito!');
+                      setTimeout(() => { setMensajeAuthOk(''); setVistaPerfil('perfil'); setModalPerfil(false); }, 2000);
+                    } else {
+                      alert('El código ingresado es incorrecto. Intenta de nuevo.');
+                    }
+                  }} 
+                  style={{ width: '100%', padding: '0.8rem', backgroundColor: '#00E676', color: '#000', fontWeight: 'bold', border: 'none', borderRadius: '10px', cursor: 'pointer', fontSize: '0.9rem' }}
+                >
+                  ✔ Verificar y Activar Cuenta
+                </button>
+              </div>
+            )}
+
+            {vistaPerfil === 'recuperar' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
+                <p style={{ fontSize: '0.8rem', color: '#8AA398', margin: 0 }}>Selecciona el método de recuperación para recibir las instrucciones:</p>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                  <button onClick={() => setMetodoRecuperacion('correo')} style={{ backgroundColor: metodoRecuperacion === 'correo' ? '#0F2B20' : '#050A08', color: '#FFF', border: metodoRecuperacion === 'correo' ? '2px solid #00FF88' : '1px solid #1B3D2F', padding: '0.6rem', borderRadius: '8px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 'bold' }}>✉️ Por Correo</button>
+                  <button onClick={() => setMetodoRecuperacion('sms')} style={{ backgroundColor: metodoRecuperacion === 'sms' ? '#0F2B20' : '#050A08', color: '#FFF', border: metodoRecuperacion === 'sms' ? '2px solid #00FF88' : '1px solid #1B3D2F', padding: '0.6rem', borderRadius: '8px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 'bold' }}>💬 Por Mensaje (SMS)</button>
+                </div>
+                <input type="text" placeholder={metodoRecuperacion === 'correo' ? 'Correo registrado' : 'Celular registrado'} value={formRecuperar.contacto} onChange={(e) => setFormRecuperar({ contacto: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }} />
+                <button onClick={() => { setMensajeAuthOk(`¡Instrucciones enviadas vía ${metodoRecuperacion === 'correo' ? 'Correo' : 'SMS'}!`); setTimeout(() => { setMensajeAuthOk(''); setVistaPerfil('login'); }, 2000); }} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#00E676', color: '#000', fontWeight: 'bold', border: 'none', borderRadius: '10px', cursor: 'pointer' }}>Enviar Instrucciones</button>
+              </div>
+            )}
+
+          </div>
+        </div>
+      )}
+
+      {/* 📌 MODAL REGISTRAR AVISTAMIENTO (+) */}
       {modalRegistro && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999, padding: '1rem' }}>
           <div style={{ backgroundColor: '#09130F', borderRadius: '16px', border: '1px solid #1B3D2F', width: '100%', maxWidth: '580px', padding: '1.2rem', maxHeight: '92vh', overflowY: 'auto' }}>
@@ -894,11 +1267,6 @@ export default function App() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid #122B20', paddingBottom: '0.5rem' }}>
               <h3 style={{ margin: 0, color: '#FFF', fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>🐸 Registrar Avistamiento</h3>
               <button onClick={() => setModalRegistro(false)} style={{ backgroundColor: 'transparent', border: 'none', color: '#FFF', fontSize: '1.3rem', cursor: 'pointer' }}>✕</button>
-            </div>
-
-            <div style={{ backgroundColor: '#1C1B0A', border: '1px solid #5C4D0A', color: '#EEDC82', padding: '0.8rem', borderRadius: '10px', fontSize: '0.75rem', marginBottom: '1.2rem', display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
-              <span>🛡️</span>
-              <div><strong>Protocolo de Seguridad:</strong> Mantén distancia con organismos desconocidos o venenosos.</div>
             </div>
 
             {/* PASO 1 */}
@@ -990,7 +1358,7 @@ export default function App() {
               </div>
             </div>
 
-            {/* PASO 5: HASTA 3 FOTOGRAFÍAS CON COMPRESIÓN PARA NO LLENAR LOCALSTORAGE */}
+            {/* PASO 5: FOTOGRAFÍAS CON COMPRESIÓN */}
             <div style={{ marginBottom: '1.2rem' }}>
               <label style={{ display: 'block', fontSize: '0.8rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.5rem' }}>5. FOTOGRAFÍAS DEL INDIVIDUO (HASTA 3 FOTOS) *</label>
               
@@ -1035,9 +1403,9 @@ export default function App() {
               </div>
             </div>
 
-            {/* PASO 7: CON HORAS Y SOBRE ROCA */}
+            {/* PASO 7 */}
             <div style={{ marginBottom: '1.2rem' }}>
-              <label style={{ display: 'block', fontSize: '0.8rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.5rem' }}>7. MICROHÁBITAT, TEMPERATURA Y HORA DEL AVISTAMIENTO</label>
+              <label style={{ display: 'block', fontSize: '0.8rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.5rem' }}>7. MICROHÁBITAT Y ESTADO BIOLÓGICO</label>
               
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '0.5rem' }}>
                 <div>
@@ -1172,7 +1540,7 @@ export default function App() {
 
         <button 
           onClick={() => {
-            if (!usuario.isLoggedIn) {
+            if (!usuario?.isLoggedIn) {
               alert('Debes iniciar sesión con tu usuario y contraseña para registrar un avistamiento.');
               setVistaPerfil('login'); setModalPerfil(true);
             } else {
