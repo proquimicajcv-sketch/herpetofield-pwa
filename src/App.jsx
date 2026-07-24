@@ -129,26 +129,28 @@ export default function App() {
   const [filtroEstadoUsuario, setFiltroEstadoUsuario] = useState('todos');
   const [estadoConexion, setEstadoConexion] = useState('online');
 
-  // === PERSISTENCIA LOCAL EN LIMPIO (v4) ===
+  // === PERSISTENCIA LOCAL EN LIMPIO (v5) ===
+  // Se fuerza a que TÚ seas el usuario logueado por defecto.
   const [usuario, setUsuario] = useState(() => {
     try {
-      const sesionGuardada = localStorage.getItem('herpid_usuario_sesion_v4');
+      const sesionGuardada = localStorage.getItem('herpid_usuario_sesion_v5');
       if (sesionGuardada) {
         const parsed = JSON.parse(sesionGuardada);
         return { ...parsed, rol: parsed.rol || 'Usuario Regular' };
       }
     } catch (e) { console.error(e); }
-    return { isLoggedIn: false, id: null, nombre: '', email: '', codigoPais: '+506', telefono: '', comunidad: '', rol: 'Usuario Regular', mostrarTelefono: false };
+    // INICIO DE SESIÓN AUTOMÁTICO COMO ADMIN MAESTRO
+    return { isLoggedIn: true, id: 1, nombre: 'Jorge Carvajal', email: 'jorge.carvajal@docente.edu', codigoPais: '+506', telefono: '88889999', comunidad: 'Tarrazú', rol: 'Administrador Experto (Máximo Rango)', mostrarTelefono: false };
   });
 
   useEffect(() => {
-    localStorage.setItem('herpid_usuario_sesion_v4', JSON.stringify(usuario));
+    localStorage.setItem('herpid_usuario_sesion_v5', JSON.stringify(usuario));
   }, [usuario]);
 
-  // BASE DE DATOS DE USUARIOS (Limpiada - Solo Cuenta Maestra)
+  // BASE DE DATOS DE USUARIOS (Solo Cuenta Maestra tuya)
   const [cuentasRegistradas, setCuentasRegistradas] = useState(() => {
     try {
-      const guardadas = localStorage.getItem('herpid_cuentas_registradas_v4');
+      const guardadas = localStorage.getItem('herpid_cuentas_registradas_v5');
       if (guardadas) return JSON.parse(guardadas);
     } catch (e) { console.error(e); }
     return [
@@ -157,46 +159,46 @@ export default function App() {
   });
 
   useEffect(() => {
-    localStorage.setItem('herpid_cuentas_registradas_v4', JSON.stringify(cuentasRegistradas));
+    localStorage.setItem('herpid_cuentas_registradas_v5', JSON.stringify(cuentasRegistradas));
   }, [cuentasRegistradas]);
 
   // BASE DE DATOS DE REGISTROS (En blanco)
   const [registros, setRegistros] = useState(() => {
     try {
-      const guardados = localStorage.getItem('herpid_registros_avistamientos_v4');
+      const guardados = localStorage.getItem('herpid_registros_avistamientos_v5');
       if (guardados) return JSON.parse(guardados);
     } catch (e) { console.error(e); }
     return [];
   });
 
   useEffect(() => {
-    try { localStorage.setItem('herpid_registros_avistamientos_v4', JSON.stringify(registros)); } 
+    try { localStorage.setItem('herpid_registros_avistamientos_v5', JSON.stringify(registros)); } 
     catch (e) { console.error("LocalStorage lleno"); }
   }, [registros]);
 
   // SOLICITUDES DE EXPERTOS (En blanco)
   const [solicitudesExpertos, setSolicitudesExpertos] = useState(() => {
     try {
-      const guardadas = localStorage.getItem('herpid_solicitudes_expertos_v4');
+      const guardadas = localStorage.getItem('herpid_solicitudes_expertos_v5');
       if (guardadas) return JSON.parse(guardadas);
     } catch (e) { console.error(e); }
     return [];
   });
 
   useEffect(() => {
-    localStorage.setItem('herpid_solicitudes_expertos_v4', JSON.stringify(solicitudesExpertos));
+    localStorage.setItem('herpid_solicitudes_expertos_v5', JSON.stringify(solicitudesExpertos));
   }, [solicitudesExpertos]);
 
   const [pendientesOffline, setPendientesOffline] = useState(() => {
     try {
-      const guardados = localStorage.getItem('herpid_pendientes_offline_v4');
+      const guardados = localStorage.getItem('herpid_pendientes_offline_v5');
       if (guardados) return JSON.parse(guardados);
     } catch (e) { console.error(e); }
     return [];
   });
 
   useEffect(() => {
-    localStorage.setItem('herpid_pendientes_offline_v4', JSON.stringify(pendientesOffline));
+    localStorage.setItem('herpid_pendientes_offline_v5', JSON.stringify(pendientesOffline));
   }, [pendientesOffline]);
 
   // ROLES
@@ -206,7 +208,7 @@ export default function App() {
   // ESCUCHADOR DE EVENTOS EN TIEMPO REAL
   useEffect(() => {
     const handleStorageChange = (e) => {
-      if (e.key === 'herpid_cuentas_registradas_v4' && e.newValue) {
+      if (e.key === 'herpid_cuentas_registradas_v5' && e.newValue) {
         const oldCuentas = e.oldValue ? JSON.parse(e.oldValue) : [];
         const newCuentas = JSON.parse(e.newValue);
         if (newCuentas.length > oldCuentas.length && esExpertoOAdmin) {
@@ -216,7 +218,7 @@ export default function App() {
           setCuentasRegistradas(newCuentas);
         }
       }
-      if (e.key === 'herpid_solicitudes_expertos_v4' && e.newValue) {
+      if (e.key === 'herpid_solicitudes_expertos_v5' && e.newValue) {
         const oldReq = e.oldValue ? JSON.parse(e.oldValue) : [];
         const newReq = JSON.parse(e.newValue);
         if (newReq.length > oldReq.length && esExpertoOAdmin) {
@@ -224,7 +226,7 @@ export default function App() {
           setSolicitudesExpertos(newReq);
         }
       }
-      if (e.key === 'herpid_registros_avistamientos_v4' && e.newValue) {
+      if (e.key === 'herpid_registros_avistamientos_v5' && e.newValue) {
         const oldReg = e.oldValue ? JSON.parse(e.oldValue) : [];
         const newReg = JSON.parse(e.newValue);
         if (newReg.length > oldReg.length && esExpertoOAdmin) {
@@ -303,7 +305,7 @@ export default function App() {
     }
   };
 
-  // FORMULARIO DE 7 PASOS
+  // FORMULARIO DE 7 PASOS COMPLETOS
   const [tipoFauna, setTipoFauna] = useState('Anfibio');
   const [silueta, setSilueta] = useState('Rana Arborícola');
   const [desconocido, setDesconocido] = useState(true);
@@ -422,6 +424,11 @@ export default function App() {
     const rows = registros.map(r => `${r.id},"${r.nombreComun}","${r.especie}",${r.categoria},${r.estado},"${r.ubicacion}","${r.reportante}",${r.temp},${r.altitud},"${r.horaRegistro}","${r.editadoPor || 'N/A'}"`).join("\n");
     const blob = new Blob([headers + rows], { type: 'text/csv' });
     const a = document.createElement('a'); a.href = window.URL.createObjectURL(blob); a.download = `HerpID_CostaRica_Avistamientos.csv`; a.click();
+  };
+
+  const sincronizarPendientes = () => {
+    if (pendientesOffline.length === 0) return;
+    setRegistros([...pendientesOffline, ...registros]); setPendientesOffline([]); alert('¡Sincronización exitosa!'); setModalSincronizar(false);
   };
 
   // GUÍA DINÁMICA
@@ -797,7 +804,7 @@ export default function App() {
         </div>
       )}
 
-      {/* 📌 MODAL REGISTRAR AVISTAMIENTO (+) CON LOS 7 PASOS RESTAURADOS AL 100% */}
+      {/* 📌 MODAL REGISTRAR AVISTAMIENTO (7 PASOS COMPLETOS Y RESTAURADOS) */}
       {modalRegistro && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999, padding: '1rem' }}>
           <div style={{ backgroundColor: '#09130F', borderRadius: '16px', border: '1px solid #1B3D2F', width: '100%', maxWidth: '580px', padding: '1.2rem', maxHeight: '92vh', overflowY: 'auto' }}>
