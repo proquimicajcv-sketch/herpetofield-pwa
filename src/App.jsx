@@ -129,10 +129,10 @@ export default function App() {
   const [filtroEstadoUsuario, setFiltroEstadoUsuario] = useState('todos');
   const [estadoConexion, setEstadoConexion] = useState('online');
 
-  // === PERSISTENCIA LOCAL EN LIMPIO (v3) ===
+  // === PERSISTENCIA LOCAL EN LIMPIO (v4) ===
   const [usuario, setUsuario] = useState(() => {
     try {
-      const sesionGuardada = localStorage.getItem('herpid_usuario_sesion_v3');
+      const sesionGuardada = localStorage.getItem('herpid_usuario_sesion_v4');
       if (sesionGuardada) {
         const parsed = JSON.parse(sesionGuardada);
         return { ...parsed, rol: parsed.rol || 'Usuario Regular' };
@@ -142,13 +142,13 @@ export default function App() {
   });
 
   useEffect(() => {
-    localStorage.setItem('herpid_usuario_sesion_v3', JSON.stringify(usuario));
+    localStorage.setItem('herpid_usuario_sesion_v4', JSON.stringify(usuario));
   }, [usuario]);
 
-  // BASE DE DATOS DE USUARIOS (Limpiada)
+  // BASE DE DATOS DE USUARIOS (Limpiada - Solo Cuenta Maestra)
   const [cuentasRegistradas, setCuentasRegistradas] = useState(() => {
     try {
-      const guardadas = localStorage.getItem('herpid_cuentas_registradas_v3');
+      const guardadas = localStorage.getItem('herpid_cuentas_registradas_v4');
       if (guardadas) return JSON.parse(guardadas);
     } catch (e) { console.error(e); }
     return [
@@ -157,46 +157,46 @@ export default function App() {
   });
 
   useEffect(() => {
-    localStorage.setItem('herpid_cuentas_registradas_v3', JSON.stringify(cuentasRegistradas));
+    localStorage.setItem('herpid_cuentas_registradas_v4', JSON.stringify(cuentasRegistradas));
   }, [cuentasRegistradas]);
 
   // BASE DE DATOS DE REGISTROS (En blanco)
   const [registros, setRegistros] = useState(() => {
     try {
-      const guardados = localStorage.getItem('herpid_registros_avistamientos_v3');
+      const guardados = localStorage.getItem('herpid_registros_avistamientos_v4');
       if (guardados) return JSON.parse(guardados);
     } catch (e) { console.error(e); }
     return [];
   });
 
   useEffect(() => {
-    try { localStorage.setItem('herpid_registros_avistamientos_v3', JSON.stringify(registros)); } 
+    try { localStorage.setItem('herpid_registros_avistamientos_v4', JSON.stringify(registros)); } 
     catch (e) { console.error("LocalStorage lleno"); }
   }, [registros]);
 
-  // SOLICITUDES DE EXPERTOS
+  // SOLICITUDES DE EXPERTOS (En blanco)
   const [solicitudesExpertos, setSolicitudesExpertos] = useState(() => {
     try {
-      const guardadas = localStorage.getItem('herpid_solicitudes_expertos_v3');
+      const guardadas = localStorage.getItem('herpid_solicitudes_expertos_v4');
       if (guardadas) return JSON.parse(guardadas);
     } catch (e) { console.error(e); }
     return [];
   });
 
   useEffect(() => {
-    localStorage.setItem('herpid_solicitudes_expertos_v3', JSON.stringify(solicitudesExpertos));
+    localStorage.setItem('herpid_solicitudes_expertos_v4', JSON.stringify(solicitudesExpertos));
   }, [solicitudesExpertos]);
 
   const [pendientesOffline, setPendientesOffline] = useState(() => {
     try {
-      const guardados = localStorage.getItem('herpid_pendientes_offline_v3');
+      const guardados = localStorage.getItem('herpid_pendientes_offline_v4');
       if (guardados) return JSON.parse(guardados);
     } catch (e) { console.error(e); }
     return [];
   });
 
   useEffect(() => {
-    localStorage.setItem('herpid_pendientes_offline_v3', JSON.stringify(pendientesOffline));
+    localStorage.setItem('herpid_pendientes_offline_v4', JSON.stringify(pendientesOffline));
   }, [pendientesOffline]);
 
   // ROLES
@@ -206,7 +206,7 @@ export default function App() {
   // ESCUCHADOR DE EVENTOS EN TIEMPO REAL
   useEffect(() => {
     const handleStorageChange = (e) => {
-      if (e.key === 'herpid_cuentas_registradas_v3' && e.newValue) {
+      if (e.key === 'herpid_cuentas_registradas_v4' && e.newValue) {
         const oldCuentas = e.oldValue ? JSON.parse(e.oldValue) : [];
         const newCuentas = JSON.parse(e.newValue);
         if (newCuentas.length > oldCuentas.length && esExpertoOAdmin) {
@@ -216,7 +216,7 @@ export default function App() {
           setCuentasRegistradas(newCuentas);
         }
       }
-      if (e.key === 'herpid_solicitudes_expertos_v3' && e.newValue) {
+      if (e.key === 'herpid_solicitudes_expertos_v4' && e.newValue) {
         const oldReq = e.oldValue ? JSON.parse(e.oldValue) : [];
         const newReq = JSON.parse(e.newValue);
         if (newReq.length > oldReq.length && esExpertoOAdmin) {
@@ -224,7 +224,7 @@ export default function App() {
           setSolicitudesExpertos(newReq);
         }
       }
-      if (e.key === 'herpid_registros_avistamientos_v3' && e.newValue) {
+      if (e.key === 'herpid_registros_avistamientos_v4' && e.newValue) {
         const oldReg = e.oldValue ? JSON.parse(e.oldValue) : [];
         const newReg = JSON.parse(e.newValue);
         if (newReg.length > oldReg.length && esExpertoOAdmin) {
@@ -336,11 +336,6 @@ export default function App() {
     window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); setDeferredPrompt(e); });
   }, []);
 
-  const ejecutarInstalacionApp = () => {
-    if (deferredPrompt) { deferredPrompt.prompt(); deferredPrompt.userChoice.then(() => setDeferredPrompt(null)); } 
-    else { setModalInstalar(true); }
-  };
-
   // FUNCIONES DE UTILIDAD
   const abrirModalRegistro = () => {
     setTipoFauna('Anfibio'); setSilueta('Rana Arborícola'); setDesconocido(true); setNombreCientifico(''); setNombreComun(''); setComunidad(''); setEstadoOrganismo('Vivo / Activo'); setEtapa('Adulto'); setMicrohabitat('Vegetación / Finca Cafetalera'); setNotas(''); setFotosRegistro([]); setAudioURL(null); setHoraAproximada(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' hrs');
@@ -429,11 +424,6 @@ export default function App() {
     const a = document.createElement('a'); a.href = window.URL.createObjectURL(blob); a.download = `HerpID_CostaRica_Avistamientos.csv`; a.click();
   };
 
-  const sincronizarPendientes = () => {
-    if (pendientesOffline.length === 0) return;
-    setRegistros([...pendientesOffline, ...registros]); setPendientesOffline([]); alert('¡Sincronización exitosa!'); setModalSincronizar(false);
-  };
-
   // GUÍA DINÁMICA
   const generarGuiaDinamica = () => {
     const validados = registros.filter(r => r.estado === 'VALIDADO');
@@ -512,19 +502,13 @@ export default function App() {
               ⏳ {pendientesOffline.length} Offline
             </button>
           )}
-
           <span style={{ backgroundColor: '#0D261C', color: getBadgetConexion(estadoConexion).color, padding: '0.3rem 0.7rem', borderRadius: '20px', fontSize: '0.75rem', border: '1px solid #164D36', fontWeight: 'bold' }}>
             {getBadgetConexion(estadoConexion).icon} {getBadgetConexion(estadoConexion).label}
           </span>
-          
           <button onClick={() => setModalChat(true)} style={{ backgroundColor: '#0A2E23', color: '#00FF88', border: '1px solid #16523B', padding: '0.4rem 0.8rem', borderRadius: '20px', fontWeight: 'bold', fontSize: '0.75rem', cursor: 'pointer' }}>
             💬 Chat 1 a 1
           </button>
-
-          <button 
-            onClick={() => { setVistaPerfil(usuario?.isLoggedIn ? 'perfil' : 'login'); setModalPerfil(true); }} 
-            style={{ backgroundColor: usuario?.isLoggedIn ? '#00C853' : '#102E23', color: usuario?.isLoggedIn ? '#000' : '#00FF88', border: usuario?.isLoggedIn ? 'none' : '1px solid #00FF88', padding: '0.4rem 0.8rem', borderRadius: '20px', fontWeight: 'bold', fontSize: '0.75rem', cursor: 'pointer' }}
-          >
+          <button onClick={() => { setVistaPerfil(usuario?.isLoggedIn ? 'perfil' : 'login'); setModalPerfil(true); }} style={{ backgroundColor: usuario?.isLoggedIn ? '#00C853' : '#102E23', color: usuario?.isLoggedIn ? '#000' : '#00FF88', border: usuario?.isLoggedIn ? 'none' : '1px solid #00FF88', padding: '0.4rem 0.8rem', borderRadius: '20px', fontWeight: 'bold', fontSize: '0.75rem', cursor: 'pointer' }}>
             {usuario?.isLoggedIn ? `${usuario.rol.includes('Admin') ? '🛡️' : usuario.rol.includes('Experto') ? '🎓' : '👤'} ${usuario.nombre}` : '🔑 INICIAR SESIÓN / REGISTRARSE'}
           </button>
         </div>
@@ -663,9 +647,9 @@ export default function App() {
                 <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', backgroundColor: '#050A08', padding: '0.3rem', borderRadius: '20px', marginBottom: '1rem' }}>
                   <button onClick={() => setSubTabAdmin('consultas')} style={{ backgroundColor: subTabAdmin === 'consultas' ? '#0F2B20' : 'transparent', color: subTabAdmin === 'consultas' ? '#00FF88' : '#8AA398', border: 'none', borderRadius: '15px', padding: '0.3rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>💬 Consultas 1 a 1</button>
                   {esExpertoOAdmin && <button onClick={() => setSubTabAdmin('metricas')} style={{ backgroundColor: subTabAdmin === 'metricas' ? '#0F2B20' : 'transparent', color: subTabAdmin === 'metricas' ? '#00FF88' : '#8AA398', border: 'none', borderRadius: '15px', padding: '0.3rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>📊 Métricas</button>}
-                  {esAdminAbsoluto && <button onClick={() => { setSubTabAdmin('usuarios'); setNuevosUsuariosCount(0); }} style={{ backgroundColor: subTabAdmin === 'usuarios' ? '#0F2B20' : 'transparent', color: subTabAdmin === 'usuarios' ? '#00FF88' : '#8AA398', border: 'none', borderRadius: '15px', padding: '0.3rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>👥 Usuarios <GloboNotificacion count={nuevosUsuariosCount} /></button>}
-                  {esExpertoOAdmin && <button onClick={() => setSubTabAdmin('solicitudes')} style={{ backgroundColor: subTabAdmin === 'solicitudes' ? '#0F2B20' : 'transparent', color: subTabAdmin === 'solicitudes' ? '#00FF88' : '#8AA398', border: 'none', borderRadius: '15px', padding: '0.3rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>🎓 Solicitudes <GloboNotificacion count={solicitudesExpertos.length} /></button>}
-                  {esExpertoOAdmin && <button onClick={() => setSubTabAdmin('moderacion')} style={{ backgroundColor: subTabAdmin === 'moderacion' ? '#0F2B20' : 'transparent', color: subTabAdmin === 'moderacion' ? '#00FF88' : '#8AA398', border: 'none', borderRadius: '15px', padding: '0.3rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>📋 Moderación <GloboNotificacion count={conteoModeracion} /></button>}
+                  {esAdminAbsoluto && <button onClick={() => { setSubTabAdmin('usuarios'); setNuevosUsuariosCount(0); }} style={{ backgroundColor: subTabAdmin === 'usuarios' ? '#0F2B20' : 'transparent', color: subTabAdmin === 'usuarios' ? '#00FF88' : '#8AA398', border: 'none', borderRadius: '15px', padding: '0.3rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold', display: 'flex', alignItems: 'center' }}>👥 Usuarios <GloboNotificacion count={nuevosUsuariosCount} /></button>}
+                  {esExpertoOAdmin && <button onClick={() => setSubTabAdmin('solicitudes')} style={{ backgroundColor: subTabAdmin === 'solicitudes' ? '#0F2B20' : 'transparent', color: subTabAdmin === 'solicitudes' ? '#00FF88' : '#8AA398', border: 'none', borderRadius: '15px', padding: '0.3rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold', display: 'flex', alignItems: 'center' }}>🎓 Solicitudes <GloboNotificacion count={solicitudesExpertos.length} /></button>}
+                  {esExpertoOAdmin && <button onClick={() => setSubTabAdmin('moderacion')} style={{ backgroundColor: subTabAdmin === 'moderacion' ? '#0F2B20' : 'transparent', color: subTabAdmin === 'moderacion' ? '#00FF88' : '#8AA398', border: 'none', borderRadius: '15px', padding: '0.3rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold', display: 'flex', alignItems: 'center' }}>📋 Moderación <GloboNotificacion count={conteoModeracion} /></button>}
                 </div>
 
                 {subTabAdmin === 'usuarios' && esAdminAbsoluto && (
@@ -719,7 +703,9 @@ export default function App() {
             </div>
           )}
         </div>
-        {/* 🔍 MODAL: FICHA DE CURADURÍA Y EDICIÓN EXPERTA */}
+      )}
+
+      {/* 🔍 MODAL: FICHA DE CURADURÍA Y EDICIÓN EXPERTA */}
       {registroSeleccionado && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.88)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999, padding: '1rem' }}>
           <div style={{ backgroundColor: '#09130F', borderRadius: '16px', border: '1px solid #1B3D2F', width: '100%', maxWidth: '880px', maxHeight: '92vh', overflowY: 'auto', padding: '1.2rem' }}>
