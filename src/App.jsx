@@ -135,15 +135,14 @@ export default function App() {
     localStorage.setItem('herpid_usuario_sesion', JSON.stringify(usuario));
   }, [usuario]);
 
-  // BASE DE DATOS DE USUARIOS PERSISTENTE
+  // BASE DE DATOS DE USUARIOS PERSISTENTE (Limpiada, solo queda cuenta Master Admin)
   const [cuentasRegistradas, setCuentasRegistradas] = useState(() => {
     try {
       const guardadas = localStorage.getItem('herpid_cuentas_registradas');
       if (guardadas) return JSON.parse(guardadas);
     } catch (e) { console.error(e); }
     return [
-      { id: 1, nombre: 'Jorge Carvajal', email: 'jorge.carvajal@docente.edu', codigoPais: '+506', tel: '88889999', comunidad: 'Tarrazú', rol: 'Administrador Experto (Máximo Rango)', pass: 'admin123', estadoConexion: 'online', fechaIngreso: '2026-03-01 08:30:00', mostrarTelefono: false, estatusCuenta: 'activo', cuentaVerificada: true },
-      { id: 2, nombre: 'Dra. Sofía Herpetóloga', email: 'sofia.herpeto@ucr.ac.cr', codigoPais: '+506', tel: '87654321', comunidad: 'Dota', rol: 'Experto Herpetólogo', pass: 'sofia123', estadoConexion: 'online', fechaIngreso: '2026-04-12 14:15:00', mostrarTelefono: false, estatusCuenta: 'activo', cuentaVerificada: true }
+      { id: 1, nombre: 'Jorge Carvajal', email: 'jorge.carvajal@docente.edu', codigoPais: '+506', tel: '88889999', comunidad: 'Tarrazú', rol: 'Administrador Experto (Máximo Rango)', pass: 'admin123', estadoConexion: 'online', fechaIngreso: new Date().toISOString().replace('T', ' ').substring(0, 19), mostrarTelefono: false, estatusCuenta: 'activo', cuentaVerificada: true }
     ];
   });
 
@@ -151,30 +150,13 @@ export default function App() {
     localStorage.setItem('herpid_cuentas_registradas', JSON.stringify(cuentasRegistradas));
   }, [cuentasRegistradas]);
 
-  // REGISTROS PRINCIPALES PERSISTENTES
+  // REGISTROS PRINCIPALES PERSISTENTES (Base de datos en blanco)
   const [registros, setRegistros] = useState(() => {
     try {
       const guardados = localStorage.getItem('herpid_registros_avistamientos');
       if (guardados) return JSON.parse(guardados);
     } catch (e) { console.error(e); }
-    return [
-      {
-        id: 1, especie: 'Agalychnis annae', nombreComun: 'Rana Verde de Palmera', categoria: 'ANFIBIO', silueta: 'Rana Arborícola',
-        estado: 'VALIDADO', ubicacion: 'San Marcos de Tarrazú', reportante: 'Jorge Carvajal', contacto: 'jorge.carvajal@docente.edu',
-        temp: '21.0 °C', altitud: '1450 msnm', horaRegistro: '24/07/2026, 08:30:15', microhabitat: 'Vegetación / Finca Cafetalera',
-        estadoVida: 'Vivo / Activo (Adulto)', tieneAudio: false, fotos: ['https://images.unsplash.com/photo-1548802673-380ab8ebc7b7?auto=format&fit=crop&w=600&q=80'],
-        img: 'https://images.unsplash.com/photo-1548802673-380ab8ebc7b7?auto=format&fit=crop&w=600&q=80', coords: [9.650565, -84.000236],
-        editadoPor: 'Jorge Carvajal (Administrador Experto)', fechaEdicion: '24/07/2026, 00:15', notasTaxo: 'Confirmado patrón de coloración lateral azul.'
-      },
-      {
-        id: 2, especie: 'Cerrophidion godmani', nombreComun: 'Toboba de Montaña', categoria: 'REPTIL', silueta: 'Serpiente',
-        estado: 'EN REVISIÓN EXPERTA', ubicacion: 'San Pablo de León Cortés', reportante: 'Dra. Sofía Herpetóloga', contacto: 'sofia.herpeto@ucr.ac.cr',
-        temp: '17.5 °C', altitud: '1900 msnm', horaRegistro: '24/07/2026, 09:12:00', microhabitat: 'Hojarasca de bosque de roble',
-        estadoVida: 'Vivo / Activo (Adulto)', tieneAudio: false, fotos: ['https://images.unsplash.com/photo-1531386151447-fd76ad50012f?auto=format&fit=crop&w=600&q=80'],
-        img: 'https://images.unsplash.com/photo-1531386151447-fd76ad50012f?auto=format&fit=crop&w=600&q=80', coords: [9.6682, -84.0141],
-        editadoPor: null, fechaEdicion: null
-      }
-    ];
+    return [];
   });
 
   useEffect(() => {
@@ -239,7 +221,7 @@ export default function App() {
   const [formLogin, setFormLogin] = useState({ emailOrTel: '', pass: '' });
   const [formReg, setFormReg] = useState({ nombre: '', email: '', codigoPais: '+506', telefono: '', comunidad: '', pass: '', confirmPass: '', solicitaExperto: false, medioVerificacion: 'correo' });
   const [formRecuperar, setFormRecuperar] = useState({ contacto: '' });
-  const [solicitudesExpertos, setSolicitudesExpertos] = useState([{ id: 101, userId: 3, nombre: 'MSc. Juan Abarca', email: 'jabarca@herpeto.org', tel: '+506 8333-4444', atencedentes: 'Biólogo especialista.', fecha: '24/07/2026' }]);
+  const [solicitudesExpertos, setSolicitudesExpertos] = useState([]); // Solicitudes limpiadas
   
   const [chatMensajes, setChatMensajes] = useState([{ id: 1, texto: '👋 Bienvenido a la central de ayuda. Escribe tu duda o solicita identificación.', emisor: 'sistema' }]);
   const [nuevoMensaje, setNuevoMensaje] = useState('');
@@ -389,6 +371,7 @@ export default function App() {
   };
 
   const exportarCSV = () => {
+    if (registros.length === 0) return alert('No hay datos para exportar.');
     const headers = "ID,Nombre Comun,Especie,Categoria,Estado,Ubicacion,Reportante,Temperatura,Altitud,HoraRegistro,EditadoPor\n";
     const rows = registros.map(r => `${r.id},"${r.nombreComun}","${r.especie}",${r.categoria},${r.estado},"${r.ubicacion}","${r.reportante}",${r.temp},${r.altitud},"${r.horaRegistro}","${r.editadoPor || 'N/A'}"`).join("\n");
     const blob = new Blob([headers + rows], { type: 'text/csv' });
@@ -555,6 +538,7 @@ export default function App() {
                 </>
               )}
 
+              {/* LOS PINES SOLO SE RENDERIZAN SI ERES ADMIN */}
               {registrosFiltradosMapa.map((reg) => (
                 <Marker key={reg.id} position={reg.coords} icon={crearIconoPersonalizado(reg.silueta, reg.estado)} eventHandlers={{ click: () => setRegistroSeleccionado(reg) }}>
                   <Popup>
@@ -598,21 +582,26 @@ export default function App() {
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
-            {registrosFiltradosGaleria.map((reg) => (
-              <div key={reg.id} onClick={() => setRegistroSeleccionado(reg)} style={{ backgroundColor: '#0F1A16', borderRadius: '12px', overflow: 'hidden', border: '1px solid #1B2E27', cursor: 'pointer' }}>
-                <div style={{ position: 'relative', height: '180px' }}>
-                  <img src={reg.img || (reg.fotos && reg.fotos[0])} alt={reg.especie} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  <span style={{ position: 'absolute', top: '10px', right: '10px', backgroundColor: reg.estado === 'VALIDADO' ? '#00E676' : '#FFB300', color: '#000', padding: '0.2rem 0.6rem', borderRadius: '12px', fontSize: '0.7rem', fontWeight: 'bold' }}>{reg.estado}</span>
+          {registrosFiltradosGaleria.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '2rem', color: '#8AA398' }}>La base de datos está limpia. Aún no hay avistamientos.</div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
+              {registrosFiltradosGaleria.map((reg) => (
+                <div key={reg.id} onClick={() => setRegistroSeleccionado(reg)} style={{ backgroundColor: '#0F1A16', borderRadius: '12px', overflow: 'hidden', border: '1px solid #1B2E27', cursor: 'pointer' }}>
+                  <div style={{ position: 'relative', height: '180px' }}>
+                    <img src={reg.img || (reg.fotos && reg.fotos[0])} alt={reg.especie} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <span style={{ position: 'absolute', top: '10px', right: '10px', backgroundColor: reg.estado === 'VALIDADO' ? '#00E676' : '#FFB300', color: '#000', padding: '0.2rem 0.6rem', borderRadius: '12px', fontSize: '0.7rem', fontWeight: 'bold' }}>{reg.estado}</span>
+                  </div>
+                  <div style={{ padding: '0.9rem' }}>
+                    <span style={{ fontSize: '0.75rem', color: '#00FF88', fontWeight: 'bold' }}>🐸 {reg.categoria} • {reg.silueta}</span>
+                    <h3 style={{ margin: '0.3rem 0', fontSize: '1rem', color: '#FFF' }}>{reg.nombreComun}</h3>
+                    {/* AQUÍ SE OCULTA INFORMACIÓN DETALLADA A USUARIOS REGULARES */}
+                    <p style={{ margin: '0.2rem 0', fontSize: '0.8rem', color: '#8AA398' }}>📍 {esExpertoOAdmin ? reg.ubicacion : reg.ubicacion.split(',')[0]} • 🕒 {reg.horaRegistro.split(',')[0]}</p>
+                  </div>
                 </div>
-                <div style={{ padding: '0.9rem' }}>
-                  <span style={{ fontSize: '0.75rem', color: '#00FF88', fontWeight: 'bold' }}>🐸 {reg.categoria} • {reg.silueta}</span>
-                  <h3 style={{ margin: '0.3rem 0', fontSize: '1rem', color: '#FFF' }}>{reg.nombreComun}</h3>
-                  <p style={{ margin: '0.2rem 0', fontSize: '0.8rem', color: '#8AA398' }}>📍 {esExpertoOAdmin ? reg.ubicacion : reg.ubicacion.split(',')[0]} • 🕒 {reg.horaRegistro.split(',')[0]}</p>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -752,7 +741,7 @@ export default function App() {
                 {subTabAdmin === 'usuarios' && esAdminAbsoluto && (
                   <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.8rem' }}>
-                      <h4 style={{ margin: 0, color: '#FFF', fontSize: '0.95rem' }}>👥 Gestión de Accesos de Usuarios</h4>
+                      <h4 style={{ margin: '0, color: '#FFF', fontSize: '0.95rem' }}>👥 Gestión de Accesos de Usuarios</h4>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         <label style={{ fontSize: '0.75rem', color: '#00FF88', fontWeight: 'bold' }}>🔍 Filtrar Red:</label>
                         <select value={filtroEstadoUsuario} onChange={(e) => setFiltroEstadoUsuario(e.target.value)} style={{ backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '12px', padding: '0.4rem 0.8rem', fontSize: '0.75rem', fontWeight: 'bold' }}>
@@ -839,15 +828,19 @@ export default function App() {
                   <div>
                     <h4 style={{ margin: '0 0 1rem 0', color: '#FFF', fontSize: '0.95rem' }}>📋 Moderación y Edición de Reportes de Campo</h4>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
-                      {registros.map((r) => (
-                        <div key={r.id} style={{ backgroundColor: '#060D0A', border: '1px solid #162B23', borderRadius: '12px', padding: '0.9rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <div>
-                            <strong style={{ color: '#FFF', fontSize: '0.85rem' }}>{r.nombreComun} ({r.especie})</strong>
-                            <div style={{ fontSize: '0.75rem', color: '#8AA398' }}>📍 {r.ubicacion} | 🕒 {r.horaRegistro} | Estado: <span style={{ color: r.estado === 'VALIDADO' ? '#00E676' : '#FFB300' }}>{r.estado}</span></div>
+                      {registros.length === 0 ? (
+                        <p style={{ color: '#8AA398', fontSize: '0.85rem' }}>No hay registros de campo en este momento.</p>
+                      ) : (
+                        registros.map((r) => (
+                          <div key={r.id} style={{ backgroundColor: '#060D0A', border: '1px solid #162B23', borderRadius: '12px', padding: '0.9rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div>
+                              <strong style={{ color: '#FFF', fontSize: '0.85rem' }}>{r.nombreComun} ({r.especie})</strong>
+                              <div style={{ fontSize: '0.75rem', color: '#8AA398' }}>📍 {r.ubicacion} | 🕒 {r.horaRegistro} | Estado: <span style={{ color: r.estado === 'VALIDADO' ? '#00E676' : '#FFB300' }}>{r.estado}</span></div>
+                            </div>
+                            <button onClick={() => setRegistroSeleccionado(r)} style={{ backgroundColor: '#00E676', color: '#000', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}>Abrir Ficha / Moderar</button>
                           </div>
-                          <button onClick={() => setRegistroSeleccionado(r)} style={{ backgroundColor: '#00E676', color: '#000', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}>Abrir Ficha / Moderar</button>
-                        </div>
-                      ))}
+                        ))
+                      )}
                     </div>
                   </div>
                 )}
@@ -1219,6 +1212,11 @@ export default function App() {
                   </div>
                 </div>
 
+                <div style={{ backgroundColor: '#0D1E18', border: '1px solid #1B3D2F', padding: '0.7rem', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.6rem' }} onClick={() => setFormReg({ ...formReg, solicitaExperto: !formReg.solicitaExperto })}>
+                  <input type="checkbox" checked={formReg.solicitaExperto} onChange={() => {}} style={{ accentColor: '#00FF88' }} />
+                  <span style={{ color: '#00FF88', fontSize: '0.75rem', fontWeight: 'bold' }}>🎓 Soy Biólogo/Herpetólogo (Solicitar validación de Rango)</span>
+                </div>
+
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
                   <div><label style={{ display: 'block', fontSize: '0.7rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.3rem' }}>CONTRASEÑA *</label><input type="password" placeholder="••••••••" value={formReg.pass} onChange={(e) => setFormReg({ ...formReg, pass: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }} /></div>
                   <div><label style={{ display: 'block', fontSize: '0.7rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.3rem' }}>CONFIRMAR *</label><input type="password" placeholder="••••••••" value={formReg.confirmPass} onChange={(e) => setFormReg({ ...formReg, confirmPass: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }} /></div>
@@ -1275,6 +1273,19 @@ export default function App() {
                 </button>
               </div>
             )}
+
+            {vistaPerfil === 'recuperar' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
+                <p style={{ fontSize: '0.8rem', color: '#8AA398', margin: 0 }}>Selecciona el método de recuperación para recibir las instrucciones:</p>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                  <button onClick={() => setMetodoRecuperacion('correo')} style={{ backgroundColor: metodoRecuperacion === 'correo' ? '#0F2B20' : '#050A08', color: '#FFF', border: metodoRecuperacion === 'correo' ? '2px solid #00FF88' : '1px solid #1B3D2F', padding: '0.6rem', borderRadius: '8px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 'bold' }}>✉️ Por Correo</button>
+                  <button onClick={() => setMetodoRecuperacion('sms')} style={{ backgroundColor: metodoRecuperacion === 'sms' ? '#0F2B20' : '#050A08', color: '#FFF', border: metodoRecuperacion === 'sms' ? '2px solid #00FF88' : '1px solid #1B3D2F', padding: '0.6rem', borderRadius: '8px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 'bold' }}>💬 Por Mensaje (SMS)</button>
+                </div>
+                <input type="text" placeholder={metodoRecuperacion === 'correo' ? 'Correo registrado' : 'Celular registrado'} value={formRecuperar.contacto} onChange={(e) => setFormRecuperar({ contacto: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }} />
+                <button onClick={() => { setMensajeAuthOk(`¡Instrucciones enviadas vía ${metodoRecuperacion === 'correo' ? 'Correo' : 'SMS'}!`); setTimeout(() => { setMensajeAuthOk(''); setVistaPerfil('login'); }, 2000); }} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#00E676', color: '#000', fontWeight: 'bold', border: 'none', borderRadius: '10px', cursor: 'pointer' }}>Enviar Instrucciones</button>
+              </div>
+            )}
+
           </div>
         </div>
       )}
@@ -1430,7 +1441,7 @@ export default function App() {
               </div>
             </div>
 
-            {/* PASO 6: AUDIO (RESTAURADO AL 100%) */}
+            {/* PASO 6: AUDIO */}
             <div style={{ marginBottom: '1.2rem' }}>
               <label style={{ display: 'block', fontSize: '0.8rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.5rem' }}>6. GRABACIÓN DEL CANTO / VOCALIZACIÓN (OPCIONAL)</label>
               <div style={{ backgroundColor: '#0D1E18', border: '1px border-dashed #1B3D2F', borderRadius: '10px', padding: '0.8rem' }}>
