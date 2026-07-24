@@ -86,7 +86,6 @@ export default function App() {
   const [modalChat, setModalChat] = useState(false);
   const [modalInstalar, setModalInstalar] = useState(false);
   const [modalSincronizar, setModalSincronizar] = useState(false);
-  const [modalGuiaEdit, setModalGuiaEdit] = useState(false);
   const [registroSeleccionado, setRegistroSeleccionado] = useState(null);
 
   // Autenticación y Perfil
@@ -101,10 +100,15 @@ export default function App() {
   const [mapLayer, setMapLayer] = useState('satelite-hibrido');
   const [filtroEspecie, setFiltroEspecie] = useState('todas');
   const [busquedaGaleria, setBusquedaGaleria] = useState('');
+  
+  // Filtros Guía Dinámica
+  const [filtroGuiaCategoria, setFiltroGuiaCategoria] = useState('todas');
+  const [busquedaGuiaLugar, setBusquedaGuiaLugar] = useState('');
+  
   const [filtroEstadoUsuario, setFiltroEstadoUsuario] = useState('todos');
   const [estadoConexion, setEstadoConexion] = useState('online');
 
-  // === PERSISTENCIA LOCAL ===
+  // === PERSISTENCIA LOCAL (A prueba de fallos y refrescos) ===
   
   const [usuario, setUsuario] = useState(() => {
     try {
@@ -121,6 +125,23 @@ export default function App() {
     localStorage.setItem('herpid_usuario_sesion', JSON.stringify(usuario));
   }, [usuario]);
 
+  // BASE DE DATOS DE USUARIOS PERSISTENTE
+  const [cuentasRegistradas, setCuentasRegistradas] = useState(() => {
+    try {
+      const guardadas = localStorage.getItem('herpid_cuentas_registradas');
+      if (guardadas) return JSON.parse(guardadas);
+    } catch (e) { console.error(e); }
+    return [
+      { id: 1, nombre: 'Jorge Carvajal', email: 'jorge.carvajal@docente.edu', codigoPais: '+506', tel: '88889999', comunidad: 'Tarrazú', rol: 'Administrador Experto (Máximo Rango)', pass: 'admin123', estadoConexion: 'online', fechaIngreso: '2026-03-01 08:30:00', mostrarTelefono: false, estatusCuenta: 'activo', cuentaVerificada: true },
+      { id: 2, nombre: 'Dra. Sofía Herpetóloga', email: 'sofia.herpeto@ucr.ac.cr', codigoPais: '+506', tel: '87654321', comunidad: 'Dota', rol: 'Experto Herpetólogo', pass: 'sofia123', estadoConexion: 'online', fechaIngreso: '2026-04-12 14:15:00', mostrarTelefono: false, estatusCuenta: 'activo', cuentaVerificada: true }
+    ];
+  });
+
+  useEffect(() => {
+    localStorage.setItem('herpid_cuentas_registradas', JSON.stringify(cuentasRegistradas));
+  }, [cuentasRegistradas]);
+
+  // REGISTROS PRINCIPALES PERSISTENTES
   const [registros, setRegistros] = useState(() => {
     try {
       const guardados = localStorage.getItem('herpid_registros_avistamientos');
@@ -129,16 +150,16 @@ export default function App() {
     return [
       {
         id: 1, especie: 'Agalychnis annae', nombreComun: 'Rana Verde de Palmera', categoria: 'ANFIBIO', silueta: 'Rana Arborícola',
-        estado: 'VALIDADO', ubicacion: 'San Marcos de Tarrazú', reportante: 'Jorge Carvajal', contacto: 'jorge.carvajal@docente.edu | 🔒 [Celular Privado]',
-        temp: '21.0 °C', altitud: '1450 msnm', horaRegistro: '24/07/2026, 08:30:15 (Exacta)', microhabitat: 'Vegetación / Finca Cafetalera',
-        estadoVida: 'Vivo / Activo (Adulto)', tieneAudio: true, fotos: ['https://images.unsplash.com/photo-1548802673-380ab8ebc7b7?auto=format&fit=crop&w=600&q=80'],
+        estado: 'VALIDADO', ubicacion: 'San Marcos de Tarrazú', reportante: 'Jorge Carvajal', contacto: 'jorge.carvajal@docente.edu',
+        temp: '21.0 °C', altitud: '1450 msnm', horaRegistro: '24/07/2026, 08:30:15', microhabitat: 'Vegetación / Finca Cafetalera',
+        estadoVida: 'Vivo / Activo (Adulto)', tieneAudio: false, fotos: ['https://images.unsplash.com/photo-1548802673-380ab8ebc7b7?auto=format&fit=crop&w=600&q=80'],
         img: 'https://images.unsplash.com/photo-1548802673-380ab8ebc7b7?auto=format&fit=crop&w=600&q=80', coords: [9.650565, -84.000236],
-        editadoPor: 'Jorge Carvajal (Administrador Experto)', fechaEdicion: '24/07/2026, 00:15', notasTaxo: 'Confirmado patrón de coloración lateral azul. Excelente registro visual.'
+        editadoPor: 'Jorge Carvajal (Administrador Experto)', fechaEdicion: '24/07/2026, 00:15', notasTaxo: 'Confirmado patrón de coloración lateral azul.'
       },
       {
         id: 2, especie: 'Cerrophidion godmani', nombreComun: 'Toboba de Montaña', categoria: 'REPTIL', silueta: 'Serpiente',
-        estado: 'EN REVISIÓN EXPERTA', ubicacion: 'San Pablo de León Cortés', reportante: 'Dra. Sofía Herpetóloga', contacto: 'sofia.herpeto@ucr.ac.cr | 🔒 [Celular Privado]',
-        temp: '17.5 °C', altitud: '1900 msnm', horaRegistro: '24/07/2026, 09:12:00 (Exacta)', microhabitat: 'Hojarasca de bosque de roble',
+        estado: 'EN REVISIÓN EXPERTA', ubicacion: 'San Pablo de León Cortés', reportante: 'Dra. Sofía Herpetóloga', contacto: 'sofia.herpeto@ucr.ac.cr',
+        temp: '17.5 °C', altitud: '1900 msnm', horaRegistro: '24/07/2026, 09:12:00', microhabitat: 'Hojarasca de bosque de roble',
         estadoVida: 'Vivo / Activo (Adulto)', tieneAudio: false, fotos: ['https://images.unsplash.com/photo-1531386151447-fd76ad50012f?auto=format&fit=crop&w=600&q=80'],
         img: 'https://images.unsplash.com/photo-1531386151447-fd76ad50012f?auto=format&fit=crop&w=600&q=80', coords: [9.6682, -84.0141],
         editadoPor: null, fechaEdicion: null
@@ -163,13 +184,6 @@ export default function App() {
     localStorage.setItem('herpid_pendientes_offline', JSON.stringify(pendientesOffline));
   }, [pendientesOffline]);
 
-  // === BASE DE DATOS LOCAL ===
-  const [cuentasRegistradas, setCuentasRegistradas] = useState([
-    { id: 1, nombre: 'Jorge Carvajal', email: 'jorge.carvajal@docente.edu', codigoPais: '+506', tel: '88889999', comunidad: 'Tarrazú (San Marcos, San Lorenzo, Carlos)', rol: 'Administrador Experto (Máximo Rango)', pass: 'admin123', estadoConexion: 'online', fechaIngreso: '2026-03-01 08:30:00', mostrarTelefono: false, estatusCuenta: 'activo', cuentaVerificada: true },
-    { id: 2, nombre: 'Dra. Sofía Herpetóloga', email: 'sofia.herpeto@ucr.ac.cr', codigoPais: '+506', tel: '87654321', comunidad: 'Dota (Santa María, Copey, Jardín)', rol: 'Experto Herpetólogo', pass: 'sofia123', estadoConexion: 'online', fechaIngreso: '2026-04-12 14:15:00', mostrarTelefono: false, estatusCuenta: 'activo', cuentaVerificada: true },
-    { id: 3, nombre: 'Carlos Picado', email: 'cpicado@comunidad.cr', codigoPais: '+506', tel: '85551234', comunidad: 'León Cortés (San Pablo, San Rafael)', rol: 'Usuario Regular', pass: 'carlos123', estadoConexion: 'offline', fechaIngreso: '2026-05-20 11:45:00', mostrarTelefono: true, estatusCuenta: 'activo', cuentaVerificada: true }
-  ]);
-
   const codigosPaises = [
     { code: '+506', label: '🇨🇷 Costa Rica (+506)' },
     { code: '+1', label: '🇺🇸/🇨🇦 Estados Unidos / Canadá (+1)' },
@@ -178,7 +192,7 @@ export default function App() {
     { code: '+57', label: '🇨🇴 Colombia (+57)' }
   ];
 
-  // === ROLES ===
+  // === ROLES PRIVILEGIADOS ===
   const esExpertoOAdmin = usuario?.isLoggedIn && usuario?.rol && (usuario.rol.includes('Administrador') || usuario.rol.includes('Experto'));
   const esAdminAbsoluto = usuario?.isLoggedIn && usuario?.rol && usuario.rol.includes('Administrador');
 
@@ -201,7 +215,7 @@ export default function App() {
   const [formLogin, setFormLogin] = useState({ emailOrTel: '', pass: '' });
   const [formReg, setFormReg] = useState({ nombre: '', email: '', codigoPais: '+506', telefono: '', comunidad: '', pass: '', confirmPass: '', solicitaExperto: false, medioVerificacion: 'correo' });
   const [formRecuperar, setFormRecuperar] = useState({ contacto: '' });
-  const [solicitudesExpertos, setSolicitudesExpertos] = useState([{ id: 101, userId: 3, nombre: 'MSc. Juan Abarca', email: 'jabarca@herpeto.org', tel: '+506 8333-4444', atencedentes: 'Biólogo especialista en Isthmohyla nacientes.', fecha: '24/07/2026' }]);
+  const [solicitudesExpertos, setSolicitudesExpertos] = useState([{ id: 101, userId: 3, nombre: 'MSc. Juan Abarca', email: 'jabarca@herpeto.org', tel: '+506 8333-4444', atencedentes: 'Biólogo especialista.', fecha: '24/07/2026' }]);
   
   const [chatMensajes, setChatMensajes] = useState([{ id: 1, texto: '👋 Has iniciado una consulta privada directa. Escribe tu mensaje abajo.', emisor: 'sistema' }]);
   const [nuevoMensaje, setNuevoMensaje] = useState('');
@@ -220,7 +234,6 @@ export default function App() {
     setChatMensajes(prev => [...prev, nuevoMsj]);
     setNuevoMensaje('');
     
-    // Simulación de respuesta de experto en 1.5 segundos
     setTimeout(() => {
       setChatMensajes(prev => [...prev, { 
         id: Date.now() + 1, 
@@ -268,7 +281,7 @@ export default function App() {
     else { setModalInstalar(true); }
   };
 
-  // FUNCIONES DE UTILIDAD
+  // FUNCIONES DE COMPRESIÓN Y UTILIDAD
   const abrirModalRegistro = () => {
     setTipoFauna('Anfibio');
     setSilueta('Rana Arborícola');
@@ -379,8 +392,8 @@ export default function App() {
 
   const getBadgetConexion = (estado) => {
     if (estado === 'online') return { icon: '🟢', label: 'En línea', color: '#00FF88' };
-    if (estado === 'busy') return { icon: '🟠', label: 'Ocupado en campo', color: '#FFB300' };
-    return { icon: '🔴', label: 'Fuera de cobertura (Offline)', color: '#FF5252' };
+    if (estado === 'busy') return { icon: '🟠', label: 'Ocupado', color: '#FFB300' };
+    return { icon: '🔴', label: 'Offline', color: '#FF5252' };
   };
 
   const exportarCSV = () => {
@@ -401,46 +414,40 @@ export default function App() {
     setModalSincronizar(false);
   };
 
-  // GUÍA EDITABLE
-  const [especiesGuia, setEspeciesGuia] = useState([
-    {
-      id: 1, nombre: 'Agalychnis annae', comun: 'Rana Verde de Palmera', tipo: 'ANFIBIO • IUCN: EN (En Peligro)',
-      habitat: 'Vegetación de cafetal y jardines (1200 - 1800 msnm)', desc: 'Rana arborícola de color verde intenso con flancos amarillos.',
-      img: 'https://images.unsplash.com/photo-1548802673-380ab8ebc7b7?auto=format&fit=crop&w=600&q=80'
-    },
-    {
-      id: 2, nombre: 'Cerrophidion godmani', comun: 'Toboba de Montaña', tipo: 'REPTIL • IUCN: LC (Preocupación Menor)',
-      habitat: 'Hojarasca de bosque de roble (>1800 msnm)', desc: 'Serpiente venenosa pequeña de hábitos terrestres.',
-      img: 'https://images.unsplash.com/photo-1531386151447-fd76ad50012f?auto=format&fit=crop&w=600&q=80'
-    }
-  ]);
+  // === MOTOR DE LA GUÍA DINÁMICA (Agrupación de Validados) ===
+  const generarGuiaDinamica = () => {
+    const validados = registros.filter(r => r.estado === 'VALIDADO');
+    
+    // Agrupar por nombre científico
+    const agrupados = validados.reduce((acc, curr) => {
+      const key = curr.especie;
+      if (!acc[key]) {
+        acc[key] = {
+          ...curr,
+          conteo: 1,
+          lugaresSet: new Set([curr.ubicacion])
+        };
+      } else {
+        acc[key].conteo += 1;
+        acc[key].lugaresSet.add(curr.ubicacion);
+      }
+      return acc;
+    }, {});
 
-  const [especieGuiaEditando, setEspecieGuiaEditando] = useState(null);
-  const [formGuia, setFormGuia] = useState({ nombre: '', comun: '', tipo: 'ANFIBIO • IUCN: LC', habitat: '', desc: '', img: '' });
-
-  const abrirEdicionGuia = (item) => {
-    if (item) {
-      setEspecieGuiaEditando(item);
-      setFormGuia({ nombre: item.nombre, comun: item.comun, tipo: item.tipo, habitat: item.habitat, desc: item.desc, img: item.img });
-    } else {
-      setEspecieGuiaEditando(null);
-      setFormGuia({ nombre: '', comun: '', tipo: 'ANFIBIO • IUCN: Preocupación Menor', habitat: '', desc: '', img: 'https://images.unsplash.com/photo-1590005354167-6da97870c757?auto=format&fit=crop&w=600&q=80' });
-    }
-    setModalGuiaEdit(true);
+    // Convertir a Array y aplicar filtros (Anfibio/Reptil y Buscador geográfico)
+    return Object.values(agrupados).filter(sp => {
+      const matchCat = filtroGuiaCategoria === 'todas' || sp.categoria.toLowerCase() === filtroGuiaCategoria.toLowerCase();
+      const matchLugar = 
+        sp.nombreComun.toLowerCase().includes(busquedaGuiaLugar.toLowerCase()) || 
+        sp.especie.toLowerCase().includes(busquedaGuiaLugar.toLowerCase()) || 
+        Array.from(sp.lugaresSet).some(l => l.toLowerCase().includes(busquedaGuiaLugar.toLowerCase()));
+      return matchCat && matchLugar;
+    });
   };
 
-  const guardarEspecieGuia = () => {
-    if (!formGuia.nombre || !formGuia.comun) { alert('Nombre científico y nombre común son obligatorios.'); return; }
-    if (especieGuiaEditando) {
-      setEspeciesGuia(especiesGuia.map(sp => sp.id === especieGuiaEditando.id ? { ...sp, ...formGuia } : sp));
-      alert('¡Ficha actualizada con éxito!');
-    } else {
-      setEspeciesGuia([...especiesGuia, { id: Date.now(), ...formGuia }]);
-      alert('¡Nueva especie agregada a la Guía!');
-    }
-    setModalGuiaEdit(false);
-  };
+  const especiesGuiaDinamica = generarGuiaDinamica();
 
+  // === MOTOR DEL MAPA Y GALERÍA ===
   const registrosFiltrados = registros.filter((r) => {
     const esVisiblePorRol = esExpertoOAdmin || r.estado === 'VALIDADO';
     const coincideBusqueda = r.nombreComun.toLowerCase().includes(busquedaGaleria.toLowerCase()) || r.especie.toLowerCase().includes(busquedaGaleria.toLowerCase()) || r.ubicacion.toLowerCase().includes(busquedaGaleria.toLowerCase());
@@ -453,6 +460,8 @@ export default function App() {
   const usuariosOrdenadosYFiltrados = cuentasRegistradas
     .filter(u => filtroEstadoUsuario === 'todos' || u.estadoConexion === filtroEstadoUsuario)
     .sort((a, b) => new Date(b.fechaIngreso) - new Date(a.fechaIngreso));
+
+  const misReportes = registros.filter(r => r.reportante === usuario.nombre || r.contacto.includes(usuario.email));
 
   return (
     <div style={{ backgroundColor: '#070D0B', color: '#E0E6E3', minHeight: '100vh', fontFamily: 'system-ui, sans-serif', paddingBottom: '90px' }}>
@@ -477,17 +486,7 @@ export default function App() {
             <div style={{ position: 'absolute', width: '42px', height: '42px', border: '1px solid rgba(0,255,136,0.3)', borderRadius: '50%' }}></div>
             <div style={{ position: 'absolute', width: '28px', height: '28px', border: '1px dashed rgba(0,255,136,0.5)', borderRadius: '50%' }}></div>
             <span style={{ fontSize: '1.9rem', filter: 'drop-shadow(0 3px 6px rgba(0,255,136,0.7))', zIndex: 2 }}>🐸</span>
-            <div style={{
-              position: 'absolute',
-              bottom: '5px',
-              right: '5px',
-              backgroundColor: '#00FF88',
-              width: '12px',
-              height: '12px',
-              borderRadius: '50%',
-              border: '2px solid #070D0B',
-              boxShadow: '0 0 8px #00FF88'
-            }}></div>
+            <div style={{ position: 'absolute', bottom: '5px', right: '5px', backgroundColor: '#00FF88', width: '12px', height: '12px', borderRadius: '50%', border: '2px solid #070D0B', boxShadow: '0 0 8px #00FF88' }}></div>
           </div>
 
           <div>
@@ -497,10 +496,9 @@ export default function App() {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
-          
           {pendientesOffline.length > 0 && (
             <button onClick={() => setModalSincronizar(true)} style={{ backgroundColor: '#FFB300', color: '#000', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '20px', fontWeight: 'bold', fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-              ⏳ {pendientesOffline.length} Pendiente(s) Offline
+              ⏳ {pendientesOffline.length} Offline
             </button>
           )}
 
@@ -530,30 +528,18 @@ export default function App() {
         <div style={{ position: 'relative' }}>
           <div style={{ position: 'absolute', top: '15px', left: '15px', zIndex: 1000, display: 'flex', flexDirection: 'column', gap: '8px' }}>
             <div style={{ backgroundColor: 'rgba(11, 21, 18, 0.9)', backdropFilter: 'blur(8px)', border: '1px solid #162B23', borderRadius: '25px', padding: '4px', display: 'flex', gap: '4px' }}>
-              <button onClick={() => setFiltroEspecie('todas')} style={{ backgroundColor: filtroEspecie === 'todas' ? '#0F2B20' : 'transparent', color: filtroEspecie === 'todas' ? '#00FF88' : '#8AA398', border: filtroEspecie === 'todas' ? '1px solid #00FF88' : 'none', padding: '6px 14px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}>
-                Todas las Especies
-              </button>
-              <button onClick={() => setFiltroEspecie('anfibios')} style={{ backgroundColor: filtroEspecie === 'anfibios' ? '#0F2B20' : 'transparent', color: filtroEspecie === 'anfibios' ? '#00FF88' : '#8AA398', border: filtroEspecie === 'anfibios' ? '1px solid #00FF88' : 'none', padding: '6px 14px', borderRadius: '20px', fontSize: '0.75rem', cursor: 'pointer' }}>
-                🐸 Anfibios
-              </button>
-              <button onClick={() => setFiltroEspecie('reptiles')} style={{ backgroundColor: filtroEspecie === 'reptiles' ? '#0F2B20' : 'transparent', color: filtroEspecie === 'reptiles' ? '#00FF88' : '#8AA398', border: filtroEspecie === 'reptiles' ? '1px solid #00FF88' : 'none', padding: '6px 14px', borderRadius: '20px', fontSize: '0.75rem', cursor: 'pointer' }}>
-                🦎 Reptiles
-              </button>
+              <button onClick={() => setFiltroEspecie('todas')} style={{ backgroundColor: filtroEspecie === 'todas' ? '#0F2B20' : 'transparent', color: filtroEspecie === 'todas' ? '#00FF88' : '#8AA398', border: filtroEspecie === 'todas' ? '1px solid #00FF88' : 'none', padding: '6px 14px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}>Todas</button>
+              <button onClick={() => setFiltroEspecie('anfibios')} style={{ backgroundColor: filtroEspecie === 'anfibios' ? '#0F2B20' : 'transparent', color: filtroEspecie === 'anfibios' ? '#00FF88' : '#8AA398', border: filtroEspecie === 'anfibios' ? '1px solid #00FF88' : 'none', padding: '6px 14px', borderRadius: '20px', fontSize: '0.75rem', cursor: 'pointer' }}>🐸 Anfibios</button>
+              <button onClick={() => setFiltroEspecie('reptiles')} style={{ backgroundColor: filtroEspecie === 'reptiles' ? '#0F2B20' : 'transparent', color: filtroEspecie === 'reptiles' ? '#00FF88' : '#8AA398', border: filtroEspecie === 'reptiles' ? '1px solid #00FF88' : 'none', padding: '6px 14px', borderRadius: '20px', fontSize: '0.75rem', cursor: 'pointer' }}>🦎 Reptiles</button>
             </div>
 
             <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-              <button onClick={() => setMapLayer('callejero')} style={{ backgroundColor: mapLayer === 'callejero' ? '#0F2B20' : 'rgba(11, 21, 18, 0.9)', color: mapLayer === 'callejero' ? '#00FF88' : '#FFF', border: '1px solid #00FF88', borderRadius: '20px', padding: '6px 12px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}>
-                🗺️ Callejero
-              </button>
-              <button onClick={() => setMapLayer('satelite-hibrido')} style={{ backgroundColor: mapLayer === 'satelite-hibrido' ? '#0F2B20' : 'rgba(11, 21, 18, 0.9)', color: mapLayer === 'satelite-hibrido' ? '#00FF88' : '#FFF', border: '1px solid #00FF88', borderRadius: '20px', padding: '6px 12px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}>
-                🛰️ Satélite con Nombres (Híbrido)
-              </button>
+              <button onClick={() => setMapLayer('callejero')} style={{ backgroundColor: mapLayer === 'callejero' ? '#0F2B20' : 'rgba(11, 21, 18, 0.9)', color: mapLayer === 'callejero' ? '#00FF88' : '#FFF', border: '1px solid #00FF88', borderRadius: '20px', padding: '6px 12px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}>🗺️ Callejero</button>
+              <button onClick={() => setMapLayer('satelite-hibrido')} style={{ backgroundColor: mapLayer === 'satelite-hibrido' ? '#0F2B20' : 'rgba(11, 21, 18, 0.9)', color: mapLayer === 'satelite-hibrido' ? '#00FF88' : '#FFF', border: '1px solid #00FF88', borderRadius: '20px', padding: '6px 12px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}>🛰️ Satélite Híbrido</button>
             </div>
           </div>
 
-          <div style={{ position: 'absolute', top: '15px', right: '15px', zIndex: 1000, backgroundColor: 'rgba(11, 21, 18, 0.9)', backdropFilter: 'blur(8px)', border: '1px solid #162B23', borderRadius: '20px', padding: '6px 12px', fontSize: '0.75rem', color: '#00FF88', fontWeight: 'bold' }}>
-            🛰️ GPS: {lat}, {lng} ±182m
-          </div>
+          <div style={{ position: 'absolute', top: '15px', right: '15px', zIndex: 1000, backgroundColor: 'rgba(11, 21, 18, 0.9)', backdropFilter: 'blur(8px)', border: '1px solid #162B23', borderRadius: '20px', padding: '6px 12px', fontSize: '0.75rem', color: '#00FF88', fontWeight: 'bold' }}>🛰️ GPS: {lat}, {lng} ±182m</div>
 
           <div style={{ height: 'calc(100vh - 180px)', width: '100%' }}>
             <MapContainer center={[9.650565, -84.000236]} zoom={13} style={{ height: '100%', width: '100%' }}>
@@ -567,24 +553,17 @@ export default function App() {
               )}
 
               {registrosFiltrados.map((reg) => (
-                <Marker 
-                  key={reg.id} 
-                  position={reg.coords}
-                  icon={crearIconoPersonalizado(reg.silueta, reg.estado)}
-                  eventHandlers={{ click: () => setRegistroSeleccionado(reg) }}
-                >
+                <Marker key={reg.id} position={reg.coords} icon={crearIconoPersonalizado(reg.silueta, reg.estado)} eventHandlers={{ click: () => setRegistroSeleccionado(reg) }}>
                   <Popup>
                     <strong style={{ color: '#00C853' }}>{reg.nombreComun}</strong><br />
-                    <em>{reg.especie}</em><br />
-                    📍 {reg.ubicacion}<br />
-                    🕒 {reg.horaRegistro}<br />
-                    👤 Reporta: {reg.reportante}
+                    <em>{reg.especie}</em><br />📍 {reg.ubicacion}<br />🕒 {reg.horaRegistro}<br />👤 Reporta: {reg.reportante}
                   </Popup>
                 </Marker>
               ))}
             </MapContainer>
           </div>
-
+          
+          {/* Métricas rápidas inferiores en mapa */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem', padding: '0.8rem 1rem', backgroundColor: '#0A120E', position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 1000 }}>
             <div style={{ backgroundColor: '#101C17', padding: '0.5rem', borderRadius: '8px', textAlign: 'center', border: '1px solid #1A2E26' }}>
               <div style={{ color: '#00FF88', fontSize: '1.2rem', fontWeight: 'bold' }}>{registros.filter(r => r.estado === 'VALIDADO').length}</div>
@@ -606,32 +585,14 @@ export default function App() {
         </div>
       )}
 
-      {/* 🖼️ GALERÍA */}
+      {/* 🖼️ GALERÍA DE AVISTAMIENTOS INDIVIDUALES */}
       {tab === 'galeria' && (
         <div style={{ padding: '1rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.8rem' }}>
-            <h2 style={{ margin: '0', fontSize: '1.2rem', color: '#00FF88' }}>🌿 Herpetofauna de Costa Rica</h2>
+            <h2 style={{ margin: '0', fontSize: '1.2rem', color: '#00FF88' }}>🌿 Registros Históricos de Costa Rica</h2>
             <div style={{ display: 'flex', gap: '0.5rem', flex: 1, maxWidth: '400px' }}>
-              <input 
-                type="text" 
-                placeholder="🔍 Buscar especie o comunidad..." 
-                value={busquedaGaleria}
-                onChange={(e) => setBusquedaGaleria(e.target.value)}
-                style={{ flex: 1, padding: '0.5rem 0.8rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '20px', fontSize: '0.8rem' }}
-              />
-              <button 
-                onClick={() => {
-                  if (!usuario?.isLoggedIn) {
-                    alert('Debes iniciar sesión con tu usuario y contraseña para registrar un avistamiento.');
-                    setVistaPerfil('login'); setModalPerfil(true);
-                  } else {
-                    abrirModalRegistro();
-                  }
-                }} 
-                style={{ backgroundColor: '#00C853', color: '#000', border: 'none', padding: '0.5rem 1rem', borderRadius: '20px', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.8rem', whiteSpace: 'nowrap' }}
-              >
-                + Registrar
-              </button>
+              <input type="text" placeholder="🔍 Buscar especie o comunidad..." value={busquedaGaleria} onChange={(e) => setBusquedaGaleria(e.target.value)} style={{ flex: 1, padding: '0.5rem 0.8rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '20px', fontSize: '0.8rem' }} />
+              <button onClick={() => { if (!usuario?.isLoggedIn) { alert('Debes iniciar sesión.'); setVistaPerfil('login'); setModalPerfil(true); } else { abrirModalRegistro(); } }} style={{ backgroundColor: '#00C853', color: '#000', border: 'none', padding: '0.5rem 1rem', borderRadius: '20px', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>+ Registrar</button>
             </div>
           </div>
 
@@ -640,9 +601,7 @@ export default function App() {
               <div key={reg.id} onClick={() => setRegistroSeleccionado(reg)} style={{ backgroundColor: '#0F1A16', borderRadius: '12px', overflow: 'hidden', border: '1px solid #1B2E27', cursor: 'pointer' }}>
                 <div style={{ position: 'relative', height: '180px' }}>
                   <img src={reg.img || (reg.fotos && reg.fotos[0])} alt={reg.especie} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  <span style={{ position: 'absolute', top: '10px', right: '10px', backgroundColor: reg.estado === 'VALIDADO' ? '#00E676' : '#FFB300', color: '#000', padding: '0.2rem 0.6rem', borderRadius: '12px', fontSize: '0.7rem', fontWeight: 'bold' }}>
-                    {reg.estado}
-                  </span>
+                  <span style={{ position: 'absolute', top: '10px', right: '10px', backgroundColor: reg.estado === 'VALIDADO' ? '#00E676' : '#FFB300', color: '#000', padding: '0.2rem 0.6rem', borderRadius: '12px', fontSize: '0.7rem', fontWeight: 'bold' }}>{reg.estado}</span>
                 </div>
                 <div style={{ padding: '0.9rem' }}>
                   <span style={{ fontSize: '0.75rem', color: '#00FF88', fontWeight: 'bold' }}>🐸 {reg.categoria} • {reg.silueta}</span>
@@ -655,40 +614,55 @@ export default function App() {
         </div>
       )}
 
-      {/* 📖 GUÍA EDITABLE SOLO POR ADMIN */}
+      {/* 📖 NUEVA GUÍA DINÁMICA AGRUPADA POR ESPECIES VALIDADAS */}
       {tab === 'guia' && (
         <div style={{ padding: '1rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.8rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1rem' }}>
             <h2 style={{ margin: 0, fontSize: '1.2rem', color: '#00FF88' }}>📖 Guía Oficial de Especies Validadas</h2>
-            {esAdminAbsoluto && (
-              <button onClick={() => abrirEdicionGuia(null)} style={{ backgroundColor: '#FFB300', color: '#000', border: 'none', padding: '0.5rem 1rem', borderRadius: '20px', fontWeight: 'bold', fontSize: '0.8rem', cursor: 'pointer' }}>
-                ➕ Agregar Nueva Especie
-              </button>
-            )}
+            <p style={{ margin: 0, fontSize: '0.8rem', color: '#8AA398' }}>Esta guía se actualiza automáticamente con los organismos identificados y validados por los expertos herpetólogos en Costa Rica.</p>
+            
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', backgroundColor: '#0A120E', padding: '0.5rem', borderRadius: '12px', border: '1px solid #162B23' }}>
+              <select value={filtroGuiaCategoria} onChange={(e) => setFiltroGuiaCategoria(e.target.value)} style={{ padding: '0.5rem', backgroundColor: '#050A08', color: '#00FF88', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 'bold', flex: 1 }}>
+                <option value="todas">🌎 Todos (Anfibios y Reptiles)</option>
+                <option value="anfibio">🐸 Solo Anfibios</option>
+                <option value="reptil">🦎 Solo Reptiles</option>
+              </select>
+              
+              <input type="text" placeholder="🔍 Buscar especie, provincia o zona..." value={busquedaGuiaLugar} onChange={(e) => setBusquedaGuiaLugar(e.target.value)} style={{ flex: 2, padding: '0.5rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.8rem', minWidth: '200px' }} />
+            </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem', marginTop: '1rem' }}>
-            {especiesGuia.map((sp) => (
-              <div key={sp.id} style={{ backgroundColor: '#0F1A16', borderRadius: '12px', overflow: 'hidden', border: '1px solid #1B2E27', display: 'flex', flexDirection: 'column' }}>
-                <img src={sp.img} alt={sp.nombre} style={{ width: '100%', height: '160px', objectFit: 'cover' }} />
-                <div style={{ padding: '0.9rem', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                  <div>
-                    <span style={{ fontSize: '0.7rem', color: '#00FF88', fontWeight: 'bold' }}>{sp.tipo}</span>
-                    <h3 style={{ margin: '0.2rem 0', fontSize: '1.1rem', fontStyle: 'italic', color: '#FFF' }}>{sp.nombre}</h3>
-                    <h4 style={{ margin: '0 0 0.4rem 0', fontSize: '0.85rem', color: '#FFB300', fontWeight: 'bold' }}>{sp.comun}</h4>
-                    <p style={{ margin: '0.3rem 0', fontSize: '0.75rem', color: '#A0C2B4' }}>🏡 {sp.habitat}</p>
-                    <p style={{ margin: '0.3rem 0', fontSize: '0.75rem', color: '#8AA398' }}>{sp.desc}</p>
+          {especiesGuiaDinamica.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '2rem', color: '#8AA398' }}>No hay registros validados para los filtros seleccionados.</div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
+              {especiesGuiaDinamica.map((sp, idx) => (
+                <div key={idx} style={{ backgroundColor: '#0F1A16', borderRadius: '12px', overflow: 'hidden', border: '1px solid #1B2E27', display: 'flex', flexDirection: 'column' }}>
+                  <img src={sp.img} alt={sp.especie} style={{ width: '100%', height: '180px', objectFit: 'cover' }} />
+                  <div style={{ padding: '1rem', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                    <div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <span style={{ fontSize: '0.7rem', color: '#00C853', fontWeight: 'bold', border: '1px solid #00C853', padding: '0.2rem 0.4rem', borderRadius: '6px' }}>{sp.categoria}</span>
+                        <span style={{ fontSize: '0.75rem', backgroundColor: '#FFB300', color: '#000', fontWeight: 'bold', padding: '0.2rem 0.5rem', borderRadius: '12px' }}>
+                          🔥 {sp.conteo} Avistamiento(s)
+                        </span>
+                      </div>
+                      
+                      <h3 style={{ margin: '0.6rem 0 0.2rem 0', fontSize: '1.2rem', fontStyle: 'italic', color: '#FFF' }}>{sp.especie}</h3>
+                      <h4 style={{ margin: '0 0 0.6rem 0', fontSize: '0.9rem', color: '#00FF88', fontWeight: 'bold' }}>{sp.nombreComun}</h4>
+                      
+                      <div style={{ backgroundColor: '#0A120E', padding: '0.6rem', borderRadius: '8px', border: '1px solid #162B23', marginTop: '0.5rem' }}>
+                        <p style={{ margin: '0', fontSize: '0.75rem', color: '#A0C2B4', fontWeight: 'bold' }}>📍 Confirmada en las zonas de:</p>
+                        <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.7rem', color: '#8AA398', lineHeight: '1.4' }}>
+                          {Array.from(sp.lugaresSet).join(' • ')}
+                        </p>
+                      </div>
+                    </div>
                   </div>
-
-                  {esAdminAbsoluto && (
-                    <button onClick={() => abrirEdicionGuia(sp)} style={{ width: '100%', marginTop: '0.8rem', padding: '0.5rem', backgroundColor: '#1A1807', color: '#FFB300', border: '1px solid #5C4D0A', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}>
-                      ✏️ Editar Especie (ADMIN)
-                    </button>
-                  )}
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -707,21 +681,20 @@ export default function App() {
           ) : (
             <div>
               <h2 style={{ fontSize: '1.2rem', color: '#FFF', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                {esAdminAbsoluto ? '🛡️ Panel de Administración' : esExpertoOAdmin ? '🎓 Panel de Curaduría' : '💬 Buzón de Consultas'}
+                {esAdminAbsoluto ? '🛡️ Panel de Administración General' : esExpertoOAdmin ? '🎓 Panel de Curaduría Científica' : '💬 Buzón de Consultas con Expertos'}
               </h2>
               
               <div style={{ backgroundColor: '#09130F', borderRadius: '16px', border: '1px solid #1B3D2F', padding: '1.2rem' }}>
                 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #162B23', paddingBottom: '0.8rem', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-                  <h3 style={{ margin: 0, color: '#00FF88', fontSize: '1.05rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                    📫 Buzón & Herramientas
-                  </h3>
+                  <h3 style={{ margin: 0, color: '#00FF88', fontSize: '1.05rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>📫 Buzón & Herramientas</h3>
                   
                   <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', backgroundColor: '#050A08', padding: '0.3rem', borderRadius: '20px', border: '1px solid #122B20' }}>
-                    <button onClick={() => setSubTabAdmin('consultas')} style={{ backgroundColor: subTabAdmin === 'consultas' ? '#0F2B20' : 'transparent', color: subTabAdmin === 'consultas' ? '#00FF88' : '#8AA398', border: subTabAdmin === 'consultas' ? '1px solid #00FF88' : 'none', borderRadius: '15px', padding: '0.3rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>💬 Consultas</button>
+                    <button onClick={() => setSubTabAdmin('consultas')} style={{ backgroundColor: subTabAdmin === 'consultas' ? '#0F2B20' : 'transparent', color: subTabAdmin === 'consultas' ? '#00FF88' : '#8AA398', border: subTabAdmin === 'consultas' ? '1px solid #00FF88' : 'none', borderRadius: '15px', padding: '0.3rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>💬 Consultas 1 a 1</button>
                     {esExpertoOAdmin && <button onClick={() => setSubTabAdmin('metricas')} style={{ backgroundColor: subTabAdmin === 'metricas' ? '#0F2B20' : 'transparent', color: subTabAdmin === 'metricas' ? '#00FF88' : '#8AA398', border: subTabAdmin === 'metricas' ? '1px solid #00FF88' : 'none', borderRadius: '15px', padding: '0.3rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>📊 Métricas</button>}
-                    {esAdminAbsoluto && <button onClick={() => setSubTabAdmin('usuarios')} style={{ backgroundColor: subTabAdmin === 'usuarios' ? '#0F2B20' : 'transparent', color: subTabAdmin === 'usuarios' ? '#00FF88' : '#8AA398', border: subTabAdmin === 'usuarios' ? '1px solid #00FF88' : 'none', borderRadius: '15px', padding: '0.3rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>👥 Usuarios</button>}
-                    {esExpertoOAdmin && <button onClick={() => setSubTabAdmin('solicitudes')} style={{ backgroundColor: subTabAdmin === 'solicitudes' ? '#0F2B20' : 'transparent', color: subTabAdmin === 'solicitudes' ? '#00FF88' : '#8AA398', border: subTabAdmin === 'solicitudes' ? '1px solid #00FF88' : 'none', borderRadius: '15px', padding: '0.3rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>🎓 Solicitudes</button>}
+                    {/* BOTON DE USUARIOS ESTRICTAMENTE GUARDADO POR esAdminAbsoluto */}
+                    {esAdminAbsoluto && <button onClick={() => setSubTabAdmin('usuarios')} style={{ backgroundColor: subTabAdmin === 'usuarios' ? '#0F2B20' : 'transparent', color: subTabAdmin === 'usuarios' ? '#00FF88' : '#8AA398', border: subTabAdmin === 'usuarios' ? '1px solid #00FF88' : 'none', borderRadius: '15px', padding: '0.3rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>👥 Usuarios (Mantenimiento)</button>}
+                    {esExpertoOAdmin && <button onClick={() => setSubTabAdmin('solicitudes')} style={{ backgroundColor: subTabAdmin === 'solicitudes' ? '#0F2B20' : 'transparent', color: subTabAdmin === 'solicitudes' ? '#00FF88' : '#8AA398', border: subTabAdmin === 'solicitudes' ? '1px solid #00FF88' : 'none', borderRadius: '15px', padding: '0.3rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>🎓 Solicitudes Expertos</button>}
                     {esExpertoOAdmin && <button onClick={() => setSubTabAdmin('moderacion')} style={{ backgroundColor: subTabAdmin === 'moderacion' ? '#0F2B20' : 'transparent', color: subTabAdmin === 'moderacion' ? '#00FF88' : '#8AA398', border: subTabAdmin === 'moderacion' ? '1px solid #00FF88' : 'none', borderRadius: '15px', padding: '0.3rem 0.8rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>📋 Moderación</button>}
                   </div>
                 </div>
@@ -733,7 +706,6 @@ export default function App() {
                       <span style={{ fontSize: '0.85rem', color: '#FFF', fontWeight: 'bold' }}>💬 Chat Privado Directo</span>
                       <button onClick={() => setModalChat(true)} style={{ backgroundColor: '#00E676', color: '#000', border: 'none', padding: '0.4rem 0.9rem', borderRadius: '15px', fontWeight: 'bold', fontSize: '0.8rem', cursor: 'pointer' }}>+ Nueva Consulta</button>
                     </div>
-
                     <div style={{ backgroundColor: '#060D0A', border: '1px solid #162B23', borderRadius: '12px', padding: '0.9rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div>
                         <strong style={{ color: '#FFF', fontSize: '0.9rem' }}>{usuario.nombre} ({usuario.rol})</strong>
@@ -749,11 +721,8 @@ export default function App() {
                   <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                       <h4 style={{ margin: 0, color: '#FFF' }}>📊 Métricas de Biodiversidad en Costa Rica</h4>
-                      <button onClick={exportarCSV} style={{ backgroundColor: '#00E676', color: '#000', border: 'none', padding: '0.4rem 0.9rem', borderRadius: '15px', fontWeight: 'bold', fontSize: '0.75rem', cursor: 'pointer' }}>
-                        📥 Exportar CSV
-                      </button>
+                      <button onClick={exportarCSV} style={{ backgroundColor: '#00E676', color: '#000', border: 'none', padding: '0.4rem 0.9rem', borderRadius: '15px', fontWeight: 'bold', fontSize: '0.75rem', cursor: 'pointer' }}>📥 Exportar Datos CSV</button>
                     </div>
-
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.8rem', marginBottom: '1.5rem' }}>
                       <div style={{ backgroundColor: '#060D0A', border: '1px solid #162B23', padding: '1.2rem', borderRadius: '12px', textAlign: 'center' }}>
                         <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#FFF' }}>{registros.length}</div>
@@ -765,7 +734,7 @@ export default function App() {
                       </div>
                       <div style={{ backgroundColor: '#060D0A', border: '1px solid #FFB300', padding: '1.2rem', borderRadius: '12px', textAlign: 'center' }}>
                         <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#FFB300' }}>{cuentasRegistradas.length}</div>
-                        <div style={{ fontSize: '0.75rem', color: '#8AA398' }}>Usuarios</div>
+                        <div style={{ fontSize: '0.75rem', color: '#8AA398' }}>Usuarios Inscritos</div>
                       </div>
                       <div style={{ backgroundColor: '#060D0A', border: '1px solid #FF5252', padding: '1.2rem', borderRadius: '12px', textAlign: 'center' }}>
                         <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#FF5252' }}>0</div>
@@ -775,19 +744,14 @@ export default function App() {
                   </div>
                 )}
 
-                {/* 3. USUARIOS */}
+                {/* 3. USUARIOS (Estrictamente protegido) */}
                 {subTabAdmin === 'usuarios' && esAdminAbsoluto && (
                   <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.8rem' }}>
-                      <h4 style={{ margin: 0, color: '#FFF', fontSize: '0.95rem' }}>👥 Gestión de Usuarios</h4>
-                      
+                      <h4 style={{ margin: 0, color: '#FFF', fontSize: '0.95rem' }}>👥 Gestión de Accesos de Usuarios</h4>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <label style={{ fontSize: '0.75rem', color: '#00FF88', fontWeight: 'bold' }}>🔍 Filtrar:</label>
-                        <select 
-                          value={filtroEstadoUsuario} 
-                          onChange={(e) => setFiltroEstadoUsuario(e.target.value)} 
-                          style={{ backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '12px', padding: '0.4rem 0.8rem', fontSize: '0.75rem', fontWeight: 'bold' }}
-                        >
+                        <label style={{ fontSize: '0.75rem', color: '#00FF88', fontWeight: 'bold' }}>🔍 Filtrar Red:</label>
+                        <select value={filtroEstadoUsuario} onChange={(e) => setFiltroEstadoUsuario(e.target.value)} style={{ backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '12px', padding: '0.4rem 0.8rem', fontSize: '0.75rem', fontWeight: 'bold' }}>
                           <option value="todos">🌐 Todos</option>
                           <option value="online">🟢 En línea</option>
                           <option value="busy">🟠 Ocupado</option>
@@ -795,52 +759,32 @@ export default function App() {
                         </select>
                       </div>
                     </div>
-
                     <div style={{ overflowX: 'auto' }}>
                       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', textAlign: 'left' }}>
                         <thead>
                           <tr style={{ borderBottom: '1px solid #162B23', color: '#00FF88' }}>
                             <th style={{ padding: '0.6rem' }}>ESTADO</th>
-                            <th style={{ padding: '0.6rem' }}>NOMBRE</th>
-                            <th style={{ padding: '0.6rem' }}>CONTACTO</th>
-                            <th style={{ padding: '0.6rem' }}>ROL</th>
-                            <th style={{ padding: '0.6rem' }}>ACCIONES</th>
+                            <th style={{ padding: '0.6rem' }}>NOMBRE DEL USUARIO</th>
+                            <th style={{ padding: '0.6rem' }}>CONTACTO DIRECTO</th>
+                            <th style={{ padding: '0.6rem' }}>ROL ASIGNADO</th>
+                            <th style={{ padding: '0.6rem' }}>ACCIÓN DE BANEADO</th>
                           </tr>
                         </thead>
                         <tbody>
                           {usuariosOrdenadosYFiltrados.map((u) => {
                             const badg = getBadgetConexion(u.estadoConexion || 'online');
                             const esContactoOculto = (u.rol.includes('Experto') || u.rol.includes('Admin')) && !u.mostrarTelefono;
-
                             return (
                               <tr key={u.id} style={{ borderBottom: '1px solid #0D1A15' }}>
-                                <td style={{ padding: '0.6rem' }}>
-                                  <span style={{ color: badg.color, fontWeight: 'bold' }} title={badg.label}>{badg.icon}</span>
-                                </td>
+                                <td style={{ padding: '0.6rem' }}><span style={{ color: badg.color, fontWeight: 'bold' }} title={badg.label}>{badg.icon}</span></td>
                                 <td style={{ padding: '0.6rem', fontWeight: 'bold', color: '#FFF' }}>
-                                  {u.nombre}<br />
-                                  <span style={{ fontSize: '0.65rem', color: u.cuentaVerificada ? '#00FF88' : '#FFB300' }}>
-                                    {u.cuentaVerificada ? '✅ Verificado' : '⏳ Pendiente'}
-                                  </span>
+                                  {u.nombre}<br /><span style={{ fontSize: '0.65rem', color: u.cuentaVerificada ? '#00FF88' : '#FFB300' }}>{u.cuentaVerificada ? '✅ Verificado' : '⏳ Pendiente'}</span>
                                 </td>
                                 <td style={{ padding: '0.6rem', color: '#8AA398' }}>
-                                  📧 {u.email}<br />
-                                  <span style={{ fontSize: '0.7rem', color: esContactoOculto ? '#FFB300' : '#A0C2B4' }}>
-                                    📱 {esContactoOculto ? '🔒 [Celular Privado]' : `${u.codigoPais || '+506'} ${u.tel}`}
-                                  </span>
+                                  📧 {u.email}<br /><span style={{ fontSize: '0.7rem', color: esContactoOculto ? '#FFB300' : '#A0C2B4' }}>📱 {esContactoOculto ? '🔒 [Celular Privado]' : `${u.codigoPais || '+506'} ${u.tel}`}</span>
                                 </td>
                                 <td style={{ padding: '0.6rem' }}>
-                                  <select 
-                                    value={u.rol} 
-                                    onChange={(e) => {
-                                      const nuevoRol = e.target.value;
-                                      setCuentasRegistradas(cuentasRegistradas.map(item => item.id === u.id ? { ...item, rol: nuevoRol } : item));
-                                      if (usuario.id === u.id) {
-                                        setUsuario({ ...usuario, rol: nuevoRol });
-                                      }
-                                    }} 
-                                    style={{ backgroundColor: '#050A08', color: '#00FF88', border: '1px solid #1B3D2F', borderRadius: '12px', padding: '0.3rem 0.5rem', fontSize: '0.75rem' }}
-                                  >
+                                  <select value={u.rol} onChange={(e) => { const nuevoRol = e.target.value; setCuentasRegistradas(cuentasRegistradas.map(item => item.id === u.id ? { ...item, rol: nuevoRol } : item)); if (usuario.id === u.id) { setUsuario({ ...usuario, rol: nuevoRol }); } }} style={{ backgroundColor: '#050A08', color: '#00FF88', border: '1px solid #1B3D2F', borderRadius: '12px', padding: '0.3rem 0.5rem', fontSize: '0.75rem' }}>
                                     <option value="Administrador Experto (Máximo Rango)">🛡️ Administrador Experto</option>
                                     <option value="Administrador">⚔️ Administrador</option>
                                     <option value="Experto Herpetólogo">🎓 Experto Herpetólogo</option>
@@ -848,17 +792,7 @@ export default function App() {
                                   </select>
                                 </td>
                                 <td style={{ padding: '0.6rem' }}>
-                                  <div style={{ display: 'flex', gap: '0.4rem' }}>
-                                    <button 
-                                      onClick={() => {
-                                        setCuentasRegistradas(cuentasRegistradas.map(item => item.id === u.id ? { ...item, estatusCuenta: 'suspendido' } : item));
-                                        alert(`⚠️ La cuenta de ${u.nombre} ha sido baneada.`);
-                                      }} 
-                                      style={{ backgroundColor: '#D32F2F', color: '#FFF', border: 'none', borderRadius: '8px', padding: '0.3rem 0.5rem', fontSize: '0.7rem', fontWeight: 'bold', cursor: 'pointer' }}
-                                    >
-                                      🚫
-                                    </button>
-                                  </div>
+                                  <button onClick={() => { setCuentasRegistradas(cuentasRegistradas.map(item => item.id === u.id ? { ...item, estatusCuenta: 'suspendido' } : item)); alert(`⚠️ La cuenta de ${u.nombre} ha sido baneada.`); }} style={{ backgroundColor: '#D32F2F', color: '#FFF', border: 'none', borderRadius: '8px', padding: '0.3rem 0.5rem', fontSize: '0.7rem', fontWeight: 'bold', cursor: 'pointer' }}>🚫 Banear</button>
                                 </td>
                               </tr>
                             );
@@ -874,7 +808,7 @@ export default function App() {
                   <div>
                     <h4 style={{ margin: '0 0 1rem 0', color: '#FFB300', fontSize: '0.95rem' }}>🎓 Solicitudes de Acreditación (Biólogos)</h4>
                     {solicitudesExpertos.length === 0 ? (
-                      <p style={{ color: '#8AA398', fontSize: '0.85rem' }}>No hay solicitudes pendientes.</p>
+                      <p style={{ color: '#8AA398', fontSize: '0.85rem' }}>No hay solicitudes de biólogos pendientes.</p>
                     ) : (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
                         {solicitudesExpertos.map((s) => (
@@ -885,32 +819,8 @@ export default function App() {
                               <div style={{ fontSize: '0.75rem', color: '#00FF88', marginTop: '0.2rem' }}>📜 {s.atencedentes}</div>
                             </div>
                             <div style={{ display: 'flex', gap: '0.5rem' }}>
-                              <button 
-                                onClick={() => {
-                                  const fechaHoraActual = new Date().toISOString().replace('T', ' ').substring(0, 19);
-                                  const cuentasActualizadas = cuentasRegistradas.map(u => u.id === s.userId ? { ...u, rol: 'Experto Herpetólogo', mostrarTelefono: false } : u);
-                                  const existe = cuentasRegistradas.some(u => u.id === s.userId);
-                                  
-                                  if (!existe) {
-                                    cuentasActualizadas.push({ id: s.userId || Date.now(), nombre: s.nombre, email: s.email, codigoPais: '+506', tel: s.tel, comunidad: 'Costa Rica', rol: 'Experto Herpetólogo', pass: '123456', estadoConexion: 'online', fechaIngreso: fechaHoraActual, mostrarTelefono: false, estatusCuenta: 'activo', cuentaVerificada: true });
-                                  }
-
-                                  setCuentasRegistradas(cuentasActualizadas);
-
-                                  if (usuario.id === s.userId || usuario.email === s.email) {
-                                    setUsuario(prev => ({ ...prev, rol: 'Experto Herpetólogo', mostrarTelefono: false }));
-                                  }
-
-                                  setSolicitudesExpertos(solicitudesExpertos.filter(item => item.id !== s.id));
-                                  alert(`¡Acreditación Aprobada! ${s.nombre} ahora tiene el rango EXPERTO.`);
-                                }} 
-                                style={{ backgroundColor: '#00E676', color: '#000', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}
-                              >
-                                ✔ Aprobar
-                              </button>
-                              <button onClick={() => setSolicitudesExpertos(solicitudesExpertos.filter(item => item.id !== s.id))} style={{ backgroundColor: '#D32F2F', color: '#FFF', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}>
-                                ✕
-                              </button>
+                              <button onClick={() => { const fechaHoraActual = new Date().toISOString().replace('T', ' ').substring(0, 19); const cuentasActualizadas = cuentasRegistradas.map(u => u.id === s.userId ? { ...u, rol: 'Experto Herpetólogo', mostrarTelefono: false } : u); const existe = cuentasRegistradas.some(u => u.id === s.userId); if (!existe) { cuentasActualizadas.push({ id: s.userId || Date.now(), nombre: s.nombre, email: s.email, codigoPais: '+506', tel: s.tel, comunidad: 'Costa Rica', rol: 'Experto Herpetólogo', pass: '123456', estadoConexion: 'online', fechaIngreso: fechaHoraActual, mostrarTelefono: false, estatusCuenta: 'activo', cuentaVerificada: true }); } setCuentasRegistradas(cuentasActualizadas); if (usuario.id === s.userId || usuario.email === s.email) { setUsuario(prev => ({ ...prev, rol: 'Experto Herpetólogo', mostrarTelefono: false })); } setSolicitudesExpertos(solicitudesExpertos.filter(item => item.id !== s.id)); alert(`¡Acreditación Aprobada! ${s.nombre} ahora tiene el rango EXPERTO.`); }} style={{ backgroundColor: '#00E676', color: '#000', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}>✔ Aprobar</button>
+                              <button onClick={() => setSolicitudesExpertos(solicitudesExpertos.filter(item => item.id !== s.id))} style={{ backgroundColor: '#D32F2F', color: '#FFF', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}>✕</button>
                             </div>
                           </div>
                         ))}
@@ -922,7 +832,7 @@ export default function App() {
                 {/* 5. MODERACIÓN */}
                 {subTabAdmin === 'moderacion' && esExpertoOAdmin && (
                   <div>
-                    <h4 style={{ margin: '0 0 1rem 0', color: '#FFF', fontSize: '0.95rem' }}>📋 Moderación y Edición de Reportes</h4>
+                    <h4 style={{ margin: '0 0 1rem 0', color: '#FFF', fontSize: '0.95rem' }}>📋 Moderación y Edición de Reportes de Campo</h4>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
                       {registros.map((r) => (
                         <div key={r.id} style={{ backgroundColor: '#060D0A', border: '1px solid #162B23', borderRadius: '12px', padding: '0.9rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -930,7 +840,7 @@ export default function App() {
                             <strong style={{ color: '#FFF', fontSize: '0.85rem' }}>{r.nombreComun} ({r.especie})</strong>
                             <div style={{ fontSize: '0.75rem', color: '#8AA398' }}>📍 {r.ubicacion} | 🕒 {r.horaRegistro} | Estado: <span style={{ color: r.estado === 'VALIDADO' ? '#00E676' : '#FFB300' }}>{r.estado}</span></div>
                           </div>
-                          <button onClick={() => setRegistroSeleccionado(r)} style={{ backgroundColor: '#00E676', color: '#000', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}>Abrir Ficha</button>
+                          <button onClick={() => setRegistroSeleccionado(r)} style={{ backgroundColor: '#00E676', color: '#000', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}>Abrir Ficha / Moderar</button>
                         </div>
                       ))}
                     </div>
@@ -962,7 +872,6 @@ export default function App() {
                   <img src={editFotoPrincipal || registroSeleccionado.img || (registroSeleccionado.fotos && registroSeleccionado.fotos[0])} alt="Fauna" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 </div>
 
-                {/* VISUALIZADOR DE LAS HASTA 3 FOTOGRAFÍAS ENVIADAS */}
                 {registroSeleccionado.fotos && registroSeleccionado.fotos.length > 0 && (
                   <div style={{ marginBottom: '0.8rem' }}>
                     <span style={{ fontSize: '0.7rem', color: '#00FF88', fontWeight: 'bold', display: 'block', marginBottom: '0.3rem' }}>📷 Fotografías aportadas ({registroSeleccionado.fotos.length}/3) — Selecciona la principal:</span>
@@ -971,15 +880,7 @@ export default function App() {
                         <div 
                           key={idx} 
                           onClick={() => setEditFotoPrincipal(fUrl)}
-                          style={{ 
-                            width: '60px', 
-                            height: '60px', 
-                            borderRadius: '8px', 
-                            overflow: 'hidden', 
-                            border: editFotoPrincipal === fUrl ? '2px solid #00E676' : '1px solid #1B3D2F', 
-                            cursor: 'pointer',
-                            opacity: editFotoPrincipal === fUrl ? 1 : 0.6 
-                          }}
+                          style={{ width: '60px', height: '60px', borderRadius: '8px', overflow: 'hidden', border: editFotoPrincipal === fUrl ? '2px solid #00E676' : '1px solid #1B3D2F', cursor: 'pointer', opacity: editFotoPrincipal === fUrl ? 1 : 0.6 }}
                         >
                           <img src={fUrl} alt={`Evidencia ${idx+1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                         </div>
@@ -999,11 +900,11 @@ export default function App() {
                 </div>
 
                 <button onClick={() => setModalChat(true)} style={{ width: '100%', padding: '0.7rem', backgroundColor: '#0A2E23', color: '#00FF88', border: '1px solid #00FF88', borderRadius: '20px', fontWeight: 'bold', fontSize: '0.8rem', cursor: 'pointer' }}>
-                  💬 Consultar a un Experto (1 a 1)
+                  💬 Consultar a un Experto en Privado (1 a 1)
                 </button>
               </div>
 
-              {/* COLUMNA DERECHA: ESTADO, VALIDACIÓN Y PANEL DE EDICIÓN */}
+              {/* COLUMNA DERECHA: ESTADO, VALIDACIÓN Y PANEL DE EDICIÓN (OCULTAMIENTO INTELIGENTE) */}
               <div>
                 <span style={{ fontSize: '0.75rem', color: '#00FF88', fontWeight: 'bold' }}>
                   🐸 {registroSeleccionado.categoria} • <span style={{ color: registroSeleccionado.estado === 'VALIDADO' ? '#00E676' : '#FFB300' }}>{registroSeleccionado.estado}</span>
@@ -1085,8 +986,8 @@ export default function App() {
 
                 {/* Mensaje de espera para usuarios regulares si la ficha AÚN NO está validada */}
                 {registroSeleccionado.estado !== 'VALIDADO' && !esExpertoOAdmin && (
-                  <div style={{ backgroundColor: '#060D0A', border: '1px solid #162B23', padding: '0.8rem', borderRadius: '10px', fontSize: '0.75rem', color: '#8AA398' }}>
-                    ℹ️ Esta ficha se encuentra en proceso de revisión por los expertos autorizados de la zona.
+                  <div style={{ backgroundColor: '#060D0A', border: '1px solid #162B23', padding: '0.8rem', borderRadius: '10px', fontSize: '0.75rem', color: '#8AA398', marginTop: '1rem' }}>
+                    ℹ️ Esta ficha se encuentra en proceso de revisión por los expertos autorizados.
                   </div>
                 )}
 
@@ -1098,57 +999,7 @@ export default function App() {
         </div>
       )}
 
-      {/* ✏️ MODAL EDITAR / CREAR ESPECIE EN LA GUÍA */}
-      {modalGuiaEdit && esAdminAbsoluto && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999, padding: '1rem' }}>
-          <div style={{ backgroundColor: '#09130F', borderRadius: '16px', border: '1px solid #1B3D2F', width: '100%', maxWidth: '520px', padding: '1.2rem', maxHeight: '90vh', overflowY: 'auto' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid #122B20', paddingBottom: '0.5rem' }}>
-              <h3 style={{ color: '#FFF', margin: 0, fontSize: '1.1rem' }}>
-                {especieGuiaEditando ? '✏️ Editar Especie en la Guía' : '➕ Agregar Especie a la Guía'}
-              </h3>
-              <button onClick={() => setModalGuiaEdit(false)} style={{ backgroundColor: 'transparent', border: 'none', color: '#FFF', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '0.75rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.3rem' }}>NOMBRE CIENTÍFICO *</label>
-                <input type="text" placeholder="Ej. Isthmohyla nacientes" value={formGuia.nombre} onChange={(e) => setFormGuia({ ...formGuia, nombre: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }} />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '0.75rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.3rem' }}>NOMBRE COMÚN *</label>
-                <input type="text" placeholder="Ej. Rana de manantial" value={formGuia.comun} onChange={(e) => setFormGuia({ ...formGuia, comun: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }} />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '0.75rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.3rem' }}>CATEGORÍA Y ESTADO IUCN</label>
-                <input type="text" placeholder="Ej. ANFIBIO • IUCN: CR (En Peligro Crítico)" value={formGuia.tipo} onChange={(e) => setFormGuia({ ...formGuia, tipo: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }} />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '0.75rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.3rem' }}>HÁBITAT Y ALTITUD</label>
-                <input type="text" placeholder="Ej. Quebradas de bosque nublado (>1600 msnm)" value={formGuia.habitat} onChange={(e) => setFormGuia({ ...formGuia, habitat: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }} />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '0.75rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.3rem' }}>DESCRIPCIÓN TAXONÓMICA</label>
-                <textarea rows="3" placeholder="Detalles visuales e historia natural..." value={formGuia.desc} onChange={(e) => setFormGuia({ ...formGuia, desc: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }} />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '0.75rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.3rem' }}>URL DE FOTO DE REFERENCIA</label>
-                <input type="text" placeholder="URL de la imagen" value={formGuia.img} onChange={(e) => setFormGuia({ ...formGuia, img: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }} />
-              </div>
-
-              <button onClick={guardarEspecieGuia} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#00E676', color: '#000', fontWeight: 'bold', border: 'none', borderRadius: '10px', cursor: 'pointer', marginTop: '0.5rem' }}>
-                {especieGuiaEditando ? 'Guardar Cambios en la Guía' : 'Publicar Especie en la Guía'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 👤 MODAL PERFIL Y AUTENTICACIÓN */}
+      {/* 👤 MODAL PERFIL Y AUTENTICACIÓN (INCLUYE "MIS REPORTES") */}
       {modalPerfil && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999, padding: '1rem' }}>
           <div style={{ backgroundColor: '#09130F', borderRadius: '16px', border: '1px solid #1B3D2F', width: '100%', maxWidth: '520px', padding: '1.2rem', maxHeight: '90vh', overflowY: 'auto' }}>
@@ -1156,6 +1007,7 @@ export default function App() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid #122B20', paddingBottom: '0.5rem' }}>
               <h3 style={{ color: '#FFF', margin: 0, fontSize: '1.1rem' }}>
                 {vistaPerfil === 'perfil' && '👤 Mi Perfil & Disponibilidad'}
+                {vistaPerfil === 'mis_reportes' && '📂 Mi Historial de Reportes'}
                 {vistaPerfil === 'login' && '🔑 Iniciar Sesión en HerpID'}
                 {vistaPerfil === 'registro' && '📝 Crear Cuenta Nueva'}
                 {vistaPerfil === 'verificar' && '📲 Verificación de Seguridad'}
@@ -1172,6 +1024,13 @@ export default function App() {
 
             {vistaPerfil === 'perfil' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
+                
+                {/* BOTÓN DE MIS REPORTES (Nuevo) */}
+                <button onClick={() => setVistaPerfil('mis_reportes')} style={{ backgroundColor: '#162B23', border: '1px solid #00FF88', color: '#00FF88', padding: '0.8rem', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>📂 Ver mi historial de reportes</span>
+                  <span style={{ backgroundColor: '#00E676', color: '#000', padding: '0.2rem 0.6rem', borderRadius: '12px', fontSize: '0.75rem' }}>{misReportes.length} Aportes</span>
+                </button>
+
                 <div style={{ backgroundColor: '#060D0A', border: '1px solid #1B3D2F', borderRadius: '12px', padding: '0.8rem', textAlign: 'center' }}>
                   <span style={{ color: '#00FF88', fontWeight: 'bold', fontSize: '0.85rem' }}>🛡️ ROL: {usuario.rol.toUpperCase()}</span>
                 </div>
@@ -1223,6 +1082,30 @@ export default function App() {
                   <button onClick={() => { setUsuario({ isLoggedIn: false, id: null, nombre: '', email: '', codigoPais: '+506', telefono: '', comunidad: '', rol: 'Usuario Regular', mostrarTelefono: false }); localStorage.removeItem('herpid_usuario_sesion'); setVistaPerfil('login'); }} style={{ backgroundColor: 'transparent', border: 'none', color: '#FF5252', fontSize: '0.75rem', cursor: 'pointer', textDecoration: 'underline' }}>🔴 Cerrar Sesión</button>
                   <button onClick={() => setVistaPerfil('login')} style={{ backgroundColor: 'transparent', border: 'none', color: '#00FF88', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>Cambiar de Cuenta</button>
                 </div>
+              </div>
+            )}
+
+            {/* SECCIÓN "MIS REPORTES" DENTRO DEL PERFIL */}
+            {vistaPerfil === 'mis_reportes' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+                <button onClick={() => setVistaPerfil('perfil')} style={{ backgroundColor: 'transparent', border: '1px solid #1B3D2F', color: '#A0C2B4', padding: '0.4rem', borderRadius: '8px', fontSize: '0.75rem', cursor: 'pointer', alignSelf: 'flex-start' }}>← Volver al Perfil</button>
+                
+                {misReportes.length === 0 ? (
+                  <p style={{ color: '#8AA398', fontSize: '0.85rem', textAlign: 'center', marginTop: '1rem' }}>No has registrado ningún avistamiento aún.</p>
+                ) : (
+                  misReportes.map(r => (
+                    <div key={r.id} style={{ backgroundColor: '#060D0A', border: '1px solid #162B23', borderRadius: '10px', padding: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
+                      <img src={r.img} alt="Aporte" style={{ width: '50px', height: '50px', borderRadius: '6px', objectFit: 'cover' }} />
+                      <div style={{ flex: 1 }}>
+                        <strong style={{ color: '#FFF', fontSize: '0.85rem', display: 'block' }}>{r.nombreComun}</strong>
+                        <span style={{ color: '#8AA398', fontSize: '0.7rem' }}>📍 {r.ubicacion} | 📅 {r.horaRegistro.split(',')[0]}</span>
+                      </div>
+                      <span style={{ fontSize: '0.65rem', fontWeight: 'bold', padding: '0.3rem 0.5rem', borderRadius: '12px', backgroundColor: r.estado === 'VALIDADO' ? '#00E676' : '#FFB300', color: '#000', textAlign: 'center', minWidth: '70px' }}>
+                        {r.estado === 'VALIDADO' ? '✅ Aprobado' : '⏳ Revisión'}
+                      </span>
+                    </div>
+                  ))
+                )}
               </div>
             )}
 
@@ -1761,7 +1644,7 @@ export default function App() {
                     categoria: tipoFauna.toUpperCase(),
                     silueta: silueta,
                     estado: 'EN REVISIÓN EXPERTA',
-                    ubicacion: comunidad || 'Zona de los Santos',
+                    ubicacion: comunidad || 'Costa Rica',
                     reportante: usuario.isLoggedIn ? usuario.nombre : 'Usuario Anónimo',
                     contacto: textoContacto,
                     temp: `${temp} °C`,
