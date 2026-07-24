@@ -123,16 +123,17 @@ export default function App() {
     }
   };
 
-  // Cuentas registradas
+  // Base de datos de cuentas registradas con sus contraseñas
   const [cuentasRegistradas, setCuentasRegistradas] = useState([
     { id: 1, nombre: 'Jorge Carvajal', email: 'jorge.carvajal@docente.edu', tel: '+506 8888-9999', comunidad: 'Tarrazú (San Marcos, San Lorenzo, Carlos)', rol: 'Administrador Experto (Máximo Rango)', pass: 'admin123', estadoConexion: 'online' },
     { id: 2, nombre: 'Dra. Sofía Herpetóloga', email: 'sofia.herpeto@ucr.ac.cr', tel: '+506 8765-4321', comunidad: 'Dota (Santa María, Copey, Jardín)', rol: 'Experto Herpetólogo', pass: 'sofia123', estadoConexion: 'online' },
     { id: 3, nombre: 'Carlos Picado', email: 'cpicado@comunidad.cr', tel: '+506 8555-1234', comunidad: 'León Cortés (San Pablo, San Rafael)', rol: 'Usuario Regular', pass: 'carlos123', estadoConexion: 'offline' }
   ]);
 
-  // USUARIO ACTIVO (Sin sesión por defecto)
+  // USUARIO ACTIVO (Sin sesión activa por defecto al abrir)
   const [usuario, setUsuario] = useState({
     isLoggedIn: false,
+    id: null,
     nombre: '',
     email: '',
     telefono: '',
@@ -140,6 +141,7 @@ export default function App() {
     rol: 'Usuario Regular'
   });
 
+  // Permiso de edición taxonómica y moderación (Solo si la cuenta activa ya fue aprobada como Admin o Experto)
   const esExpertoOAdmin = usuario.isLoggedIn && (usuario.rol.includes('Administrador') || usuario.rol.includes('Experto'));
 
   // Formulario temporal de edición en Ficha
@@ -160,9 +162,9 @@ export default function App() {
   const [formReg, setFormReg] = useState({ nombre: '', email: '', telefono: '', comunidad: 'Tarrazú (San Marcos, San Lorenzo, Carlos)', pass: '', confirmPass: '', solicitaExperto: false });
   const [formRecuperar, setFormRecuperar] = useState({ contacto: '' });
 
-  // Solicitudes pendientes de biólogos
+  // Solicitudes pendientes de biólogos/expertos para revisión de Admin
   const [solicitudesExpertos, setSolicitudesExpertos] = useState([
-    { id: 101, nombre: 'MSc. Juan Abarca', email: 'jabarca@herpeto.org', tel: '+506 8333-4444', atencedentes: 'Biólogo especialista en Isthmohyla nacientes.', fecha: '24/07/2026' }
+    { id: 101, userId: 3, nombre: 'MSc. Juan Abarca', email: 'jabarca@herpeto.org', tel: '+506 8333-4444', atencedentes: 'Biólogo especialista en Isthmohyla nacientes.', fecha: '24/07/2026' }
   ]);
 
   // Chat
@@ -285,7 +287,6 @@ export default function App() {
     a.click();
   };
 
-  // Función para sincronizar pendientes acumulados offline
   const sincronizarPendientes = () => {
     if (pendientesOffline.length === 0) {
       alert('No hay registros almacenados offline para sincronizar.');
@@ -297,7 +298,7 @@ export default function App() {
     setModalSincronizar(false);
   };
 
-  // Registros
+  // Registros de la base de datos
   const [registros, setRegistros] = useState([
     {
       id: 1,
@@ -388,7 +389,7 @@ export default function App() {
   return (
     <div style={{ backgroundColor: '#070D0B', color: '#E0E6E3', minHeight: '100vh', fontFamily: 'system-ui, sans-serif', paddingBottom: '90px' }}>
       
-      {/* 🟢 BARRA SUPERIOR DINÁMICA CON INDICADOR DE SINCRONIZACIÓN OFFLINE */}
+      {/* 🟢 BARRA SUPERIOR DINÁMICA */}
       <header style={{ backgroundColor: '#0B1512', padding: '0.8rem 1.2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #162B23', flexWrap: 'wrap', gap: '0.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
           <div style={{ backgroundColor: '#0A1E16', border: '1px solid #00FF88', borderRadius: '12px', padding: '3px 8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -402,7 +403,6 @@ export default function App() {
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
           
-          {/* Botón de Sincronización Offline si hay guardados en memoria */}
           {pendientesOffline.length > 0 && (
             <button onClick={() => setModalSincronizar(true)} style={{ backgroundColor: '#FFB300', color: '#000', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '20px', fontWeight: 'bold', fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
               ⏳ {pendientesOffline.length} Pendiente(s) Offline
@@ -571,7 +571,7 @@ export default function App() {
         </div>
       )}
 
-      {/* 📊 PANEL ADMIN */}
+      {/* 📊 PANEL ADMIN (ACCESO RESTRINGIDO SI NO HA INICIADO SESIÓN) */}
       {tab === 'admin' && (
         <div style={{ padding: '1.2rem' }}>
           {!usuario.isLoggedIn ? (
@@ -686,7 +686,12 @@ export default function App() {
                                   <select 
                                     value={u.rol} 
                                     onChange={(e) => {
-                                      setCuentasRegistradas(cuentasRegistradas.map(item => item.id === u.id ? { ...item, rol: e.target.value } : item));
+                                      const nuevoRol = e.target.value;
+                                      setCuentasRegistradas(cuentasRegistradas.map(item => item.id === u.id ? { ...item, rol: nuevoRol } : item));
+                                      // Si el usuario modificado es el actual, actualizamos la sesión activa
+                                      if (usuario.id === u.id) {
+                                        setUsuario({ ...usuario, rol: nuevoRol });
+                                      }
                                     }} 
                                     style={{ backgroundColor: '#050A08', color: '#00FF88', border: '1px solid #1B3D2F', borderRadius: '12px', padding: '0.3rem 0.5rem', fontSize: '0.75rem' }}
                                   >
@@ -708,7 +713,7 @@ export default function App() {
                   </div>
                 )}
 
-                {/* SOLICITUDES DE EXPERTOS */}
+                {/* SOLICITUDES DE ACREDITACIÓN A EXPERTO */}
                 {subTabAdmin === 'solicitudes' && (
                   <div>
                     <h4 style={{ margin: '0 0 1rem 0', color: '#FFB300', fontSize: '0.95rem' }}>🎓 Solicitudes de Acreditación de Rango Experto (Biólogos)</h4>
@@ -726,9 +731,24 @@ export default function App() {
                             <div style={{ display: 'flex', gap: '0.5rem' }}>
                               <button 
                                 onClick={() => {
-                                  setCuentasRegistradas([...cuentasRegistradas, { id: Date.now(), nombre: s.nombre, email: s.email, tel: s.tel, comunidad: 'Zona de los Santos', rol: 'Experto Herpetólogo', pass: '123456', estadoConexion: 'online' }]);
+                                  // Promover cuenta en cuentasRegistradas de Usuario Regular -> Experto Herpetólogo
+                                  const cuentasActualizadas = cuentasRegistradas.map(u => u.id === s.userId ? { ...u, rol: 'Experto Herpetólogo' } : u);
+                                  
+                                  // Si no estaba en la lista de cuentas, se agrega
+                                  const existe = cuentasRegistradas.some(u => u.id === s.userId);
+                                  if (!existe) {
+                                    cuentasActualizadas.push({ id: s.userId || Date.now(), nombre: s.nombre, email: s.email, tel: s.tel, comunidad: 'Zona de los Santos', rol: 'Experto Herpetólogo', pass: '123456', estadoConexion: 'online' });
+                                  }
+
+                                  setCuentasRegistradas(cuentasActualizadas);
+
+                                  // Si el usuario promovido es el que está en sesión actual, actualiza inmediatamente su rol
+                                  if (usuario.id === s.userId || usuario.email === s.email) {
+                                    setUsuario(prev => ({ ...prev, rol: 'Experto Herpetólogo' }));
+                                  }
+
                                   setSolicitudesExpertos(solicitudesExpertos.filter(item => item.id !== s.id));
-                                  alert(`¡Rango EXPERTO aprobado para ${s.nombre}!`);
+                                  alert(`¡Acreditación Aprobada! ${s.nombre} ahora tiene el rango EXPERTO HERPETÓLOGO con permisos de edición y respuesta.`);
                                 }} 
                                 style={{ backgroundColor: '#00E676', color: '#000', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}
                               >
@@ -808,7 +828,6 @@ export default function App() {
                 <h2 style={{ margin: '0.2rem 0', color: '#FFF', fontSize: '1.2rem' }}>{registroSeleccionado.nombreComun}</h2>
                 <h4 style={{ margin: '0 0 0.8rem 0', color: '#00C853', fontStyle: 'italic', fontSize: '0.9rem', fontWeight: 'normal' }}>{registroSeleccionado.especie}</h4>
 
-                {/* MUESTRA EDITADO POR SI FUE EDITADO */}
                 {registroSeleccionado.editadoPor && (
                   <div style={{ backgroundColor: '#0A1E16', border: '1px solid #00FF88', color: '#00FF88', padding: '0.6rem', borderRadius: '8px', fontSize: '0.75rem', marginBottom: '1rem' }}>
                     ✍️ <strong>EDITADO Y VALIDADO POR:</strong><br />
@@ -817,7 +836,7 @@ export default function App() {
                   </div>
                 )}
 
-                {/* EDICIÓN TAXONÓMICA RESERVADA A EXPERTOS O ADMIN */}
+                {/* EDICIÓN TAXONÓMICA RESERVADA EXCLUSIVAMENTE A CUENTAS APROBADAS COMO EXPERTOS O ADMIN */}
                 {esExpertoOAdmin ? (
                   <div style={{ backgroundColor: '#1A1807', border: '1px solid #5C4D0A', borderRadius: '12px', padding: '0.9rem' }}>
                     <h4 style={{ margin: '0 0 0.6rem 0', color: '#FFB300', fontSize: '0.85rem' }}>✏️ PANEL DE DIAGNÓSTICO Y EDICIÓN EXPERTA</h4>
@@ -903,13 +922,31 @@ export default function App() {
               </div>
             )}
 
-            {/* VISTA 1: PERFIL DE USUARIO ACTIVO */}
+            {/* VISTA 1: PERFIL DE USUARIO ACTIVO (EDITABLE POR EL PROPIO USUARIO) */}
             {vistaPerfil === 'perfil' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
                 <div style={{ backgroundColor: '#060D0A', border: '1px solid #1B3D2F', borderRadius: '12px', padding: '0.8rem', textAlign: 'center' }}>
-                  <span style={{ color: '#00FF88', fontWeight: 'bold', fontSize: '0.85rem' }}>🛡️ {usuario.rol.toUpperCase()}</span>
-                  <div style={{ fontSize: '0.95rem', color: '#FFF', fontWeight: 'bold', marginTop: '0.3rem' }}>{usuario.nombre}</div>
-                  <div style={{ fontSize: '0.75rem', color: '#7A9A8C' }}>{usuario.email} | {usuario.telefono}</div>
+                  <span style={{ color: '#00FF88', fontWeight: 'bold', fontSize: '0.85rem' }}>🛡️ ROL: {usuario.rol.toUpperCase()}</span>
+                  {usuario.rol === 'Usuario Regular' && (
+                    <div style={{ fontSize: '0.7rem', color: '#FFB300', marginTop: '0.3rem' }}>
+                      (Si solicitaste Rango Experto, tu solicitud está en proceso de revisión por los ADMIN).
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.3rem' }}>MI NOMBRE COMPLETO *</label>
+                  <input type="text" value={usuario.nombre} onChange={(e) => setUsuario({ ...usuario, nombre: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }} />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.3rem' }}>CORREO ELECTRÓNICO *</label>
+                  <input type="email" value={usuario.email} onChange={(e) => setUsuario({ ...usuario, email: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }} />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.3rem' }}>NÚMERO DE CELULAR *</label>
+                  <input type="text" value={usuario.telefono} onChange={(e) => setUsuario({ ...usuario, telefono: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }} />
                 </div>
 
                 <div style={{ backgroundColor: '#0A1E16', border: '1px solid #00FF88', padding: '0.8rem', borderRadius: '10px' }}>
@@ -923,21 +960,21 @@ export default function App() {
                   </select>
                 </div>
 
-                <button onClick={() => setModalPerfil(false)} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#00E676', color: '#000', fontWeight: 'bold', border: 'none', borderRadius: '10px', cursor: 'pointer' }}>Guardar Cambios</button>
+                <button onClick={() => { setModalPerfil(false); alert('¡Perfil actualizado con éxito!'); }} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#00E676', color: '#000', fontWeight: 'bold', border: 'none', borderRadius: '10px', cursor: 'pointer' }}>Guardar Cambios en Perfil</button>
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.5rem' }}>
-                  <button onClick={() => { setUsuario({ isLoggedIn: false, nombre: '', email: '', telefono: '', comunidad: '', rol: 'Usuario Regular' }); setVistaPerfil('login'); }} style={{ backgroundColor: 'transparent', border: 'none', color: '#FF5252', fontSize: '0.75rem', cursor: 'pointer', textDecoration: 'underline' }}>🔴 Cerrar Sesión</button>
+                  <button onClick={() => { setUsuario({ isLoggedIn: false, id: null, nombre: '', email: '', telefono: '', comunidad: '', rol: 'Usuario Regular' }); setVistaPerfil('login'); }} style={{ backgroundColor: 'transparent', border: 'none', color: '#FF5252', fontSize: '0.75rem', cursor: 'pointer', textDecoration: 'underline' }}>🔴 Cerrar Sesión</button>
                   <button onClick={() => setVistaPerfil('login')} style={{ backgroundColor: 'transparent', border: 'none', color: '#00FF88', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 'bold' }}>Cambiar de Cuenta</button>
                 </div>
               </div>
             )}
 
-            {/* VISTA 2: INICIAR SESIÓN CON CLAVE */}
+            {/* VISTA 2: INICIAR SESIÓN */}
             {vistaPerfil === 'login' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.75rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.3rem' }}>CORREO O NÚMERO DE CELULAR *</label>
-                  <input type="text" placeholder="Ej. jorge.carvajal@docente.edu o +506 8888-9999" value={formLogin.emailOrTel} onChange={(e) => setFormLogin({ ...formLogin, emailOrTel: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }} />
+                  <input type="text" placeholder="Ej. jorge.carvajal@docente.edu o cpicado@comunidad.cr" value={formLogin.emailOrTel} onChange={(e) => setFormLogin({ ...formLogin, emailOrTel: e.target.value })} style={{ width: '100%', padding: '0.6rem', backgroundColor: '#050A08', color: '#FFF', border: '1px solid #1B3D2F', borderRadius: '8px', fontSize: '0.85rem' }} />
                 </div>
 
                 <div>
@@ -956,6 +993,7 @@ export default function App() {
                     if (usuarioEncontrado) {
                       setUsuario({
                         isLoggedIn: true,
+                        id: usuarioEncontrado.id,
                         nombre: usuarioEncontrado.nombre,
                         email: usuarioEncontrado.email,
                         telefono: usuarioEncontrado.tel,
@@ -982,7 +1020,7 @@ export default function App() {
               </div>
             )}
 
-            {/* VISTA 3: REGISTRO DE CUENTA NUEVA */}
+            {/* VISTA 3: REGISTRO DE CUENTA NUEVA (INGRESA DIRECTO COMO USUARIO REGULAR Y SOLICITUD A ADMIN) */}
             {vistaPerfil === 'registro' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
                 <div>
@@ -1002,7 +1040,7 @@ export default function App() {
 
                 <div style={{ backgroundColor: '#0D1E18', border: '1px solid #1B3D2F', padding: '0.7rem', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.6rem' }} onClick={() => setFormReg({ ...formReg, solicitaExperto: !formReg.solicitaExperto })}>
                   <input type="checkbox" checked={formReg.solicitaExperto} onChange={() => {}} style={{ accentColor: '#00FF88' }} />
-                  <span style={{ color: '#00FF88', fontSize: '0.75rem', fontWeight: 'bold' }}>🎓 Soy Biólogo/Herpetólogo (Solicitar validación de Rango Experto)</span>
+                  <span style={{ color: '#00FF88', fontSize: '0.75rem', fontWeight: 'bold' }}>🎓 Soy Biólogo/Herpetólogo (Solicitar validación de Rango Experto a los ADMIN)</span>
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
@@ -1023,13 +1061,14 @@ export default function App() {
                       return;
                     }
 
+                    const newId = Date.now();
                     const nuevaCuenta = {
-                      id: Date.now(),
+                      id: newId,
                       nombre: formReg.nombre,
                       email: formReg.email,
                       tel: formReg.telefono,
                       comunidad: formReg.comunidad,
-                      rol: 'Usuario Regular',
+                      rol: 'Usuario Regular', // INICIA SIEMPRE COMO USUARIO REGULAR
                       pass: formReg.pass,
                       estadoConexion: 'online'
                     };
@@ -1037,11 +1076,13 @@ export default function App() {
                     setCuentasRegistradas([...cuentasRegistradas, nuevaCuenta]);
 
                     if (formReg.solicitaExperto) {
-                      setSolicitudesExpertos([...solicitudesExpertos, { id: Date.now(), nombre: formReg.nombre, email: formReg.email, tel: formReg.telefono, atencedentes: 'Solicitó rango de Experto al registrarse.', fecha: 'Hoy' }]);
+                      setSolicitudesExpertos([...solicitudesExpertos, { id: Date.now(), userId: newId, nombre: formReg.nombre, email: formReg.email, tel: formReg.telefono, atencedentes: 'Solicitó rango de Experto Herpetólogo al registrarse.', fecha: 'Hoy' }]);
                     }
 
+                    // Inicia sesión de inmediato como Usuario Regular
                     setUsuario({
                       isLoggedIn: true,
+                      id: newId,
                       nombre: formReg.nombre,
                       email: formReg.email,
                       telefono: formReg.telefono,
@@ -1049,12 +1090,12 @@ export default function App() {
                       rol: 'Usuario Regular'
                     });
 
-                    setMensajeAuthOk(formReg.solicitaExperto ? '¡Cuenta registrada! Tu solicitud de Experto quedó en revisión.' : '¡Cuenta creada con éxito!');
-                    setTimeout(() => { setMensajeAuthOk(''); setVistaPerfil('perfil'); setModalPerfil(false); }, 1800);
+                    setMensajeAuthOk(formReg.solicitaExperto ? '¡Cuenta creada! Has ingresado como Usuario Regular. Tu solicitud de Experto fue enviada a los ADMIN.' : '¡Cuenta registrada con éxito!');
+                    setTimeout(() => { setMensajeAuthOk(''); setVistaPerfil('perfil'); setModalPerfil(false); }, 2200);
                   }} 
                   style={{ width: '100%', padding: '0.8rem', backgroundColor: '#00E676', color: '#000', fontWeight: 'bold', border: 'none', borderRadius: '10px', cursor: 'pointer' }}
                 >
-                  Registrarme en HerpID
+                  Registrarme e Ingresar
                 </button>
               </div>
             )}
@@ -1167,7 +1208,7 @@ export default function App() {
         </div>
       )}
 
-      {/* 📌 MODAL REGISTRAR AVISTAMIENTO CON MAPA DE ALFILER ROJO Y SOPORTE OFFLINE */}
+      {/* 📌 MODAL REGISTRAR AVISTAMIENTO (+) */}
       {modalRegistro && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999, padding: '1rem' }}>
           <div style={{ backgroundColor: '#09130F', borderRadius: '16px', border: '1px solid #1B3D2F', width: '100%', maxWidth: '580px', padding: '1.2rem', maxHeight: '92vh', overflowY: 'auto' }}>
@@ -1225,7 +1266,7 @@ export default function App() {
               )}
             </div>
 
-            {/* PASO 4: COORDENADAS CON ALFILER ROJO INTERACTIVO */}
+            {/* PASO 4 */}
             <div style={{ marginBottom: '1.2rem' }}>
               <label style={{ display: 'block', fontSize: '0.8rem', color: '#FFF', fontWeight: 'bold', marginBottom: '0.5rem' }}>4. UBICACIÓN GPS Y ALFILER ROJO EN EL MAPA *</label>
               <div style={{ backgroundColor: '#0D1E18', border: '1px border-dashed #1B3D2F', borderRadius: '8px', padding: '0.8rem' }}>
@@ -1237,7 +1278,6 @@ export default function App() {
 
                 <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.7rem', color: '#FFB300' }}>👉 Toca cualquier punto en el mapa para colocar el 📍 <strong>Alfiler Rojo</strong> exactamente donde viste al organismo:</p>
 
-                {/* MAPA INTERACTIVO MINI PARA EL ALFILER ROJO */}
                 <div style={{ height: '180px', borderRadius: '8px', overflow: 'hidden', marginBottom: '0.6rem', border: '1px solid #1B3D2F' }}>
                   <MapContainer center={posPin} zoom={14} style={{ height: '100%', width: '100%' }}>
                     <TileLayer attribution='&copy; OpenStreetMap' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
